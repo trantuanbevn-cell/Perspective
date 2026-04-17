@@ -623,10 +623,10 @@ function renderContent() {
   if (activePjId) {
     const p = getPj(activePjId);
     if (!p) { activePjId = null; renderContent(); return; }
-    // Always render hero at top, project detail below
     renderHeroStats(ci);
     const detailDiv = document.getElementById('pjDetailArea');
     if (detailDiv) renderProjectDetail(detailDiv, p);
+    updateHeroForProject(p);
   } else {
     renderMonthOverview(ci);
   }
@@ -650,12 +650,6 @@ function renderHeroStats(ci) {
   });
   const maxPerf = Math.max(1, ...Object.values(smPerf));
   const activePerf = D.settings.staffList.filter(s => smPerf[s] > 0).sort((a,b) => smPerf[b] - smPerf[a]);
-
-  // Only update hero if it doesn't already exist OR month changed
-  if (document.getElementById('heroStatsRow') && document.getElementById('pjDetailArea')) {
-    // Already rendered, just update target numbers
-    return;
-  }
 
   ci.innerHTML = `
   <div id="heroStatsRow" class="hero-row" style="grid-template-columns:1fr 1fr 1fr auto">
@@ -833,9 +827,11 @@ function updateMonthTarget(field, val) {
   const pctRev = tgtRev>0?Math.min(100,Math.round(sumRev/tgtRev*100)):0;
   const pN = document.getElementById('prgNew'); if(pN) pN.style.width=pctNew+'%';
   const pR = document.getElementById('prgRev'); if(pR) pR.style.width=pctRev+'%';
-  // Update hero numbers display
-  const hN = document.getElementById('heroSumNew'); if(hN) hN.textContent=sumNew;
-  const hR = document.getElementById('heroSumRev'); if(hR) hR.textContent=sumRev;
+  // Update hero - if in project view keep project numbers, else show month totals
+  if (!activePjId) {
+    const hN = document.getElementById('heroSumNew'); if(hN) hN.textContent=sumNew;
+    const hR = document.getElementById('heroSumRev'); if(hR) hR.textContent=sumRev;
+  }
   // Update progress labels
   document.querySelectorAll('.progress-label').forEach((el,i)=>{
     const spans = el.querySelectorAll('span');
@@ -973,9 +969,6 @@ function renderProjectDetail(ci, p) {
   (p.otLog||[]).forEach(e=>{if(e.staff&&sm[e.staff])sm[e.staff].ot+=(e.hours||0);});
   const activeS=D.settings.staffList.filter(s=>sm[s].n+sm[s].r+sm[s].ot>0);
   const maxV=Math.max(1,...activeS.map(s=>sm[s].n+sm[s].r));
-
-  // Update hero stats to show project-specific numbers
-  updateHeroForProject(p);
 
   ci.innerHTML=`
   <!-- Project banner with back button -->
@@ -1323,7 +1316,13 @@ function renderStaffSchedule(p) {
         const to   = r.dateTo||r.dateFrom;
         return from<=dk && to>=dk;
       });
-      const bg = isToday?'rgba(255,192,0,.08)':isSun||isSat?'rgba(0,0,0,.03)':'#fff';
+      // Check leave on this day
+      const leaves = getStaffLeaves(staff);
+      const isOnLeave = leaves.some(l=>{
+        const lf=l.from||l.to, lt=l.to||l.from;
+        return lf && lt && lf<=dk && lt>=dk;
+      });
+      const bg = isOnLeave?'rgba(231,76,60,.08)':isToday?'rgba(255,192,0,.08)':isSun||isSat?'rgba(0,0,0,.03)':'#fff';
       const borderL = isWeekBorder?'2px solid rgba(0,0,0,.08)':'1px solid #f0f0f0';
       if(activeTasks.length===0){
         return `<td style="background:${bg};border-left:${borderL};padding:1px"></td>`;
@@ -1343,7 +1342,14 @@ function renderStaffSchedule(p) {
     }).join('');
 
     // Task list summary on left
-    const taskSummary = tasks.length>0 ? tasks.map(r=>{
+    // Show active leaves in summary too
+    const activeLeaveList = getStaffLeaves(staff).filter(l=>{
+      const lt=l.to||l.from;
+      return lt >= todayStr;
+    });
+    const taskSummary = tasks.length>0 || activeLeaveList.length>0 ? 
+      activeLeaveList.map(l=>`<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#e74c3c;flex-shrink:0;display:inline-block"></span><span style="color:#e74c3c;overflow:hidden;text-overflow:ellipsis">Nghỉ ${l.from||'?'}${l.to&&l.to!==l.from?'→'+l.to:''}</span></div>`).join('')
+      + tasks.map(r=>{
       const overdue = r.dateTo && r.dateTo < todayStr;
       return `<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">
         <span style="width:6px;height:6px;border-radius:50%;background:${r.status==='new'?'#70AD47':'var(--gold)'};flex-shrink:0;display:inline-block"></span>
@@ -1460,14 +1466,11 @@ function updRow(pjId,gid2,rid,field,val) {
 }
 function refreshPjTotals(pjId) {
   const p = getPj(pjId); if(!p) return;
-  const tn=totalNew(p), tr=totalRev(p), ta=tn+tr, ot=totalOT(p);
-  // Hero nums (project view shows project totals)
-  const hN = document.getElementById('heroSumNew'); if(hN) hN.textContent = tn;
-  const hR = document.getElementById('heroSumRev'); if(hR) hR.textContent = tr;
-  // Tfoot named spans
+  const tn=totalNew(p), tr=totalRev(p), ta=tn+tr;
   const fTn = document.getElementById('tfoot-tn-'+pjId); if(fTn) fTn.textContent = tn;
   const fTr = document.getElementById('tfoot-tr-'+pjId); if(fTr) fTr.textContent = tr;
   const fTa = document.getElementById('tfoot-ta-'+pjId); if(fTa) fTa.textContent = ta;
+  updateHeroForProject(p);
   refreshStaffSched(pjId);
   renderSidebar();
 }
@@ -1565,6 +1568,9 @@ function renderDashboard() {
     pjs.forEach(p=>{
       (p.groups||[]).flatMap(g=>g.rows||[]).forEach(r=>{
         if(r.staff&&staffAnn[r.staff]){ if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0); staffAnn[r.staff].ot+=(r.ot||0); }
+      });
+      (p.records||[]).forEach(r=>{  // legacy records support
+        if(r.staff&&staffAnn[r.staff]){ if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0); }
       });
       (p.otLog||[]).forEach(e=>{if(e.staff&&staffAnn[e.staff])staffAnn[e.staff].ot+=(e.hours||0);});
     });
@@ -1760,6 +1766,9 @@ function getStaffStats(name) {
           if(r.status==='new') mn+=(r.qty||0); else mr+=(r.qty||0);
           mot+=(r.ot||0);
         }
+      });
+      (p.records||[]).forEach(r=>{  // legacy
+        if(r.staff===name){ if(r.status==='new') mn+=(r.qty||0); else mr+=(r.qty||0); }
       });
       (p.otLog||[]).forEach(e=>{ if(e.staff===name) mot+=(e.hours||0); });
     });
