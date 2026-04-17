@@ -3114,6 +3114,221 @@ function clearAllPhotos() {
   toast('✓ Đã xóa tất cả ảnh');
 }
 /* INIT */
+
+
+// ── Inject leave data from 休暇管理表 2026 (12 nhân sự) ──
+(function injectLeaves() {
+  if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
+  const leaveDB = {
+  "トゥアン": [
+    {
+      "id": "lv_tuan_1",
+      "from": "2026-03-30",
+      "to": "2026-04-01",
+      "reason": "お父さんの葬式 (Tang lễ bố)"
+    }
+  ],
+  "SGN ヒエン": [
+    {
+      "id": "lv_hien_1",
+      "from": "2026-04-06",
+      "to": "2026-04-07",
+      "reason": "私用 (Việc cá nhân)"
+    }
+  ],
+  "SGN L.フォン": [
+    {
+      "id": "lv_lfon_1",
+      "from": "2026-02-12",
+      "to": "2026-02-13",
+      "reason": "健康診断 (Khám sức khỏe)"
+    },
+    {
+      "id": "lv_lfon_2",
+      "from": "2026-03-17",
+      "to": "2026-03-17",
+      "reason": "弟の婚約式 (Lễ đính hôn em trai)"
+    }
+  ],
+  "HAN ハー": [
+    {
+      "id": "lv_haa_1",
+      "from": "2026-02-27",
+      "to": "2026-02-27",
+      "reason": "病気 (Bệnh)"
+    },
+    {
+      "id": "lv_haa_2",
+      "from": "2026-03-26",
+      "to": "2026-03-26",
+      "reason": "病気・午前半休 (Bệnh, nửa ngày sáng)"
+    }
+  ],
+  "SGN ズエン": [],
+  "HAN T.タイン": [
+    {
+      "id": "lv_ntain_1",
+      "from": "2026-01-30",
+      "to": "2026-01-30",
+      "reason": "病気 (Bệnh)"
+    }
+  ],
+  "HAN M.フオン": [
+    {
+      "id": "lv_mfon_1",
+      "from": "2026-02-27",
+      "to": "2026-02-27",
+      "reason": "私用 (Việc cá nhân)"
+    },
+    {
+      "id": "lv_mfon_2",
+      "from": "2026-03-17",
+      "to": "2026-03-17",
+      "reason": "病気 (Bệnh)"
+    },
+    {
+      "id": "lv_mfon_3",
+      "from": "2026-03-18",
+      "to": "2026-03-18",
+      "reason": "子供病気・午前半休 (Con bệnh, nửa ngày)"
+    },
+    {
+      "id": "lv_mfon_4",
+      "from": "2026-03-26",
+      "to": "2026-03-26",
+      "reason": "私用・午後半休 (Việc cá nhân, nửa ngày chiều)"
+    }
+  ],
+  "HAN D.チュン": [
+    {
+      "id": "lv_dchun_1",
+      "from": "2026-03-02",
+      "to": "2026-03-03",
+      "reason": "奥さんの入院 (Vợ nhập viện)"
+    }
+  ],
+  "SGN ロック": [
+    {
+      "id": "lv_rok_1",
+      "from": "2026-01-09",
+      "to": "2026-01-09",
+      "reason": "子供病気・午前半休 (Con bệnh, nửa ngày sáng)"
+    },
+    {
+      "id": "lv_rok_2",
+      "from": "2026-01-27",
+      "to": "2026-01-27",
+      "reason": "病気 (Bệnh)"
+    },
+    {
+      "id": "lv_rok_3",
+      "from": "2026-02-05",
+      "to": "2026-02-05",
+      "reason": "私用・午後半休 (Việc cá nhân, nửa ngày chiều)"
+    },
+    {
+      "id": "lv_rok_4",
+      "from": "2026-03-02",
+      "to": "2026-03-02",
+      "reason": "私用 (Việc cá nhân)"
+    },
+    {
+      "id": "lv_rok_5",
+      "from": "2026-03-16",
+      "to": "2026-03-16",
+      "reason": "子供病気 (Con bệnh)"
+    },
+    {
+      "id": "lv_rok_6",
+      "from": "2026-03-17",
+      "to": "2026-03-17",
+      "reason": "子供病気 (Con bệnh)"
+    },
+    {
+      "id": "lv_rok_7",
+      "from": "2026-03-27",
+      "to": "2026-03-27",
+      "reason": "祖母の葬式 (Tang lễ bà nội)"
+    }
+  ],
+  "SGN D.ティン": [],
+  "HAN H.タイン": [
+    {
+      "id": "lv_htain_1",
+      "from": "2026-02-02",
+      "to": "2026-02-02",
+      "reason": "病気 (Bệnh)"
+    },
+    {
+      "id": "lv_htain_2",
+      "from": "2026-03-26",
+      "to": "2026-03-26",
+      "reason": "病気 (Bệnh)"
+    },
+    {
+      "id": "lv_htain_3",
+      "from": "2026-03-27",
+      "to": "2026-03-27",
+      "reason": "私用 (Việc cá nhân)"
+    },
+    {
+      "id": "lv_htain_4",
+      "from": "2026-05-20",
+      "to": "2026-05-20",
+      "reason": "結婚式 (Đám cưới)"
+    },
+    {
+      "id": "lv_htain_5",
+      "from": "2026-05-26",
+      "to": "2026-05-26",
+      "reason": "結婚式 (Đám cưới)"
+    },
+    {
+      "id": "lv_htain_6",
+      "from": "2026-05-27",
+      "to": "2026-05-27",
+      "reason": "結婚式 (Đám cưới)"
+    }
+  ],
+  "HAN ニュー": [
+    {
+      "id": "lv_nuu_1",
+      "from": "2026-02-11",
+      "to": "2026-02-11",
+      "reason": "私用 (Việc cá nhân)"
+    },
+    {
+      "id": "lv_nuu_2",
+      "from": "2026-03-19",
+      "to": "2026-03-19",
+      "reason": "私用 (Việc cá nhân)"
+    },
+    {
+      "id": "lv_nuu_3",
+      "from": "2026-03-20",
+      "to": "2026-03-20",
+      "reason": "私用 (Việc cá nhân)"
+    }
+  ]
+};
+  Object.entries(leaveDB).forEach(([name, leaves]) => {
+    if (!D.settings.staffProfiles[name])
+      D.settings.staffProfiles[name] = {role:"",salaryGross:0,salaryNet:0,leaves:[],order:99};
+    const prof = D.settings.staffProfiles[name];
+    if (!prof.leaves) prof.leaves = [];
+    leaves.forEach(lv => {
+      if (!prof.leaves.find(e => e.id === lv.id)) prof.leaves.push(lv);
+    });
+  });
+  // Also update staffList to match the 12 correct names
+  const newList = ["トゥアン", "SGN ヒエン", "SGN L.フォン", "HAN ハー", "SGN ズエン", "HAN T.タイン", "HAN M.フオン", "HAN D.チュン", "SGN ロック", "SGN D.ティン", "HAN H.タイン", "HAN ニュー"];
+  // Only update if current list is still the old default
+  if (D.settings.staffList.length <= 7) {
+    D.settings.staffList = newList;
+  }
+  save();
+})();
+
 loadSavedTheme();
 showPage('main');
 renderAll();
