@@ -124,6 +124,8 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600;white-space:nowrap}
 .b-osaka{background:#dbeafe;color:#1d4ed8}
 .b-tokyo{background:#fce7f3;color:#9d174d}
+.b-hanoi{background:#dcfce7;color:#15803d}
+.b-hcm{background:#fef9c3;color:#854d0e}
 .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600}
 .chip-new{background:var(--new-bg);color:var(--new-tx)}
 .chip-gold{background:var(--rev-bg);color:var(--rev-tx)}
@@ -145,13 +147,13 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .card-body{padding:12px 14px}
 
 /* HERO STATS */
-.hero-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;margin-bottom:12px}
+.hero-row{display:grid;gap:10px;margin-bottom:12px}
 .hero-box{background:#fff;border:1px solid var(--gray2);border-radius:var(--r2);padding:13px 15px;border-top:4px solid var(--gray3)}
 .hero-box.green{border-top-color:#70AD47}
 .hero-box.gold{border-top-color:var(--gold)}
 .hero-box.navy{border-top-color:var(--navy);background:var(--navy);color:#fff}
 .hero-box.orange{border-top-color:var(--orange)}
-.hero-num{font-size:38px;font-weight:700;line-height:1}
+.hero-num{font-size:36px;font-weight:700;line-height:1}
 .hero-box.green .hero-num{color:var(--new-tx)}
 .hero-box.gold .hero-num{color:var(--rev-tx)}
 .hero-box.navy .hero-num{color:var(--gold)}
@@ -164,7 +166,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .progress-fill.gold{background:var(--gold)}
 .progress-label{font-size:10px;color:var(--gray4);margin-top:3px;display:flex;justify-content:space-between}
 /* Target box */
-.target-box{background:var(--navy);color:#fff;border-radius:var(--r2);padding:13px 15px;display:flex;flex-direction:column;gap:8px;min-width:170px}
+.target-box{background:var(--navy);color:#fff;border-radius:var(--r2);padding:13px 15px;display:flex;flex-direction:column;gap:6px;min-width:200px}
 .target-box .tgt-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold2);font-weight:600}
 .target-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .target-row label{font-size:11px;color:rgba(255,255,255,.7)}
@@ -296,6 +298,8 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .report-doc .c-ot{color:#C55A11;font-weight:600;text-align:center}
 .report-doc .b-osaka{background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600}
 .report-doc .b-tokyo{background:#fce7f3;color:#9d174d;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600}
+.report-doc .b-hanoi{background:#dcfce7;color:#15803d;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600}
+.report-doc .b-hcm{background:#fef9c3;color:#854d0e;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600}
 .report-doc .pj-block{margin-bottom:16px;border:1px solid #E8E8E8;border-radius:6px;overflow:hidden}
 .report-doc .pj-block-hd{background:#EEF3FB;padding:8px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #D9D9D9}
 .report-doc .pj-block-hd .pj-name{font-weight:700;font-size:12px;color:#1F3864}
@@ -480,10 +484,19 @@ function allCurProjects() {  // used by gantt/stats that need BOTH sections
   return [...(m.projects||[]), ...(m.projectsVN||[])];
 }
 function getPj(id) {
-  // Search current section first, then the other
-  return curProjects().find(p=>p.id===id)
-    || (curMonth().projects||[]).find(p=>p.id===id)
-    || (curMonth().projectsVN||[]).find(p=>p.id===id);
+  // Search current section first, then the other (important for cross-section rating save)
+  const m = curMonth();
+  return (m.projects||[]).find(p=>p.id===id)
+      || (m.projectsVN||[]).find(p=>p.id===id);
+}
+// Search across ALL months (for rating cells that fire after navigation)
+function getPjGlobal(id) {
+  for (const mid of Object.keys(D.months)) {
+    const m = D.months[mid];
+    const found = (m.projects||[]).find(p=>p.id===id) || (m.projectsVN||[]).find(p=>p.id===id);
+    if (found) return found;
+  }
+  return null;
 }
 
 function totalNew(p) {
@@ -766,47 +779,94 @@ function renderMonthOverview(ci) {
   const activePerf=D.settings.staffList.filter(s=>smPerf[s]>0).sort((a,b)=>smPerf[b]-smPerf[a]);
 
   ci.innerHTML=`
-  <div id="heroStatsRow" class="hero-row" style="grid-template-columns:1fr 1fr 1fr auto">
-    <div class="hero-box green">
-      <div class="hero-num" id="heroSumNew">${sumNew}</div>
-      <div class="hero-lbl">作成 — Làm mới</div>
-      <div class="progress-track"><div class="progress-fill green" style="width:${pctNew}%"></div></div>
-      <div class="progress-label"><span>${pctNew}% mục tiêu</span><span>${sumNew}/${tgtNew}</span></div>
+  <div id="heroStatsRow" class="hero-row" style="grid-template-columns:160px 160px 1fr 220px">
+
+    <!-- Box 1: Làm mới (nhỏ gọn) -->
+    <div class="hero-box green" style="padding:11px 14px">
+      <div class="hero-lbl" style="margin-bottom:4px">作成 — Làm mới</div>
+      <div class="hero-num" id="heroSumNew" style="font-size:34px">${sumNew}</div>
+      <div class="progress-track" style="margin-top:6px"><div class="progress-fill green" id="prgNew" style="width:${pctNew}%"></div></div>
+      <div class="progress-label progress-label"><span>${pctNew}%</span><span id="lblNew">${sumNew}/${tgtNew}</span></div>
     </div>
-    <div class="hero-box gold">
-      <div class="hero-num">${sumRev}</div>
-      <div class="hero-lbl">修正 — Sửa lại</div>
-      <div class="progress-track"><div class="progress-fill gold" style="width:${pctRev}%"></div></div>
-      <div class="progress-label"><span>${pctRev}% mục tiêu</span><span>${sumRev}/${tgtRev}</span></div>
+
+    <!-- Box 2: Sửa lại (nhỏ gọn) -->
+    <div class="hero-box gold" style="padding:11px 14px">
+      <div class="hero-lbl" style="margin-bottom:4px">修正 — Sửa lại</div>
+      <div class="hero-num" id="heroSumRev" style="font-size:34px">${sumRev}</div>
+      <div class="progress-track" style="margin-top:6px"><div class="progress-fill gold" id="prgRev" style="width:${pctRev}%"></div></div>
+      <div class="progress-label"><span>${pctRev}%</span><span id="lblRev">${sumRev}/${tgtRev}</span></div>
     </div>
-    <div class="hero-box navy">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);font-weight:700;margin-bottom:8px">⚡ Hiệu suất nhân sự</div>
-      ${activePerf.length ? activePerf.slice(0,6).map(s=>`
-        <div class="perf-bar">
-          <div class="perf-bar-row">
-            <span style="color:rgba(255,255,255,.85);font-weight:500">${s}</span>
-            <span style="color:var(--gold);font-weight:700">${smPerf[s]}</span>
-          </div>
-          <div class="perf-bar-track">
-            <div class="perf-bar-new" style="width:${Math.round(smPerf[s]/maxPerf*100)}%"></div>
-          </div>
-        </div>`).join('')
-      : '<div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;padding:6px 0">Chưa có dữ liệu</div>'}
-      ${staffWithOT.length?`<div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.15);font-size:10px;color:var(--gold2)">
-        ⏱ ${staffWithOT.map(s=>s+' '+otMap[s].toFixed(1)+'h').join(' · ')}
-      </div>`:''}
+
+    <!-- Box 3: Hiệu suất nhân sự — 2 cột, mỗi cột 6 dòng -->
+    <div class="hero-box navy" style="overflow:hidden">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold2);font-weight:700;margin-bottom:7px">⚡ Hiệu suất nhân sự</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">
+        ${[0,1].map(col=>{
+          const items = [];
+          for(let i=0;i<6;i++){
+            const s = D.settings.staffList[col*6+i];
+            if(s){
+              const v=smPerf[s]||0, pct=maxPerf>0?Math.round(v/maxPerf*100):0, ot=otMap[s]||0;
+              items.push(`<div class="perf-bar" style="margin-bottom:3px">
+                <div class="perf-bar-row">
+                  <span style="font-size:10px;color:${v>0?'rgba(255,255,255,.9)':'rgba(255,255,255,.35)'};font-weight:${v>0?600:400};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">${s}</span>
+                  <span style="color:${v>0?'var(--gold)':'rgba(255,255,255,.2)'};font-weight:700;font-size:10px;flex-shrink:0">${v>0?v:'—'}${ot>0?'<span style="color:var(--orange);font-size:8px"> +'+ot.toFixed(1)+'h</span>':''}</span>
+                </div>
+                <div class="perf-bar-track" style="height:3px">
+                  <div class="perf-bar-new" style="width:${pct}%"></div>
+                </div>
+              </div>`);
+            } else {
+              // Empty slot
+              items.push('<div style="height:20px;margin-bottom:3px;border-bottom:1px dashed rgba(255,255,255,.06)"></div>');
+            }
+          }
+          return items.join('');
+        }).join('')}
+      </div>
     </div>
+
+    <!-- Box 4: Mục tiêu tháng — hiển thị thực tế/mục tiêu, đổi màu xanh khi đạt -->
     <div class="target-box">
       <div class="tgt-title">🎯 Mục tiêu tháng</div>
-      <div class="target-row">
-        <label>作成 Mới</label>
-        <input class="target-input" type="number" value="${tgtNew}" min="0" id="tgtN" onchange="updateMonthTarget('targetNew',+this.value)">
+
+      <!-- Làm mới -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:10px;color:rgba(255,255,255,.7)">作成 Làm mới</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span id="tgt-actual-new" style="font-size:15px;font-weight:800;color:${sumNew>0&&tgtNew>0&&sumNew>=tgtNew?'#4ade80':'var(--gold)'}">${sumNew}</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.4)">/</span>
+            <input class="target-input" type="number" value="${tgtNew}" min="0" id="tgtN"
+              style="width:52px;font-size:13px;padding:3px 5px"
+              onchange="updateMonthTarget('targetNew',+this.value)">
+          </div>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden">
+          <div id="prgTgtNew" style="height:100%;width:${pctNew}%;background:${sumNew>=tgtNew&&tgtNew>0?'#4ade80':'#70AD47'};border-radius:2px;transition:width .3s"></div>
+        </div>
+        ${sumNew>=tgtNew&&tgtNew>0?'<div style="font-size:9px;color:#4ade80;margin-top:2px;font-weight:600">✓ Đã đạt mục tiêu!</div>':''}
       </div>
-      <div class="target-row">
-        <label>修正 Sửa</label>
-        <input class="target-input" type="number" value="${tgtRev}" min="0" id="tgtR" onchange="updateMonthTarget('targetRev',+this.value)">
+
+      <!-- Sửa lại -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:10px;color:rgba(255,255,255,.7)">修正 Sửa lại</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <span id="tgt-actual-rev" style="font-size:15px;font-weight:800;color:${sumRev>0&&tgtRev>0&&sumRev>=tgtRev?'#4ade80':'var(--gold)'}">${sumRev}</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.4)">/</span>
+            <input class="target-input" type="number" value="${tgtRev}" min="0" id="tgtR"
+              style="width:52px;font-size:13px;padding:3px 5px"
+              onchange="updateMonthTarget('targetRev',+this.value)">
+          </div>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden">
+          <div id="prgTgtRev" style="height:100%;width:${pctRev}%;background:${sumRev>=tgtRev&&tgtRev>0?'#4ade80':'var(--gold)'};border-radius:2px;transition:width .3s"></div>
+        </div>
+        ${sumRev>=tgtRev&&tgtRev>0?'<div style="font-size:9px;color:#4ade80;margin-top:2px;font-weight:600">✓ Đã đạt mục tiêu!</div>':''}
       </div>
-      <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px" id="tgtTotal">Tổng = ${tgtAll} phối cảnh</div>
+
+      <div style="font-size:10px;color:rgba(255,255,255,.45);padding-top:4px;border-top:1px solid rgba(255,255,255,.1)" id="tgtTotal">Tổng = ${tgtAll} phối cảnh</div>
     </div>
   </div>
 
@@ -828,7 +888,7 @@ function renderMonthOverview(ci) {
             <td style="color:var(--gray4)">${i+1}</td>
             <td><div style="font-weight:600">${x(p.nameVN||p.nameJP||'—')}</div>
                 ${p.nameJP&&p.nameVN?`<div style="font-size:10px;color:var(--gray4)">${x(p.nameJP)}</div>`:''}</td>
-            <td><span class="badge ${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span></td>
+            <td><span class="badge ${officeBadgeClass(p.office)}">${p.office||'—'}</span></td>
             <td>${x(p.contact||'—')}</td>
             <td class="num-c" style="color:var(--new-tx)">${totalNew(p)}</td>
             <td class="num-c" style="color:var(--rev-tx)">${totalRev(p)}</td>
@@ -1011,32 +1071,49 @@ function renderMonthGantt(pjs) {
 }
 
 function updateMonthTarget(field, val) {
-  if(!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],targetNew:0,targetRev:0};
+  if(!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],projectsVN:[],targetNew:0,targetRev:0};
   D.months[D.activeMonth][field] = Math.max(0, val); save();
+  refreshHeroTargetDisplay();
+}
+
+function refreshHeroTargetDisplay() {
   const m = curMonth();
-  // Update tgtTotal label
-  const el = document.getElementById('tgtTotal');
-  if(el) el.textContent = 'Tổng = ' + ((m.targetNew||0)+(m.targetRev||0)) + ' phối cảnh';
-  // Recompute progress bars in hero
   const pjs = curProjects();
   const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
   const tgtNew = m.targetNew||0, tgtRev = m.targetRev||0;
   const pctNew = tgtNew>0?Math.min(100,Math.round(sumNew/tgtNew*100)):0;
   const pctRev = tgtRev>0?Math.min(100,Math.round(sumRev/tgtRev*100)):0;
-  const pN = document.getElementById('prgNew'); if(pN) pN.style.width=pctNew+'%';
-  const pR = document.getElementById('prgRev'); if(pR) pR.style.width=pctRev+'%';
-  // Update hero - if in project view keep project numbers, else show month totals
+  const doneNew = tgtNew>0 && sumNew>=tgtNew;
+  const doneRev = tgtRev>0 && sumRev>=tgtRev;
+
+  // Small hero boxes - progress bars
+  const pN=document.getElementById('prgNew'); if(pN) pN.style.width=pctNew+'%';
+  const pR=document.getElementById('prgRev'); if(pR) pR.style.width=pctRev+'%';
+  const lblN=document.getElementById('lblNew'); if(lblN) lblN.textContent=sumNew+'/'+tgtNew;
+  const lblR=document.getElementById('lblRev'); if(lblR) lblR.textContent=sumRev+'/'+tgtRev;
+
+  // Target box - progress bars with green when done
+  const ptN=document.getElementById('prgTgtNew');
+  if(ptN){ ptN.style.width=pctNew+'%'; ptN.style.background=doneNew?'#4ade80':'#70AD47'; }
+  const ptR=document.getElementById('prgTgtRev');
+  if(ptR){ ptR.style.width=pctRev+'%'; ptR.style.background=doneRev?'#4ade80':'var(--gold)'; }
+
+  // Target box - actual numbers (green when done)
+  const aN=document.getElementById('tgt-actual-new');
+  if(aN){ aN.textContent=sumNew; aN.style.color=doneNew?'#4ade80':'var(--gold)'; }
+  const aR=document.getElementById('tgt-actual-rev');
+  if(aR){ aR.textContent=sumRev; aR.style.color=doneRev?'#4ade80':'var(--gold)'; }
+
+  // Total label
+  const el=document.getElementById('tgtTotal');
+  if(el) el.textContent='Tổng = '+(tgtNew+tgtRev)+' phối cảnh';
+
+  // Hero nums (month view only)
   if (!activePjId) {
-    const hN = document.getElementById('heroSumNew'); if(hN) hN.textContent=sumNew;
-    const hR = document.getElementById('heroSumRev'); if(hR) hR.textContent=sumRev;
+    const hN=document.getElementById('heroSumNew'); if(hN) hN.textContent=sumNew;
+    const hR=document.getElementById('heroSumRev'); if(hR) hR.textContent=sumRev;
   }
-  // Update progress labels
-  document.querySelectorAll('.progress-label').forEach((el,i)=>{
-    const spans = el.querySelectorAll('span');
-    if(i===0 && spans.length>=2){ spans[0].textContent=pctNew+'% mục tiêu'; spans[1].textContent=sumNew+'/'+tgtNew; }
-    if(i===1 && spans.length>=2){ spans[0].textContent=pctRev+'% mục tiêu'; spans[1].textContent=sumRev+'/'+tgtRev; }
-  });
 }
 
 function renderMonthStaffCard(pjs) {
@@ -1177,7 +1254,7 @@ function renderProjectDetail(ci, p) {
       <div style="font-weight:700;font-size:13px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(p.nameVN||p.nameJP||'—')}</div>
       ${p.nameJP&&p.nameVN?`<div style="font-size:10px;color:var(--gray4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(p.nameJP)}</div>`:''}
     </div>
-    <span class="badge ${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span>
+    <span class="badge ${officeBadgeClass(p.office)}">${p.office||'—'}</span>
     <div style="display:flex;gap:4px;flex-shrink:0">
       <span class="chip chip-new">作成 ${tn}</span>
       <span class="chip chip-gold">修正 ${tr}</span>
@@ -1324,6 +1401,14 @@ function renderRatingCell(pjId, gId, rId, field, val, color) {
     + ' oninput="var n=+this.value;this.previousElementSibling.textContent=n||\'-\';this.previousElementSibling.style.color=ratingColor(n)"'
     + ' onchange="updRow(' + JSON.stringify(pjId) + ',' + JSON.stringify(gId) + ',' + JSON.stringify(rId) + ',' + JSON.stringify(field) + ',+this.value)">'
     + '</div>';
+}
+
+function officeBadgeClass(office) {
+  if (office==='大阪') return 'b-osaka';
+  if (office==='東京') return 'b-tokyo';
+  if (office==='ハノイ'||office==='Hà Nội') return 'b-hanoi';
+  if (office==='HCM'||office==='TP.HCM') return 'b-hcm';
+  return 'b-tokyo';
 }
 
 function ratingColor(v) {
@@ -1682,12 +1767,12 @@ function setRowSt(pjId,gid2,rid,status,btn) {
   refreshPjTotals(pjId);
 }
 function updGroup(pjId,gid2,field,val) {
-  const p=getPj(pjId); if(!p) return;
+  const p=getPjGlobal(pjId)||getPj(pjId); if(!p) return;
   const g=(p.groups||[]).find(g=>g.id===gid2); if(!g) return;
   g[field]=val; save();
 }
 function updRow(pjId,gid2,rid,field,val) {
-  const p=getPj(pjId); if(!p) return;
+  const p=getPjGlobal(pjId)||getPj(pjId); if(!p) return;
   const g=(p.groups||[]).find(g=>g.id===gid2); if(!g) return;
   const r=g.rows.find(r=>r.id===rid); if(!r) return;
   r[field]=val; save();
@@ -1707,6 +1792,7 @@ function refreshPjTotals(pjId) {
   const fTr = document.getElementById('tfoot-tr-'+pjId); if(fTr) fTr.textContent = tr;
   const fTa = document.getElementById('tfoot-ta-'+pjId); if(fTa) fTa.textContent = ta;
   updateHeroForProject(p);
+  refreshHeroTargetDisplay();
   refreshStaffSched(pjId);
   renderSidebar();
 }
@@ -1719,7 +1805,7 @@ function openAddProject() {
     <div class="info-grid c3" style="gap:10px">
       <div class="field"><label>Tên dự án (VN)</label><input id="ap-nVN" placeholder="Tên gợi nhớ…"></div>
       <div class="field"><label>Tên dự án (JP)</label><input id="ap-nJP" placeholder="例：吹田市計画"></div>
-      <div class="field"><label>Văn phòng</label><select id="ap-off"><option>大阪</option><option>東京</option></select></div>
+      <div class="field"><label>Văn phòng</label><select id="ap-off"><option>大阪</option><option>東京</option><option>ハノイ</option><option>HCM</option></select></div>
     </div>
     <div class="info-grid c2" style="gap:10px;margin-top:10px">
       <div class="field"><label>Người liên hệ JP</label>
@@ -1761,7 +1847,7 @@ function openEditProject(id) {
       <div class="field"><label>Tên dự án (VN)</label><input id="ep-nVN" value="${x(p.nameVN||'')}"></div>
       <div class="field"><label>Tên dự án (JP)</label><input id="ep-nJP" value="${x(p.nameJP||'')}"></div>
       <div class="field"><label>Văn phòng</label>
-        <select id="ep-off"><option ${p.office==='大阪'?'selected':''}>大阪</option><option ${p.office==='東京'?'selected':''}>東京</option></select></div>
+        <select id="ep-off"><option ${p.office==='大阪'?'selected':''}>大阪</option><option ${p.office==='東京'?'selected':''}>東京</option><option ${p.office==='ハノイ'?'selected':''}>ハノイ</option><option ${p.office==='HCM'?'selected':''}>HCM</option></select></div>
     </div>
     <div class="info-grid c2" style="gap:10px;margin-top:10px">
       <div class="field"><label>Người liên hệ JP</label>
@@ -3253,7 +3339,7 @@ function exportProjectReport() {
           ${p.nameJP&&p.nameVN?`<div style="font-size:10px;color:#595959;margin-top:1px">${x(p.nameJP)}</div>`:''}
         </div>
         <div class="pj-chips">
-          <span class="${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span>
+          <span class="${officeBadgeClass(p.office)}">${p.office||'—'}</span>
           <span style="font-size:10px;color:#595959">${x(p.contact||'')}</span>
           <span class="chip-new">新 ${tn}</span>
           <span class="chip-rev">修 ${tr2}</span>
@@ -3329,7 +3415,7 @@ function exportProjectReport() {
           <td><strong>${x(p.nameVN||p.nameJP||'—')}</strong>
             ${p.nameJP&&p.nameVN?`<br><span style="font-size:10px;color:#595959">${x(p.nameJP)}</span>`:''}
           </td>
-          <td><span class="${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span></td>
+          <td><span class="${officeBadgeClass(p.office)}">${p.office||'—'}</span></td>
           <td>${x(p.contact||'—')}</td>
           <td class="c-new">${totalNew(p)}</td>
           <td class="c-rev">${totalRev(p)}</td>
@@ -3407,7 +3493,7 @@ function exportOTReport() {
           ${entries.map(e=>`<tr>
             <td>${e.date}</td>
             <td>${x(e.pjName)}</td>
-            <td><span class="${e.pjOffice==='大阪'?'b-osaka':'b-tokyo'}">${e.pjOffice||'—'}</span></td>
+            <td><span class="${officeBadgeClass(e.pjOffice)}">${e.pjOffice||'—'}</span></td>
             <td class="c-ot">${e.hours}h</td>
             <td style="font-size:10px;color:#595959">${x(e.note||'')}</td>
           </tr>`).join('')}
