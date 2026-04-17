@@ -1388,7 +1388,7 @@ function delPhoto(pjId,slot) {
 }
 
 
-/* ── Rating cell: 1-10 score with color dot + click-to-set ── */
+/* ── Rating cell: save on oninput so navigation doesn’t lose data ── */
 function renderRatingCell(pjId, gId, rId, field, val, color) {
   const v = val || 0;
   const dc = ratingColor(v);
@@ -1398,10 +1398,27 @@ function renderRatingCell(pjId, gId, rId, field, val, color) {
     + '<input type="range" min="0" max="10" step="1" value="' + v + '"'
     + ' style="width:44px;height:3px;accent-color:' + color + ';cursor:pointer"'
     + ' title="' + display + '/10"'
-    + ' oninput="var n=+this.value;this.previousElementSibling.textContent=n||\'-\';this.previousElementSibling.style.color=ratingColor(n)"'
-    + ' onchange="updRow(' + JSON.stringify(pjId) + ',' + JSON.stringify(gId) + ',' + JSON.stringify(rId) + ',' + JSON.stringify(field) + ',+this.value)">'
+    + ' oninput="var n=+this.value;this.previousElementSibling.textContent=n||\'-\';this.previousElementSibling.style.color=ratingColor(n);updRowRating(' + JSON.stringify(pjId) + ',' + JSON.stringify(gId) + ',' + JSON.stringify(rId) + ',' + JSON.stringify(field) + ',n)">'
     + '</div>';
 }
+
+// Dedicated debounced rating save — uses getPjGlobal for cross-navigation safety
+const _ratingTimers = {};
+function updRowRating(pjId, gId, rId, field, val) {
+  const key = pjId + '_' + rId + '_' + field;
+  clearTimeout(_ratingTimers[key]);
+  _ratingTimers[key] = setTimeout(() => {
+    const p = getPjGlobal(pjId);
+    if (!p) return;
+    const g = (p.groups||[]).find(g => g.id === gId);
+    if (!g) return;
+    const r = g.rows.find(r => r.id === rId);
+    if (!r) return;
+    r[field] = val;
+    save();
+  }, 250);
+}
+
 
 function officeBadgeClass(office) {
   if (office==='大阪') return 'b-osaka';
@@ -3081,6 +3098,12 @@ setTimeout(()=>{
 const _origSave = save;
 function save() {
   if (window._viewOnlyMode) return; // block saves in view mode
+  // Ensure contractEnd exists in all profiles before saving
+  if (D.settings && D.settings.staffProfiles) {
+    Object.values(D.settings.staffProfiles).forEach(p => {
+      if (p.contractEnd === undefined) p.contractEnd = '';
+    });
+  }
   localStorage.setItem(SK, JSON.stringify(D));
   triggerAutoSync();
 }
@@ -3903,8 +3926,10 @@ function clearAllPhotos() {
 };
   Object.entries(leaveDB).forEach(([name, leaves]) => {
     if (!D.settings.staffProfiles[name])
-      D.settings.staffProfiles[name] = {role:"",salaryGross:0,salaryNet:0,leaves:[],order:99};
+      D.settings.staffProfiles[name] = {role:"",salaryGross:0,salaryNet:0,leaves:[],order:99,contractEnd:""};
     const prof = D.settings.staffProfiles[name];
+    // Ensure contractEnd field exists (preserve existing value)
+    if (prof.contractEnd === undefined) prof.contractEnd = "";
     if (!prof.leaves) prof.leaves = [];
     leaves.forEach(lv => {
       if (!prof.leaves.find(e => e.id === lv.id)) prof.leaves.push(lv);
