@@ -351,7 +351,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
     <button class="nav-btn" id="navSettings" onclick="showPage('settings')">⚙ Cài đặt</button>
   </div>
   <div class="hdr-right">
-    <button class="sync-btn" id="syncBtn" onclick="openSyncPanel()">
+    <button class="sync-btn" id="syncBtn" onclick="quickSync()" title="Bấm để đồng bộ ngay · Giữ 1s để mở cài đặt" oncontextmenu="openSyncPanel();return false;" onmousedown="syncBtnHold(this)" onmouseup="syncBtnRelease(this)">
       <span class="dot"></span><span id="syncLabel">Sync</span>
     </button>
     <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.25)" onclick="openThemePicker()">🎨</button>
@@ -1015,12 +1015,15 @@ function renderProjectDetail(ci, p) {
         <th style="width:16%">Ghi chú</th>
         <th style="width:7%;text-align:center">OT(h)</th>
         <th style="width:9%;text-align:center">OT lý do</th>
+        <th style="width:5%;text-align:center;color:var(--gold)">★ Chất lượng</th>
+        <th style="width:5%;text-align:center;color:#4fc3f7">★ Tốc độ</th>
+        <th style="width:5%;text-align:center;color:#81c784">★ Tập trung</th>
         <th style="width:26px"></th>
       </tr></thead>
       <tbody id="rbody-${p.id}">${renderGroups(p)}</tbody>
       <tfoot id="rfoot-${p.id}">
         <tr style="background:var(--rev-bg);border-top:2px solid var(--navy)">
-          <td colspan="10" style="padding:8px 12px">
+          <td colspan="13" style="padding:8px 12px">
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <span style="font-size:11px;font-weight:700;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em">Tổng dự án:</span>
               <div style="display:flex;align-items:center;gap:6px">
@@ -1109,10 +1112,35 @@ function delPhoto(pjId,slot) {
   const g=document.getElementById(`photoGrid-${pjId}`); if(g) g.innerHTML=renderPhotoSlots(p);
 }
 
+
+/* ── Rating cell: 1-10 score with color dot + click-to-set ── */
+function renderRatingCell(pjId, gId, rId, field, val, color) {
+  const v = val || 0;
+  const dc = ratingColor(v);
+  const display = v > 0 ? String(v) : '-';
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+    + '<div style="font-size:14px;font-weight:800;color:' + dc + ';line-height:1">' + display + '</div>'
+    + '<input type="range" min="0" max="10" step="1" value="' + v + '"'
+    + ' style="width:44px;height:3px;accent-color:' + color + ';cursor:pointer"'
+    + ' title="' + display + '/10"'
+    + ' oninput="var n=+this.value;this.previousElementSibling.textContent=n||\'-\';this.previousElementSibling.style.color=ratingColor(n)"'
+    + ' onchange="updRow(' + JSON.stringify(pjId) + ',' + JSON.stringify(gId) + ',' + JSON.stringify(rId) + ',' + JSON.stringify(field) + ',+this.value)">'
+    + '</div>';
+}
+
+function ratingColor(v) {
+  if (!v) return 'var(--gray3)';
+  if (v <= 3) return '#e74c3c';
+  if (v <= 5) return '#e67e22';
+  if (v <= 7) return '#f39c12';
+  if (v <= 9) return '#70AD47';
+  return '#27ae60';
+}
+
 /* GROUPS — redesigned: flat table, all cols equal width, dropdown selects */
 function renderGroups(p) {
   const groups = p.groups||[];
-  if (!groups.length) return `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--gray4)">
+  if (!groups.length) return `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
 
   const today = new Date().toISOString().split('T')[0];
@@ -1202,6 +1230,15 @@ function renderGroups(p) {
         <td>
           <input class="tbl-input" value="${x(r.otNote||'')}" style="font-size:10px"
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
+        </td>
+        <td style="text-align:center;padding:4px 3px">
+          ${renderRatingCell(p.id, g.id, r.id, 'rateQuality', r.rateQuality||0, 'var(--gold)')}
+        </td>
+        <td style="text-align:center;padding:4px 3px">
+          ${renderRatingCell(p.id, g.id, r.id, 'rateSpeed', r.rateSpeed||0, '#4fc3f7')}
+        </td>
+        <td style="text-align:center;padding:4px 3px">
+          ${renderRatingCell(p.id, g.id, r.id, 'rateFocus', r.rateFocus||0, '#81c784')}
         </td>
         <td style="text-align:center">
           <button class="btn btn-xs btn-ghost btn-danger" onclick="delRow('${p.id}','${g.id}','${r.id}')">✕</button>
@@ -1410,14 +1447,14 @@ function refreshStaffSched(pjId) {
 function addGroup(pjId) {
   const p=getPj(pjId); if(!p) return;
   if(!p.groups) p.groups=[];
-  p.groups.push({id:gid(),type:'',rows:[{id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:''}]});
+  p.groups.push({id:gid(),type:'',rows:[{id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rateQuality:0,rateSpeed:0,rateFocus:0}]});
   save(); rebuildGroups(pjId); refreshPjTotals(pjId);
   setTimeout(()=>{ const inputs=document.querySelectorAll(`#rbody-${pjId} .grp-hd .tbl-input-dark`); if(inputs.length) inputs[inputs.length-1].focus(); },50);
 }
 function addRow(pjId,gid2) {
   const p=getPj(pjId); if(!p) return;
   const g=(p.groups||[]).find(g=>g.id===gid2); if(!g) return;
-  g.rows.push({id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:''});
+  g.rows.push({id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rateQuality:0,rateSpeed:0,rateFocus:0});
   save(); rebuildGroups(pjId); refreshPjTotals(pjId);
 }
 function delGroup(pjId,gid2) {
@@ -1563,12 +1600,21 @@ function renderDashboard() {
       pjCount:pjs.length,tN:m.targetNew||0,tR:m.targetRev||0};
   });
   const staffAnn={};
-  D.settings.staffList.forEach(s=>staffAnn[s]={n:0,r:0,ot:0});
+  D.settings.staffList.forEach(s=>staffAnn[s]={n:0,r:0,ot:0,rqSum:0,rsSum:0,rfSum:0,rCount:0});
   months.forEach(mid=>{
     const pjs=(D.months[mid]||{projects:[]}).projects||[];
     pjs.forEach(p=>{
       (p.groups||[]).flatMap(g=>g.rows||[]).forEach(r=>{
-        if(r.staff&&staffAnn[r.staff]){ if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0); staffAnn[r.staff].ot+=(r.ot||0); }
+        if(r.staff&&staffAnn[r.staff]){
+          if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0);
+          staffAnn[r.staff].ot+=(r.ot||0);
+          if(r.rateQuality||r.rateSpeed||r.rateFocus){
+            staffAnn[r.staff].rqSum+=(r.rateQuality||0);
+            staffAnn[r.staff].rsSum+=(r.rateSpeed||0);
+            staffAnn[r.staff].rfSum+=(r.rateFocus||0);
+            staffAnn[r.staff].rCount++;
+          }
+        }
       });
       (p.records||[]).forEach(r=>{  // legacy records support
         if(r.staff&&staffAnn[r.staff]){ if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0); }
@@ -1600,7 +1646,11 @@ function renderDashboard() {
     <div style="overflow-x:auto"><table class="perf-tbl">
       <thead><tr><th>Nhân sự</th><th style="text-align:center">作成</th><th style="text-align:center">修正</th>
         <th style="text-align:center">Tổng</th><th style="text-align:center">OT(h)</th>
-        <th style="min-width:150px">Năng suất</th><th>Đánh giá</th></tr></thead>
+        <th style="min-width:120px">Năng suất</th>
+        <th style="text-align:center;color:var(--gold)">★ Chất lượng</th>
+        <th style="text-align:center;color:#4fc3f7">★ Tốc độ</th>
+        <th style="text-align:center;color:#81c784">★ Tập trung</th>
+        <th>Đánh giá</th></tr></thead>
       <tbody>
         ${(()=>{
           const mx=Math.max(1,...activeS.map(s=>staffAnn[s].n+staffAnn[s].r));
@@ -1616,6 +1666,14 @@ function renderDashboard() {
                 <div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;overflow:hidden">
                   <div style="height:100%;background:var(--gold);width:${pct}%"></div></div>
                 <span style="font-size:10px;color:var(--gray4)">${pct}%</span></div></td>
+              ${(()=>{
+                const rc=staffAnn[s].rCount;
+                const rq=rc?Number((staffAnn[s].rqSum/rc).toFixed(1)):0;
+                const rs=rc?Number((staffAnn[s].rsSum/rc).toFixed(1)):0;
+                const rf=rc?Number((staffAnn[s].rfSum/rc).toFixed(1)):0;
+                const cell=(v,col)=>rc?'<td style="text-align:center"><span style="font-size:13px;font-weight:700;color:'+ratingColor(v)+'">'+v+'</span><span style="font-size:9px;color:var(--gray4)">/10</span></td>':'<td style="text-align:center;color:var(--gray3)">—</td>';
+                return cell(rq,'gold')+cell(rs,'#4fc3f7')+cell(rf,'#81c784');
+              })()}
               <td style="font-size:12px">${grade}</td>
             </tr>`;
           }).join('');
@@ -1735,19 +1793,29 @@ function getStaffStats(name) {
   const monthStats = [];
   Object.entries(D.months).sort((a,b)=>a[0]>b[0]?1:-1).forEach(([mid,m])=>{
     let mn=0,mr=0,mot=0;
+    let rqSum=0,rsSum=0,rfSum=0,rCount=0;
     (m.projects||[]).forEach(p=>{
       (p.groups||[]).flatMap(g=>g.rows||[]).forEach(r=>{
         if(r.staff===name){
           if(r.status==='new') mn+=(r.qty||0); else mr+=(r.qty||0);
           mot+=(r.ot||0);
+          if(r.rateQuality||r.rateSpeed||r.rateFocus){
+            rqSum+=(r.rateQuality||0); rsSum+=(r.rateSpeed||0); rfSum+=(r.rateFocus||0); rCount++;
+          }
         }
       });
-      (p.records||[]).forEach(r=>{  // legacy
+      (p.records||[]).forEach(r=>{
         if(r.staff===name){ if(r.status==='new') mn+=(r.qty||0); else mr+=(r.qty||0); }
       });
       (p.otLog||[]).forEach(e=>{ if(e.staff===name) mot+=(e.hours||0); });
     });
-    if(mn+mr+mot>0) monthStats.push({mid,n:mn,r:mr,ot:mot});
+    if(mn+mr+mot>0) monthStats.push({
+      mid,n:mn,r:mr,ot:mot,
+      rq:rCount?+(rqSum/rCount).toFixed(1):0,
+      rs:rCount?+(rsSum/rCount).toFixed(1):0,
+      rf:rCount?+(rfSum/rCount).toFixed(1):0,
+      rCount
+    });
     totalNew+=mn; totalRev+=mr; totalOT+=mot;
   });
   // Count leave days
@@ -1937,7 +2005,7 @@ function renderStaffPage() {
             </div>
           </div>
 
-          <!-- Lũy kế OT + nghỉ phép -->
+          <!-- Lũy kế đánh giá: OT + nghỉ + ratings 12 tháng -->
           <div style="margin-bottom:10px;padding:8px 10px;background:var(--gray1);border-radius:var(--r);border:1px solid var(--gray2)">
             <div style="font-size:10px;color:var(--gray4);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📊 Lũy kế đánh giá nhân viên</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1963,6 +2031,33 @@ function renderStaffPage() {
                 </div>`:'<div style="font-size:9px;color:var(--gray3);margin-top:3px;font-style:italic">Chưa có nghỉ phép</div>'}
               </div>
             </div>
+
+            <!-- Rating trend 12 months -->
+            ${(()=>{
+              const rStats = allStats.monthStats.filter(m=>m.rCount>0).slice(-12);
+              if(!rStats.length) return '<div style="font-size:10px;color:var(--gray3);margin-top:8px;font-style:italic;text-align:center">Chưa có đánh giá</div>';
+              const maxW = 100;
+              return '<div style="margin-top:8px;border-top:1px solid var(--gray2);padding-top:7px">'
+                + '<div style="font-size:10px;font-weight:600;color:var(--gray4);margin-bottom:5px">⭐ Đánh giá theo tháng (12 tháng gần nhất)</div>'
+                + '<div style="display:flex;flex-direction:column;gap:4px">'
+                + rStats.map(m=>{
+                    const label = m.mid.replace(/^20/,'').replace('-','/');
+                    const qPct = m.rq*10, sPct = m.rs*10, fPct = m.rf*10;
+                    return '<div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:3px;align-items:center">'
+                      + '<span style="font-size:9px;color:var(--gray4)">' + label + '</span>'
+                      + '<div title="Chất lượng: ' + m.rq + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--gold);width:' + qPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rq + '</span></div>'
+                      + '<div title="Tốc độ: ' + m.rs + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:#4fc3f7;width:' + sPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rs + '</span></div>'
+                      + '<div title="Tập trung: ' + m.rf + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:#81c784;width:' + fPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rf + '</span></div>'
+                      + '</div>';
+                  }).join('')
+                + '</div>'
+                + '<div style="display:flex;gap:10px;margin-top:4px;font-size:9px;color:var(--gray4)">'
+                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:var(--gold);border-radius:1px;display:inline-block"></span>Chất lượng</span>'
+                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:#4fc3f7;border-radius:1px;display:inline-block"></span>Tốc độ</span>'
+                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:#81c784;border-radius:1px;display:inline-block"></span>Tập trung</span>'
+                + '</div>'
+                + '</div>';
+            })()}
           </div>
 
           <!-- OT this month -->
@@ -2223,20 +2318,93 @@ function setSyncStatus(state, label) {
   if (!btn) return;
   btn.className = `sync-status ${state}`;
   lbl.textContent = label;
+  btn.title = label + ' · Bấm để sync ngay · Giữ 1s để cài đặt';
 }
 
 /* ── AUTO SYNC hook (called by save()) ── */
 function triggerAutoSync() {
-  if (SYNC.autoOn && SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
+  // Debounce: push 4s after last save (for immediate feedback on manual edits)
+  if (SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
     clearTimeout(triggerAutoSync._t);
-    setSyncStatus('syncing','Đang lưu…');
     triggerAutoSync._t = setTimeout(syncPush, 4000);
   }
 }
 
+// 5-minute periodic auto-save (runs regardless of edits)
+(function startPeriodicSync() {
+  setInterval(async () => {
+    if (SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
+      await syncPush();
+    }
+  }, 5 * 60 * 1000); // every 5 minutes
+})();
+
 /* ══════════════════════════════════════════════════════
    SYNC PANEL UI
 ══════════════════════════════════════════════════════ */
+
+/* ── Quick Sync: 1-click push/pull without password ── */
+async function quickSync() {
+  if (!SYNC.binId) {
+    toast('☁ Chưa cấu hình sync — giữ nút Sync để mở cài đặt');
+    return;
+  }
+  if (SYNC.role === 'admin' || SYNC.role === 'edit') {
+    // Push local → cloud
+    setSyncStatus('syncing', 'Đang lưu…');
+    const ok = await syncPush();
+    if (ok) toast('✓ Đã đồng bộ lên cloud');
+  } else if (SYNC.role === 'view') {
+    // Pull cloud → local (view only)
+    await syncPullWithRole();
+  } else {
+    // Not logged in — open login
+    openSyncPanel();
+  }
+}
+
+let _syncHoldTimer = null;
+function syncBtnHold(btn) {
+  _syncHoldTimer = setTimeout(() => {
+    _syncHoldTimer = null;
+    openSyncPanel();
+  }, 800);
+}
+function syncBtnRelease(btn) {
+  if (_syncHoldTimer) {
+    clearTimeout(_syncHoldTimer);
+    _syncHoldTimer = null;
+    // Short press = quickSync (already handled by onclick)
+  }
+}
+
+/* ── Local backup: export data as JSON file ── */
+function exportBackup() {
+  const data = JSON.stringify(D, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'phoicanh_backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ Đã tải backup về máy');
+}
+
+function importBackup(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.months || !data.settings) { alert('File backup không hợp lệ'); return; }
+      if (!confirm('Khôi phục từ file backup? Dữ liệu hiện tại sẽ bị thay thế.')) return;
+      D = data; save(); renderAll();
+      toast('✓ Đã khôi phục từ backup thành công');
+    } catch(err) { alert('Lỗi đọc file: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
 function openSyncPanel() {
   const role = SYNC.role;
   const isAdmin = role === 'admin';
@@ -2403,6 +2571,16 @@ function showSyncLogin() {
       👁 <strong>View</strong> — chỉ xem, không thay đổi được
     </div>
 
+    <!-- Backup -->
+    <div style="border-top:1px solid var(--gray2);margin-top:10px;padding:10px 0 2px">
+      <div style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">💾 Backup dữ liệu về máy</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:5px">
+        <button class="btn btn-sm" style="background:#f0f4ff;color:#1F3864;border-color:#4472C4" onclick="exportBackup()">⬇ Tải backup (.json)</button>
+        <label class="btn btn-sm" style="background:#fff8f2;color:#7f3500;border-color:#ffcc99;cursor:pointer">⬆ Khôi phục từ file<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
+      </div>
+      <div style="font-size:10px;color:var(--gray4)">Backup định kỳ để tránh mất dữ liệu khi xóa cache</div>
+    </div>
+
     <div class="modal-ft" style="flex-wrap:wrap;gap:8px">
       <button class="btn" onclick="closeModal()">Đóng</button>
       ${role!=='none'?`<button class="btn btn-sm" style="background:#EEF3FB;color:#1F3864;border-color:#4472C4" onclick="syncPullWithRole()">⬇ Tải dữ liệu mới nhất</button>`:''}
@@ -2412,6 +2590,7 @@ function showSyncLogin() {
     </div>
   `);
 }
+
 
 async function syncDoLogin() {
   const binId = document.getElementById('li-binid')?.value.trim();
