@@ -2055,7 +2055,9 @@ const JBIN = 'https://api.jsonbin.io/v3';
 
 async function syncPush() {
   if (!SYNC.binId || !SYNC.apiKey) return false;
-  const editPw = D.settings?.sync?.editPw || 'gendai2024';
+  // editPw stored locally during setup/login — never leaves device
+  const editPw = localStorage.getItem('sync_edit_pw') || D.settings?.sync?.editPw || '';
+  if (!editPw) { setSyncStatus('error','Cần đăng nhập lại'); toast('⚠ Phiên hết hạn — đăng nhập lại để sync'); return false; }
   try {
     const payload = await encryptData(D, editPw);
     const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
@@ -2073,21 +2075,24 @@ async function syncPush() {
   }
 }
 
-async function syncPull(password) {
-  if (!SYNC.binId) return null;
+async function syncPull(decryptPassword) {
+  // decryptPassword = the editPw used to encrypt the data
+  const binId = SYNC.binId || localStorage.getItem('sync_bin_id_public') || '';
+  if (!binId) throw new Error('no_bin_id');
   try {
-    const headers = SYNC.apiKey
-      ? { 'X-Master-Key': SYNC.apiKey }
-      : {};
-    const res = await fetch(`${JBIN}/b/${SYNC.binId}/latest`, { headers });
-    if (!res.ok) throw new Error(res.status);
+    const headers = SYNC.apiKey ? { 'X-Master-Key': SYNC.apiKey } : {};
+    const res = await fetch(`${JBIN}/b/${binId}/latest`, { headers });
+    if (!res.ok) throw new Error('http_' + res.status);
     const json = await res.json();
     const payload = json.record?.data;
     if (!payload) throw new Error('no_data');
-    return await decryptData(payload, password);
+    return await decryptData(payload, decryptPassword);
   } catch(e) {
-    if (e.message === 'no_data') throw e;
-    throw new Error('wrong_password');
+    const msg = e.message || '';
+    if (msg === 'no_data') throw e;
+    if (msg === 'no_bin_id') throw e;
+    if (msg.startsWith('http_')) throw new Error('connect_' + msg);
+    throw new Error('decrypt_fail');
   }
 }
 
@@ -2198,6 +2203,10 @@ async function confirmSyncSetup() {
   D.settings.sync.editPw    = editPw;  // needed for encryption key (stored locally only via admin)
   D.settings.sync.binId     = binId;   // public — needed by all devices to find data
 
+  // Store editPw and binId locally for encryption/pull
+  localStorage.setItem('sync_edit_pw', editPw);
+  localStorage.setItem('sync_bin_id_public', binId);
+
   save();
   setSyncStatus('syncing','Đang lưu…');
   closeModal();
@@ -2287,89 +2296,126 @@ function showSyncLogin() {
 async function syncDoLogin() {
   const binId = document.getElementById('li-binid')?.value.trim();
   const pw    = document.getElementById('li-pw')?.value;
-  if (!binId) { alert('Vui lòng nhập Bin ID'); return; }
-  if (!pw)    { alert('Vui lòng nhập mật khẩu'); return; }
+  if (!binId) { toast('⚠ Vui lòng nhập Bin ID'); return; }
+  if (!pw)    { toast('⚠ Vui lòng nhập mật khẩu'); return; }
 
   setSyncStatus('syncing','Đang xác thực…');
   closeModal();
 
   try {
-    // Pull data first — it contains the hashed passwords
-    const pulled = await syncPull(pw).catch(async () => {
-      // If decrypt fails, try to get raw to check passwords (admin case)
-      throw new Error('wrong_password');
-    });
+    // Step 1: Set binId so syncPull can use it
+    localStorage.setItem('sync_bin_id_public', binId);
+    SYNC.binId = binId;
 
-    // Check hash against passwords in settings
+    // Step 2: Hash the entered password to compare
     const h = await hashPw(pw);
-    const sync = pulled?.settings?.sync || D.settings?.sync || {};
+
+    // Step 3: We need to get the hashed passwords from cloud.
+    //   They're stored in D.settings.sync (encrypted with editPw).
+    //   Problem: we don't know editPw yet. Strategy:
+    //   - First try to decrypt with pw as editPw (works for Admin/Edit)
+    //   - If that fails, use stored local editPw (returning user)
+    //   - If both fail, try raw fetch to get unencrypted sync config (not available — fail gracefully)
+
+    let pulled = null;
+    let decryptPw = pw; // try user's pw first (Admin/Edit case)
+
+    // Also try stored editPw (for View role)
+    const storedEditPw = localStorage.getItem('sync_edit_pw') || '';
+
+    // Try decrypt with user pw
+    try {
+      pulled = await syncPull(pw);
+    } catch(e1) {
+      // Try with stored editPw (View role scenario)
+      if (storedEditPw && storedEditPw !== pw) {
+        try {
+          pulled = await syncPull(storedEditPw);
+          decryptPw = storedEditPw;
+        } catch(e2) {
+          pulled = null;
+        }
+      }
+    }
+
+    // Step 4: Determine role from hashed passwords
+    // Use pulled data's sync config, or fall back to local D.settings.sync
+    const syncCfg = pulled?.settings?.sync || D.settings?.sync || {};
 
     let role = 'none';
-    if (sync.adminHash && h === sync.adminHash) role = 'admin';
-    else if (sync.editHash  && h === sync.editHash)  role = 'edit';
-    else if (sync.viewHash  && h === sync.viewHash)  role = 'view';
+    if (syncCfg.adminHash && h === syncCfg.adminHash) role = 'admin';
+    else if (syncCfg.editHash && h === syncCfg.editHash)   role = 'edit';
+    else if (syncCfg.viewHash && h === syncCfg.viewHash)   role = 'view';
 
     if (role === 'none') {
       setSyncStatus('error','Sai mật khẩu');
-      toast('✗ Sai mật khẩu — thử lại');
-      setTimeout(()=>openSyncPanel(), 1200);
+      toast('✗ Sai mật khẩu — vui lòng kiểm tra lại');
+      setTimeout(() => openSyncPanel(), 1500);
       return;
     }
 
-    // Save session
-    SYNC.role = role;
+    // Step 5: Save credentials for this session
+    SYNC.role  = role;
     SYNC.binId = binId;
-    if (role === 'admin') SYNC.apiKey = SYNC.apiKey; // keep existing
-    // Store editPw locally for encryption/decryption
-    if (role === 'admin' && sync.editPw) localStorage.setItem('sync_edit_pw', sync.editPw);
-    else if (role === 'edit') localStorage.setItem('sync_edit_pw', pw);
 
-    // Load pulled data
-    if (role === 'view') {
-      // View: load data but disable all edit functions
-      D = pulled; save(); renderAll();
-      enableViewOnlyMode(true);
-    } else {
-      D = pulled; save(); renderAll();
-      enableViewOnlyMode(false);
+    // Store editPw for future encrypt/decrypt
+    if (role === 'admin') {
+      // Admin pw IS the editPw (admin knows all)
+      const ep = syncCfg.editPw || pw;
+      localStorage.setItem('sync_edit_pw', ep);
+    } else if (role === 'edit') {
+      // Edit pw == editPw (data encrypted with editPw)
+      localStorage.setItem('sync_edit_pw', pw);
+    } else if (role === 'view' && decryptPw) {
+      // Keep using stored editPw for decrypt
+      localStorage.setItem('sync_edit_pw', decryptPw);
     }
+
+    // Step 6: Load data if successfully pulled
+    if (pulled) {
+      D = pulled; save(); renderAll();
+    }
+
+    // Step 7: View-only mode
+    enableViewOnlyMode(role === 'view');
 
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     const roleLabels = {admin:'✓ Admin', edit:'✓ Edit', view:'👁 View'};
     setSyncStatus('synced', SYNC.autoOn && role==='admin' ? '⚡ Auto' : roleLabels[role]);
-    toast(`✓ Đăng nhập thành công — quyền ${role.toUpperCase()}`);
-
-    // Auto setup auto-sync for admin
-    if (role === 'admin' && SYNC.autoOn) {
-      setSyncStatus('synced','⚡ Auto');
-    }
+    toast('✓ Đăng nhập thành công — quyền ' + role.toUpperCase() +
+          (pulled ? '' : ' (dữ liệu local)'));
 
   } catch(e) {
-    setSyncStatus('error','Lỗi');
-    toast('✗ Không thể kết nối hoặc sai mật khẩu');
-    setTimeout(()=>openSyncPanel(), 1500);
+    setSyncStatus('error','Lỗi kết nối');
+    const msg = e.message||'';
+    if (msg.includes('no_bin_id')) toast('✗ Bin ID không hợp lệ');
+    else if (msg.includes('connect_http_401')) toast('✗ Master Key sai hoặc hết hạn');
+    else if (msg.includes('connect_http_404')) toast('✗ Bin ID không tồn tại');
+    else if (msg.includes('decrypt_fail')) toast('✗ Sai mật khẩu — không giải mã được dữ liệu');
+    else toast('✗ Lỗi kết nối: ' + msg);
+    setTimeout(() => openSyncPanel(), 2000);
   }
 }
 
 async function syncPullWithRole() {
-  const role = SYNC.role;
-  const pw = role==='admin' ? localStorage.getItem('sync_edit_pw')||''
-           : role==='edit'  ? localStorage.getItem('sync_edit_pw')||''
-           : null;
-
-  if (!pw && role!=='view') { toast('⚠ Phiên làm việc hết hạn — đăng nhập lại'); openSyncPanel(); return; }
-
+  const editPw = localStorage.getItem('sync_edit_pw') || '';
+  if (!editPw) {
+    toast('⚠ Phiên làm việc hết hạn — đăng nhập lại');
+    openSyncPanel(); return;
+  }
   setSyncStatus('syncing','Đang tải…');
   closeModal();
   try {
-    const pulled = await syncPull(pw || D.settings?.sync?.editPw || '');
+    const pulled = await syncPull(editPw);
     D = pulled; save(); renderAll();
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
-    setSyncStatus('synced', SYNC.autoOn&&role==='admin'?'⚡ Auto':'✓ Đã tải');
+    setSyncStatus('synced', SYNC.autoOn&&SYNC.role==='admin'?'⚡ Auto':'✓ Đã tải');
     toast('✓ Dữ liệu đã được cập nhật');
   } catch(e) {
     setSyncStatus('error','Lỗi tải');
-    toast('✗ Lỗi: '+e.message);
+    const msg = e.message||'';
+    if (msg.includes('decrypt_fail')) toast('✗ Không giải mã được — đăng nhập lại');
+    else toast('✗ Lỗi tải: ' + msg);
   }
 }
 
