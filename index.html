@@ -1662,10 +1662,9 @@ function contractDaysUntil(dateStr, todayStr) {
 function contractAlertInfo(days) {
   if (days === null) return {level:null, color:'var(--gray3)', label:''};
   if (days < 0)   return {level:'past',    color:'#e74c3c', label:'Đã qua!'};
-  if (days <= 7)  return {level:'week',    color:'#e74c3c', label:'Tuần cuối ⚠'};
-  if (days <= 14) return {level:'twoweek', color:'#e67e22', label:'Còn 2 tuần ⚠'};
+  if (days <= 7)  return {level:'week',    color:'#e74c3c', label:'⚠ Còn 1 tuần'};
+  if (days <= 14) return {level:'twoweek', color:'#e67e22', label:'⚠ Còn 2 tuần'};
   if (days <= 30) return {level:'month',   color:'#f39c12', label:'Còn 1 tháng'};
-  if (days <= 45) return {level:'month5',  color:'#3498db', label:'Còn 1.5 tháng'};
   return {level:'ok', color:'#27ae60', label:'Còn thời gian'};
 }
 
@@ -1684,50 +1683,25 @@ function renderDateStatus(nextDate, days, info) {
 }
 
 function renderContractBlock(staffName, prof, todayStr) {
-  const reviewDate  = prof.reviewDate  || '';
   const contractEnd = prof.contractEnd || '';
-
-  const nextReview   = contractNextAnnual(reviewDate,  todayStr);
   const nextContract = contractNextAnnual(contractEnd, todayStr);
-  const rdDays = contractDaysUntil(nextReview,   todayStr);
   const cdDays = contractDaysUntil(nextContract, todayStr);
-  const rdInfo = contractAlertInfo(rdDays);
   const cdInfo = contractAlertInfo(cdDays);
-
-  const rdBorder = rdInfo.level && rdInfo.level !== 'ok' ? rdInfo.color : 'var(--gray2)';
   const cdBorder = cdInfo.level && cdInfo.level !== 'ok' ? cdInfo.color : 'var(--gray2)';
-  const rdBg = (rdInfo.level === 'week' || rdInfo.level === 'past') ? '#fff5f5' : '#fff';
   const cdBg = (cdInfo.level === 'week' || cdInfo.level === 'past') ? '#fff5f5' : '#fff';
 
   return '<div style="margin-bottom:10px;padding:7px 9px;background:#f0f8ff;border-radius:var(--r);border:1px dashed #90cdf4">'
-    + '<div style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">📋 Hợp đồng & Review lương</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-
-    // Review lương
-    + '<div>'
-    + '<div style="font-size:10px;color:var(--gray4);margin-bottom:3px">📅 Ngày review lương</div>'
-    + '<input type="date" value="' + reviewDate + '"'
-    + ' style="width:100%;padding:4px 7px;border:1px solid ' + rdBorder + ';border-radius:var(--r);font-size:11px;background:' + rdBg + '"'
-    + (' onchange="saveStaffProfile('+JSON.stringify(staffName)+',' + JSON.stringify('reviewDate') + ',this.value);renderStaffPage()">')
-    + renderDateStatus(nextReview, rdDays, rdInfo)
-    + '</div>'
-
-    // Hết hạn hợp đồng
-    + '<div>'
-    + '<div style="font-size:10px;color:var(--gray4);margin-bottom:3px">📄 Hết hạn hợp đồng</div>'
+    + '<div style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📄 Hết hạn hợp đồng</div>'
     + '<input type="date" value="' + contractEnd + '"'
     + ' style="width:100%;padding:4px 7px;border:1px solid ' + cdBorder + ';border-radius:var(--r);font-size:11px;background:' + cdBg + '"'
     + (' onchange="saveStaffProfile('+JSON.stringify(staffName)+',' + JSON.stringify('contractEnd') + ',this.value);renderStaffPage()">')
     + renderDateStatus(nextContract, cdDays, cdInfo)
-    + '</div>'
-
-    + '</div>'
     + '</div>';
 }
 
 function getStaffProfile(name) {
   if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
-  if (!D.settings.staffProfiles[name]) D.settings.staffProfiles[name] = {role:'',salaryGross:0,salaryNet:0,leaves:[],order:99,reviewDate:'',contractEnd:''};
+  if (!D.settings.staffProfiles[name]) D.settings.staffProfiles[name] = {role:'',salaryGross:0,salaryNet:0,leaves:[],order:99,contractEnd:''};
   return D.settings.staffProfiles[name];
 }
 
@@ -1879,14 +1853,12 @@ function renderStaffPage() {
       else if (days <= 7) level = 'week';
       else if (days <= 14) level = 'twoweek';
       else if (days <= 30) level = 'month';
-      else if (days <= 45) level = 'month5';
       if (level) {
-        const colors = {past:'#e74c3c',week:'#e74c3c',twoweek:'#e67e22',month:'#f39c12',month5:'#3498db'};
-        const labels = {past:'ĐÃ QUA',week:'TUẦN CUỐI ⚠',twoweek:'CÒN 2 TUẦN',month:'CÒN 1 THÁNG',month5:'CÒN 1.5 THÁNG'};
+        const colors = {past:'#e74c3c',week:'#e74c3c',twoweek:'#e67e22',month:'#f39c12'};
+        const labels = {past:'ĐÃ QUA ⚠',week:'CÒN 1 TUẦN ⚠',twoweek:'CÒN 2 TUẦN',month:'CÒN 1 THÁNG'};
         reminderBanners.push({name:s, type, days, level, color:colors[level], label:labels[level], next:next.toISOString().split('T')[0]});
       }
     }
-    checkDate(prof2.reviewDate, 'Review lương');
     checkDate(prof2.contractEnd, 'Hết hạn HĐ');
   });
 
