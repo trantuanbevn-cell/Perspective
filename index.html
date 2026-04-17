@@ -808,8 +808,166 @@ function renderMonthOverview(ci) {
   </div>
 
   <div id="pjDetailArea"></div>
-  ${renderMonthStaffCard(pjs)}
+
+  <div class="card" id="monthGanttCard">
+    <div class="card-hd">
+      <span class="card-hd-title">📅 Lịch công việc nhân sự</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.5)">Tất cả dự án · Ai đang làm gì · Deadline · Ai rảnh</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      ${renderMonthGantt(pjs)}
+    </div>
+  </div>
   `;
+}
+
+/* ══════════════════════════════════════════════════════
+   MONTH GANTT — all projects, all staff, 3 weeks
+══════════════════════════════════════════════════════ */
+function renderMonthGantt(pjs) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+  const days = [];
+  for(let i=0;i<21;i++){
+    const d=new Date(today); d.setDate(today.getDate()+i); days.push(d);
+  }
+  const endStr = days[20].toISOString().split('T')[0];
+  function dk(d){ return d.toISOString().split('T')[0]; }
+
+  // Collect ALL tasks across ALL projects in this month
+  const allTasks = pjs.flatMap(p =>
+    (p.groups||[]).flatMap(g =>
+      (g.rows||[])
+        .filter(r => r.staff && (r.dateFrom||r.dateTo))
+        .map(r => ({
+          ...r,
+          pjName:    p.nameVN||p.nameJP||'—',
+          groupName: g.type||'—'
+        }))
+    )
+  );
+
+  function overlaps(r) {
+    const from=r.dateFrom||r.dateTo||'', to=r.dateTo||r.dateFrom||'';
+    if(!from&&!to) return false;
+    return (!to||to>=todayStr) && (!from||from<=endStr);
+  }
+
+  // Per-staff task map
+  const staffMap = {};
+  D.settings.staffList.forEach(s=>staffMap[s]=[]);
+  allTasks.filter(overlaps).forEach(r=>{
+    if(r.staff && staffMap[r.staff]) staffMap[r.staff].push(r);
+  });
+
+  // Day VN names
+  const dayVN = ['CN','T2','T3','T4','T5','T6','T7'];
+
+  // ── Month header spans ──
+  let curMo=-1, mSpan=0;
+  const monthSpans=[];
+  days.forEach((d,i)=>{
+    if(d.getMonth()!==curMo){
+      if(curMo>=0) monthSpans.push({label:['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'][curMo],span:mSpan});
+      curMo=d.getMonth(); mSpan=1;
+    } else mSpan++;
+    if(i===20) monthSpans.push({label:['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'][curMo],span:mSpan});
+  });
+  const hdrMonths = monthSpans.map(m=>`<th colspan="${m.span}" style="background:var(--navy2);color:var(--gold2);font-size:10px;text-align:center;padding:3px;border-right:1px solid rgba(255,255,255,.15)">${m.label}</th>`).join('');
+
+  // ── Day header ──
+  const hdrDays = days.map((d,i)=>{
+    const isToday=dk(d)===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
+    const isWeekBorder=d.getDay()===1&&i>0;
+    return `<th style="min-width:26px;max-width:34px;text-align:center;font-size:9px;padding:2px 1px;background:${isToday?'var(--gold)':'var(--navy)'};color:${isToday?'var(--navy)':isSun||isSat?'rgba(255,255,255,.35)':'rgba(255,255,255,.8)'};font-weight:${isToday?'800':'400'};border-left:${isWeekBorder?'2px solid rgba(255,255,255,.3)':'none'}">
+      <div>${dayVN[d.getDay()]}</div><div style="font-size:10px;font-weight:${isToday?800:600}">${d.getDate()}</div>
+    </th>`;
+  }).join('');
+
+  // ── Staff rows ──
+  const staffRows = D.settings.staffList.map(staff => {
+    const tasks = staffMap[staff]||[];
+    const isBusy = tasks.length>0;
+
+    // Left summary
+    const activeLeaveList = getStaffLeaves(staff).filter(l=>{
+      const lt=l.to||l.from; return lt>=todayStr;
+    });
+    const leaveParts = activeLeaveList.map(l=>'<div style="font-size:9px;color:#e74c3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🏖 '+(l.from||'?')+(l.to&&l.to!==l.from?'→'+l.to:'')+'</div>').join('');
+
+    const taskParts = tasks.map(r=>{
+      const overdue=r.dateTo&&r.dateTo<todayStr;
+      return '<div style="font-size:9px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">'
+        +'<span style="width:5px;height:5px;border-radius:50%;flex-shrink:0;display:inline-block;background:'+(r.status==='new'?'#70AD47':'var(--gold)')+'"></span>'
+        +'<span style="overflow:hidden;text-overflow:ellipsis;color:'+(overdue?'#e74c3c':'inherit')+'">'+(r.groupName.length>12?r.groupName.substring(0,12)+'…':r.groupName)+'</span>'
+        +'</div>';
+    }).join('');
+
+    const summary = leaveParts+taskParts || '<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>';
+    const nameBg  = isBusy ? 'var(--gray1)' : '#e8fdf0';
+
+    // Day cells
+    const dayCells = days.map((d,i)=>{
+      const dkStr=dk(d), isToday=dkStr===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
+      const isWeekBorder=d.getDay()===1&&i>0;
+      const isOnLeave = getStaffLeaves(staff).some(l=>{
+        const lf=l.from||l.to, lt=l.to||l.from;
+        return lf&&lt&&lf<=dkStr&&lt>=dkStr;
+      });
+      const activeTasks = tasks.filter(r=>{
+        const from=r.dateFrom||r.dateTo, to=r.dateTo||r.dateFrom;
+        return from&&to&&from<=dkStr&&to>=dkStr;
+      });
+      const bg = isOnLeave?'rgba(231,76,60,.07)':isToday?'rgba(255,192,0,.07)':isSun||isSat?'rgba(0,0,0,.025)':'#fff';
+      const borderL = isWeekBorder?'2px solid rgba(0,0,0,.08)':'1px solid #f0f0f0';
+      if(!activeTasks.length){
+        return `<td style="background:${bg};border-left:${borderL};padding:1px"></td>`;
+      }
+      const blocks = activeTasks.map(r=>{
+        const isNew=r.status==='new', isFirst=r.dateFrom===dkStr, isLast=r.dateTo===dkStr;
+        const bc=isNew?'#70AD47':'var(--gold)';
+        return `<div title="${x(r.groupName)} (${x(r.pjName)})\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
+          style="background:${bc};height:10px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};opacity:.85;overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 2px;line-height:10px">
+          ${isFirst?x(r.groupName.substring(0,6)):''}
+        </div>`;
+      }).join('');
+      return `<td style="background:${bg};border-left:${borderL};padding:1px;vertical-align:top">${blocks}</td>`;
+    }).join('');
+
+    return `<tr style="border-bottom:1px solid var(--gray2)">
+      <td style="background:${nameBg};padding:5px 8px;min-width:90px;max-width:110px;border-right:1px solid var(--gray2);vertical-align:top">
+        <div style="font-weight:700;font-size:11px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${staff}</div>
+        ${summary}
+      </td>
+      ${dayCells}
+    </tr>`;
+  }).join('');
+
+  return `<div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px">
+    <thead>
+      <tr>
+        <th style="background:var(--navy);width:100px;min-width:90px;padding:4px 8px;color:rgba(255,255,255,.7);font-size:10px;text-align:left">Nhân sự</th>
+        ${hdrMonths}
+      </tr>
+      <tr>
+        <th style="background:var(--navy2);padding:4px 8px;font-size:9px;color:var(--gold2);text-align:left">
+          Hôm nay: <strong style="color:var(--gold)">${todayStr.split('-').slice(1).join('/')}</strong>
+        </th>
+        ${hdrDays}
+      </tr>
+    </thead>
+    <tbody>${staffRows}</tbody>
+  </table>
+  </div>
+  <div style="padding:7px 12px;display:flex;gap:14px;font-size:10px;color:var(--gray4);background:var(--gray1);border-top:1px solid var(--gray2);flex-wrap:wrap">
+    <span>Chú thích:</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:#70AD47;border-radius:2px;display:inline-block"></span>Làm mới</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:var(--gold);border-radius:2px;display:inline-block"></span>Sửa lại</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:rgba(231,76,60,.2);border:1px solid #e74c3c;border-radius:2px;display:inline-block"></span>Nghỉ phép</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:rgba(255,192,0,.2);border:1px solid var(--gold);border-radius:2px;display:inline-block"></span>Hôm nay</span>
+    <span style="margin-left:auto;font-style:italic">Hover chuột vào ô màu để xem chi tiết</span>
+  </div>`;
 }
 
 function updateMonthTarget(field, val) {
