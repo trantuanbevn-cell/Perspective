@@ -1,0 +1,2950 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phối Cảnh Pro — 作成数管理</title>
+<meta name="description" content="Quản lý phối cảnh kiến trúc Nhật Bản — 作成数管理システム">
+<meta name="theme-color" content="#1F3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Phối Cảnh Pro">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAFPElEQVR42u2WS29lRxHH69336Xs99tjY4wwTEkaKlFmABokdazaw4xPw5VgiFqyQ2LELEiFZhEmCEjwZTzzja/u+u7uKxbkvm0gsEGJDr476dPevqqv6X4Xf/+mvAQAAEAEBAwBhNaKZh+34tzPN9oCIWM3IZmkpXqojbhcTosfuWUGIAOARuEMhBI+tYREhTMx0B+AeD4bdYb9VPXDt0GxekjESNnYi4jIXADCVlYUI7rFc1nZLm5kAYMLR7fzqekqEKwARTmbLXz5/9xc/e3o7WRBhBKjQxy++fe/RfiuxR0RAMv7yfISIT04Gi1wRgRBni/LF+ejZ+w9zcURwj37XfvvHz37z+7/0u+Ye2ytyj5xLzqUBQFCpnkthigZAGKU4IuZc8hqQSynVcy4bQM7kOzcrOwEDXI/V92Zm+xcQN8u2f3dmYCeKAAAE/+Xxf8D/HiD/+RG4Hesc24rIvwLWedbsYGYWpoCIEBERBkBRqQGISIhSgZlUJWD1DkSMiL7DAyZSVdXg9UsWYTNLJh4REWYioohgZgHUAEogs5gZoCNC9UhJiRlipU3SaGEEEHNKaVGgAZgys6iqmrhHRJiqiCCiqnogIhKhOoiwWQIsiFjdzRITxd0rQoBgopSSLZ2ZIsKURURVVSUCIsLSCpA2HhCWio0dAYiI5K6qxLw5VjZazMxmqqkwUgSYrQBmuvLATFUAUM3qxoMKwtwAiKi6mxkT3a8HAUFEZilp44GbqgirqZk1AFUVUQAws80V5QosYskACRGpupkR890sQgAAFjEz1SLC7mEmzKKiqtqoo1lzRXcAyxKN6xFN1oWZERGsK9Dag4DGNLOyioGJqVgyVV3FwExEmmXVARGZSNVFxNQiCBFrdTNTkbtBDiCC84sRi6gpE0VEK6XxLC+L76eUcwVo3oEAIouIeAMQFhEmFmZAREBHotdvbghXdVB2i3e33S4OTOTuw0EvlyosB/t780WOgH63hfTq6np8dDAc3U4JMZneTJejm9np8cF4MifC6j7odeaLHHA/yEBIk3mZzDITAcTk1dWb0eSrl29z8WUuDeBPH/0tmX764pub8RQRTeXi8vqjT/7+uz/8eTpbNoB+t307WTDTquFo2hb3GPTbIlyKN2qxWCxL9VLqqv4hRAQhCdOyVFybJUyIcDue74pNr9O6LxVEOLqdhkcjRAFBSI1yMeOmcYqAGiHrlgQBAiACBv3Orp5V9+/QIiECbnQOYJ0EzaHbhgqA7pZchIiARqyazdue6x4gALy6R2zOJYRcXJiIyMMRgAhzrkQYEe5BhI2fuRRm8hruocK7NtxpW7ptG+61I8DdS/VFrmdHg2+vxtfjeStJOMwW+ex7w9l8yUyHw+7F2/Eyl5zr2fFgdDvrddJer/X515e1xobBw7MfN+pfav3w6enF5e2zp6fX4/mPPjh7//HDo8PB7WT+wXvHD/e7k9kyF398up+SDHrtT168+tXPn19c3pwe9llYhM3k8mry9MnxP16NRPg+oFHQH7xz+Pjk4O31ZLYoQqAqo+vpoNdGxPkin78etUwPh53pLHfamktNJogYACcPB+Ppop10Os/XN7Ntamy664hQ4cenD+aL0uuk89cjBPjwh48+/fzlMnunbeHOzMK4WJaUtNexr15e7fVa09lShTsdm82WJ0fDv352TrTp1tZFHxFy8ZOj4eF+n5nfjCaPjveFeVlqMj066J8eDd45OfjJs3cBcLDXAYCLN+Pnz558/c3Vg2FvOOg+Ot4f7HURsdtJyXSTS/8EhKOt/RVEPgQAAAAASUVORK5CYII=">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="manifest" id="pwaManifest">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ═══════════ DESIGN TOKENS (Excel color palette) ═══════════ */
+:root {
+  /* Exact Excel tones: dark navy header + gold accent + white/light gray body */
+  --ex-navy:    #1F3864;   /* Excel dark blue header */
+  --ex-navy2:   #2E4A7A;   /* secondary navy */
+  --ex-navy3:   #4472C4;   /* Excel medium blue */
+  --ex-gold:    #FFC000;   /* Excel yellow/gold — THE signature color */
+  --ex-gold2:   #FFD966;   /* lighter gold */
+  --ex-red:     #FF0000;   /* Excel red font */
+  --ex-white:   #FFFFFF;
+  --ex-gray1:   #F2F2F2;   /* lightest bg */
+  --ex-gray2:   #D9D9D9;   /* border */
+  --ex-gray3:   #BFBFBF;   /* muted */
+  --ex-gray4:   #595959;   /* text secondary */
+  --ex-dark:    #1A1A1A;
+  --ex-green:   #375623;   /* Excel dark green text */
+  --ex-green2:  #E2EFDA;   /* Excel light green bg */
+  --ex-red2:    #FFC7CE;   /* Excel light red bg */
+  --ex-orange:  #ED7D31;   /* Excel orange accent */
+  /* Functional */
+  --new-bg:     #E2EFDA;
+  --new-text:   #375623;
+  --rev-bg:     #FFF2CC;
+  --rev-text:   #7F6000;
+  --r:          4px;
+  --r2:         6px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Be Vietnam Pro', 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  background: #EAECF0;
+  color: var(--ex-dark);
+  min-height: 100vh;
+}
+
+/* ═══════════ SCROLLBAR ═══════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ex-gray3); border-radius: 3px; }
+
+/* ═══════════ TOP HEADER ═══════════ */
+.header {
+  background: var(--ex-navy);
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  position: sticky; top: 0; z-index: 200;
+  border-bottom: 3px solid var(--ex-gold);
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+.header-logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.header-logo .logo-mark {
+  width: 32px; height: 32px;
+  background: var(--ex-gold);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: var(--ex-navy);
+}
+.header-logo .logo-text {
+  font-weight: 700; font-size: 15px; color: #fff;
+  letter-spacing: .02em;
+  line-height: 1.2;
+}
+.header-logo .logo-sub {
+  font-size: 10px; color: var(--ex-gold2); font-weight: 400;
+}
+.header-nav { display: flex; gap: 4px; }
+.nav-btn {
+  padding: 6px 14px;
+  border-radius: var(--r);
+  border: 1px solid rgba(255,255,255,.2);
+  background: transparent;
+  color: rgba(255,255,255,.75);
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: all .15s;
+}
+.nav-btn:hover, .nav-btn.active {
+  background: rgba(255,255,255,.12);
+  color: #fff; border-color: rgba(255,255,255,.4);
+}
+.nav-btn.active { background: var(--ex-gold); color: var(--ex-navy); border-color: var(--ex-gold); font-weight: 600; }
+.header-right { display: flex; gap: 8px; align-items: center; }
+
+/* ═══════════ MONTH TABS ═══════════ */
+.month-strip {
+  background: var(--ex-navy2);
+  display: flex; align-items: stretch;
+  padding: 0 16px;
+  gap: 0;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  overflow-x: auto; scrollbar-width: none;
+}
+.month-strip::-webkit-scrollbar { display: none; }
+.mtab {
+  padding: 9px 18px;
+  font-size: 12px; font-weight: 500;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all .15s;
+  font-family: inherit;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.mtab:hover { color: rgba(255,255,255,.85); }
+.mtab.active { color: var(--ex-gold); border-bottom-color: var(--ex-gold); }
+.mtab-add { color: var(--ex-gold2); font-size: 18px; padding: 4px 14px; line-height: 1; }
+
+/* ═══════════ LAYOUT ═══════════ */
+#pageMain { display: flex; height: calc(100vh - 90px); }
+#pageDashboard, #pageStaff, #pageSettings { 
+  display: none; padding: 20px 24px; overflow-y: auto; height: calc(100vh - 90px);
+}
+
+.sidebar {
+  width: 260px; min-width: 220px;
+  background: #fff;
+  border-right: 1px solid var(--ex-gray2);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-hd {
+  padding: 12px 14px;
+  background: var(--ex-navy);
+  color: #fff;
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-hd span { background: var(--ex-gold); color: var(--ex-navy); border-radius: 99px; padding: 1px 8px; font-size: 10px; }
+.pj-list { flex: 1; overflow-y: auto; }
+.pj-item {
+  padding: 10px 14px; cursor: pointer;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--ex-gray1);
+  transition: all .12s;
+}
+.pj-item:hover { background: var(--ex-gray1); }
+.pj-item.active { border-left-color: var(--ex-gold); background: #FFFBEE; }
+.pj-item .pj-title { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pj-item .pj-sub { font-size: 10px; color: var(--ex-gray4); margin-top: 3px; display: flex; gap: 5px; align-items: center; }
+.sidebar-ft { padding: 10px 12px; border-top: 1px solid var(--ex-gray2); background: var(--ex-gray1); }
+
+.content { flex: 1; overflow-y: auto; background: #EAECF0; }
+.content-inner { padding: 16px 20px; }
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--ex-gray2);
+  background: #fff; color: var(--ex-dark);
+  font-family: inherit; font-size: 12px; cursor: pointer; transition: all .12s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--ex-gray1); }
+.btn-primary { background: var(--ex-navy); color: #fff; border-color: var(--ex-navy); }
+.btn-primary:hover { background: var(--ex-navy2); }
+.btn-gold { background: var(--ex-gold); color: var(--ex-navy); border-color: var(--ex-gold); font-weight: 600; }
+.btn-gold:hover { background: var(--ex-gold2); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-xs { padding: 3px 8px; font-size: 10px; }
+.btn-danger { color: #c00; }
+.btn-danger:hover { background: #fff0f0; border-color: #ffaaaa; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--ex-gray1); border-color: var(--ex-gray2); }
+.btn-full { width: 100%; justify-content: center; }
+.btn-new { background: var(--new-bg); color: var(--new-text); border-color: #a9d18e; }
+.btn-new:hover { background: #d0e9c4; }
+.btn-rev { background: var(--rev-bg); color: var(--rev-text); border-color: #ffd966; }
+.btn-rev:hover { background: #ffe59a; }
+
+/* ═══════════ BADGES / PILLS ═══════════ */
+.badge {
+  display: inline-flex; align-items: center; padding: 1px 7px;
+  border-radius: 99px; font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.badge-osaka { background: #dbeafe; color: #1d4ed8; }
+.badge-tokyo { background: #fce7f3; color: #9d174d; }
+.badge-new { background: var(--new-bg); color: var(--new-text); }
+.badge-rev { background: var(--rev-bg); color: var(--rev-text); }
+.badge-gold { background: var(--ex-gold); color: var(--ex-navy); }
+
+/* ═══════════ CARD ═══════════ */
+.card {
+  background: #fff; border: 1px solid var(--ex-gray2);
+  border-radius: var(--r2); margin-bottom: 14px;
+  overflow: hidden;
+}
+.card-hd {
+  background: var(--ex-navy); color: #fff;
+  padding: 10px 16px; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-bottom: 2px solid var(--ex-gold);
+}
+.card-hd .card-hd-title { display: flex; align-items: center; gap: 8px; }
+.card-body { padding: 14px 16px; }
+
+/* ═══════════ HERO STATS (TOP BIG) ═══════════ */
+.hero-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+.hero-box {
+  background: #fff; border: 1px solid var(--ex-gray2);
+  border-radius: var(--r2); padding: 16px 18px;
+  border-top: 4px solid var(--ex-gray3);
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.hero-box.gold { border-top-color: var(--ex-gold); }
+.hero-box.navy { border-top-color: var(--ex-navy); }
+.hero-box.green { border-top-color: #70AD47; }
+.hero-box.orange { border-top-color: var(--ex-orange); }
+.hero-num {
+  font-size: 42px; font-weight: 700; line-height: 1;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+.hero-box.gold .hero-num { color: var(--ex-navy); }
+.hero-box.navy .hero-num { color: var(--ex-navy); }
+.hero-box.green .hero-num { color: var(--new-text); }
+.hero-box.orange .hero-num { color: #7f3500; }
+.hero-label { font-size: 11px; color: var(--ex-gray4); margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+.hero-jp { font-size: 10px; color: var(--ex-gray3); margin-top: 2px; }
+.hero-progress { margin-top: 10px; }
+.progress-track { height: 6px; background: var(--ex-gray2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--ex-gold); border-radius: 3px; transition: width .4s; }
+.progress-fill.green { background: #70AD47; }
+.progress-label { font-size: 10px; color: var(--ex-gray4); margin-top: 3px; display: flex; justify-content: space-between; }
+.hero-target-box {
+  background: var(--ex-navy); color: #fff;
+  border-radius: var(--r2); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-width: 180px;
+}
+.hero-target-box .tgt-title { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ex-gold2); font-weight: 600; }
+.hero-target-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hero-target-row label { font-size: 11px; color: rgba(255,255,255,.7); }
+.hero-target-input {
+  width: 70px; padding: 5px 8px; text-align: center;
+  border: 1px solid rgba(255,255,255,.3); border-radius: var(--r);
+  background: rgba(255,255,255,.1); color: #fff;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+}
+.hero-target-input:focus { outline: none; border-color: var(--ex-gold); }
+
+/* ═══════════ RENDER TABLE ═══════════ */
+.tbl-wrap { overflow-x: auto; }
+.rtbl {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.rtbl th {
+  background: var(--ex-navy); color: #fff;
+  padding: 8px 10px; text-align: left;
+  font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+  border-right: 1px solid rgba(255,255,255,.1);
+  white-space: nowrap;
+}
+.rtbl td {
+  padding: 7px 10px; border-bottom: 1px solid var(--ex-gray1);
+  vertical-align: middle; border-right: 1px solid #f5f5f5;
+}
+.rtbl tr:hover td { background: #FFFBEE; }
+.rtbl .row-new td { background: #f7fff4; }
+.rtbl .row-rev td { background: #fffdf0; }
+.rtbl .row-new:hover td, .rtbl .row-rev:hover td { background: #FFFBEE; }
+.rtbl tfoot td { font-weight: 700; background: var(--ex-gray1) !important; border-top: 2px solid var(--ex-navy); }
+
+.qty-inp {
+  width: 56px; padding: 5px 6px; text-align: center;
+  border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 14px; font-weight: 700; background: #fff;
+}
+.qty-inp:focus { outline: none; border-color: var(--ex-gold); box-shadow: 0 0 0 2px rgba(255,192,0,.2); }
+.type-inp {
+  width: 100%; min-width: 150px; padding: 5px 8px;
+  border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 12px; background: #fff;
+}
+.type-inp:focus { outline: none; border-color: var(--ex-gold); }
+.sel-sm {
+  padding: 5px 8px; border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 12px; background: #fff; cursor: pointer;
+}
+.sel-sm:focus { outline: none; border-color: var(--ex-gold); }
+
+/* ═══════════ STATUS TOGGLE ═══════════ */
+.status-toggle { display: flex; border: 1px solid var(--ex-gray2); border-radius: var(--r); overflow: hidden; }
+.st-opt {
+  padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  border: none; background: #fff; font-family: inherit; transition: all .1s;
+}
+.st-opt.new.selected { background: var(--new-bg); color: var(--new-text); }
+.st-opt.rev.selected { background: var(--rev-bg); color: var(--rev-text); }
+.st-opt:not(.selected) { color: var(--ex-gray3); }
+
+/* ═══════════ INFO GRID ═══════════ */
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.info-grid.c4 { grid-template-columns: repeat(4, 1fr); }
+.info-grid.c2 { grid-template-columns: repeat(2, 1fr); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ex-gray4); font-weight: 600;
+}
+.field input, .field select, .field textarea {
+  padding: 7px 10px; border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 12px; background: #fff;
+  transition: border-color .12s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--ex-gold); box-shadow: 0 0 0 2px rgba(255,192,0,.15);
+}
+.field textarea { resize: vertical; min-height: 72px; }
+
+/* ═══════════ PHOTOS GRID ═══════════ */
+.photos-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+}
+.photo-slot {
+  aspect-ratio: 4/3; border: 2px dashed var(--ex-gray2);
+  border-radius: var(--r2); overflow: hidden; position: relative;
+  cursor: pointer; transition: border-color .12s;
+  background: var(--ex-gray1); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.photo-slot:hover { border-color: var(--ex-gold); }
+.photo-slot.has-img { border-style: solid; border-color: var(--ex-gray2); }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+.photo-slot .ph-placeholder { font-size: 22px; color: var(--ex-gray3); }
+.photo-slot .ph-plus { font-size: 10px; color: var(--ex-gray3); margin-top: 4px; }
+.photo-slot .ph-del {
+  position: absolute; top: 3px; right: 3px;
+  background: rgba(0,0,0,.6); color: #fff;
+  border: none; border-radius: 50%; width: 20px; height: 20px;
+  font-size: 12px; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+}
+.photo-slot:hover .ph-del { display: flex; }
+.photo-slot input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ═══════════ OT TABLE ═══════════ */
+.ot-grid {
+  display: grid; grid-template-columns: 1fr auto auto auto;
+  gap: 6px; align-items: center;
+}
+.ot-row { display: contents; }
+.ot-row > * { padding: 5px 0; border-bottom: 1px solid var(--ex-gray1); }
+.ot-inp {
+  width: 70px; padding: 5px 8px; text-align: center;
+  border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 12px;
+}
+.ot-inp:focus { outline: none; border-color: var(--ex-gold); }
+
+/* ═══════════ STAFF PERFORMANCE TABLE ═══════════ */
+.perf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.perf-table th {
+  background: var(--ex-navy); color: #fff;
+  padding: 8px 12px; text-align: left;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+  border-right: 1px solid rgba(255,255,255,.1);
+}
+.perf-table td {
+  padding: 9px 12px; border-bottom: 1px solid var(--ex-gray1);
+  border-right: 1px solid #f5f5f5;
+}
+.perf-table tr:hover td { background: #FFFBEE; }
+.perf-table .total-row td { font-weight: 700; background: var(--ex-gray1) !important; border-top: 2px solid var(--ex-navy); }
+.num-c { text-align: center; font-weight: 600; }
+.mini-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.mini-bar-track { flex: 1; height: 6px; background: var(--ex-gray2); border-radius: 3px; overflow: hidden; }
+.mini-bar-fill { height: 100%; background: var(--ex-gold); border-radius: 3px; }
+.mini-bar-fill.blue { background: var(--ex-navy3); }
+.mini-bar-fill.green { background: #70AD47; }
+
+/* ═══════════ DASHBOARD GRID ═══════════ */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dash-grid.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.dash-grid.full { grid-template-columns: 1fr; }
+.chart-box {
+  background: #fff; border: 1px solid var(--ex-gray2);
+  border-radius: var(--r2); padding: 16px;
+}
+.chart-box h4 {
+  font-size: 12px; font-weight: 600; color: var(--ex-navy);
+  margin-bottom: 12px; text-transform: uppercase; letter-spacing: .06em;
+  border-left: 3px solid var(--ex-gold); padding-left: 8px;
+}
+
+/* ═══════════ MODAL ═══════════ */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center; z-index: 999;
+}
+.modal {
+  background: #fff; border-radius: var(--r2);
+  padding: 24px 28px; max-width: 560px; width: 92%;
+  box-shadow: 0 24px 64px rgba(0,0,0,.25);
+}
+.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; color: var(--ex-navy); border-left: 3px solid var(--ex-gold); padding-left: 10px; }
+.modal-ft { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* ═══════════ TOAST ═══════════ */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--ex-navy); color: #fff;
+  padding: 11px 20px; border-radius: var(--r2); font-size: 13px;
+  border-left: 4px solid var(--ex-gold); z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  animation: toastin .2s ease;
+}
+@keyframes toastin { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ═══════════ SECTION HEADER ═══════════ */
+.sect-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.sect-hd h2 { font-size: 18px; font-weight: 700; color: var(--ex-navy); }
+.sect-hd .sect-sub { font-size: 11px; color: var(--ex-gray4); margin-top: 2px; }
+
+/* ═══════════ SETTINGS TAGS ═══════════ */
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-edit {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--ex-gray1); border: 1px solid var(--ex-gray2);
+  border-radius: 99px; padding: 4px 10px;
+}
+.tag-edit input { border: none; background: transparent; font-family: inherit; font-size: 11px; outline: none; width: 80px; }
+.tag-edit .tdel { cursor: pointer; color: var(--ex-gray3); }
+.tag-edit .tdel:hover { color: var(--ex-red); }
+
+/* ═══════════ MINI STAT CHIP ═══════════ */
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.chip-gold { background: var(--rev-bg); color: var(--rev-text); }
+.chip-green { background: var(--new-bg); color: var(--new-text); }
+.chip-blue { background: #dbeafe; color: #1d4ed8; }
+.chip-navy { background: var(--ex-navy); color: #fff; }
+
+/* ═══════════ DIVIDER ═══════════ */
+.divider { border: none; border-top: 1px solid var(--ex-gray2); margin: 14px 0; }
+
+/* ═══════════ EMPTY ═══════════ */
+.empty-state { text-align: center; padding: 50px 20px; color: var(--ex-gray4); }
+.empty-state .ei { font-size: 40px; margin-bottom: 10px; }
+.empty-state h3 { font-size: 15px; font-weight: 700; color: var(--ex-navy); margin-bottom: 6px; }
+
+/* ═══════════ NOTE AREA ═══════════ */
+.note-ta {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--ex-gray2); border-radius: var(--r);
+  font-family: inherit; font-size: 12px; resize: vertical; min-height: 80px;
+  background: #FFFDF5;
+}
+.note-ta:focus { outline: none; border-color: var(--ex-gold); }
+
+/* ═══════════ GITHUB SYNC ═══════════ */
+.sync-status {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all .15s; border: 1px solid rgba(255,255,255,.25);
+  color: rgba(255,255,255,.8); background: transparent; font-family: inherit;
+}
+.sync-status:hover { background: rgba(255,255,255,.1); }
+.sync-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #888; flex-shrink: 0; }
+.sync-status.synced .dot { background: #4ade80; box-shadow: 0 0 5px #4ade80; }
+.sync-status.error .dot { background: #f87171; }
+.sync-status.syncing .dot { background: var(--ex-gold); animation: pulse .8s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ═══════════ REPORT OVERLAY ═══════════ */
+.rpt-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65);
+  z-index: 2000; display: flex; align-items: center; justify-content: center;
+}
+.rpt-container {
+  background: #fff; width: 860px; max-width: 96vw;
+  max-height: 92vh; border-radius: 8px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,.4); overflow: hidden;
+}
+.rpt-header {
+  background: var(--ex-navy); color: #fff;
+  padding: 13px 20px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 3px solid var(--ex-gold); flex-shrink: 0;
+}
+.rpt-header h2 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.rpt-actions { display: flex; gap: 8px; }
+.rpt-body { flex: 1; overflow-y: auto; }
+
+/* ── REPORT DOCUMENT ── */
+.report-doc {
+  padding: 40px 48px;
+  font-family: 'Be Vietnam Pro','Noto Sans JP',sans-serif;
+  font-size: 12px; color: #1a1a1a; background: #fff;
+}
+.report-doc .doc-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 16px; border-bottom: 2px solid #1F3864; margin-bottom: 24px;
+}
+.report-doc .doc-logo { display: flex; align-items: center; gap: 12px; }
+.report-doc .doc-logo-mark {
+  width: 42px; height: 42px; background: #1F3864; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #FFC000;
+}
+.report-doc .doc-title-main { font-size: 18px; font-weight: 700; color: #1F3864; line-height: 1.2; }
+.report-doc .doc-title-sub { font-size: 11px; color: #595959; margin-top: 3px; }
+.report-doc .doc-meta { text-align: right; font-size: 11px; color: #595959; line-height: 1.9; }
+.report-doc .doc-meta strong { color: #1F3864; }
+.report-doc .section-title {
+  font-size: 13px; font-weight: 700; color: #1F3864;
+  border-left: 4px solid #FFC000; padding-left: 10px;
+  margin: 22px 0 12px;
+}
+.report-doc .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
+.report-doc .kpi-box {
+  border: 1px solid #D9D9D9; border-radius: 6px; padding: 14px;
+  border-top: 3px solid #1F3864; text-align: center;
+}
+.report-doc .kpi-num { font-size: 30px; font-weight: 700; color: #1F3864; line-height: 1; }
+.report-doc .kpi-box.gold { border-top-color: #FFC000; }
+.report-doc .kpi-box.gold .kpi-num { color: #7F6000; }
+.report-doc .kpi-box.green { border-top-color: #70AD47; }
+.report-doc .kpi-box.green .kpi-num { color: #375623; }
+.report-doc .kpi-box.orange { border-top-color: #ED7D31; }
+.report-doc .kpi-box.orange .kpi-num { color: #7F3500; }
+.report-doc .kpi-lbl { font-size: 10px; color: #595959; margin-top: 5px; text-transform: uppercase; letter-spacing: .05em; }
+.report-doc table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 16px; }
+.report-doc table th {
+  background: #1F3864; color: #fff; padding: 8px 10px;
+  text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+}
+.report-doc table td { padding: 8px 10px; border-bottom: 1px solid #F2F2F2; }
+.report-doc table tr:nth-child(even) td { background: #F9F9F9; }
+.report-doc table tfoot td { font-weight: 700; background: #FFF2CC !important; border-top: 2px solid #1F3864; }
+.report-doc .c-new { color: #375623; font-weight: 600; text-align: center; }
+.report-doc .c-rev { color: #7F6000; font-weight: 600; text-align: center; }
+.report-doc .c-tot { font-weight: 700; text-align: center; }
+.report-doc .c-ot  { color: #C55A11; font-weight: 600; text-align: center; }
+.report-doc .b-osaka { background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600; }
+.report-doc .b-tokyo { background:#fce7f3;color:#9d174d;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:600; }
+.report-doc .pj-block { margin-bottom: 18px; border: 1px solid #E8E8E8; border-radius: 6px; overflow: hidden; }
+.report-doc .pj-block-hd {
+  background: #EEF3FB; padding: 9px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #D9D9D9;
+}
+.report-doc .pj-block-hd .pj-name { font-weight: 700; font-size: 12px; color: #1F3864; }
+.report-doc .pj-block-hd .pj-chips { display: flex; gap: 6px; align-items: center; }
+.report-doc .pj-block-hd .chip-new { background:#E2EFDA;color:#375623;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600; }
+.report-doc .pj-block-hd .chip-rev { background:#FFF2CC;color:#7F6000;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600; }
+.report-doc .pj-block-hd .chip-tot { background:#1F3864;color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600; }
+.report-doc .ot-staff-block { margin-bottom: 20px; }
+.report-doc .ot-staff-hd {
+  background: #1F3864; color: #fff; padding: 9px 14px; border-radius: 6px 6px 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.report-doc .ot-staff-hd .sname { font-size: 13px; font-weight: 700; }
+.report-doc .ot-staff-hd .stotal { color: #FFC000; font-size: 13px; font-weight: 700; }
+.report-doc .doc-footer {
+  margin-top: 36px; padding-top: 12px; border-top: 1px solid #D9D9D9;
+  display: flex; justify-content: space-between; font-size: 10px; color: #BFBFBF;
+}
+.report-doc .sign-section {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 28px;
+}
+.report-doc .sign-box {
+  border-top: 1px solid #595959; padding-top: 10px; text-align: center;
+  font-size: 11px; color: #595959;
+}
+
+/* ═══════════ THEME PICKER ═══════════ */
+.theme-swatch {
+  width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent; transition: all .15s; flex-shrink: 0;
+}
+.theme-swatch:hover { transform: scale(1.15); }
+.theme-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px var(--ex-navy); }
+.color-picker-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.color-picker-row label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ex-gray4); font-weight: 600; min-width: 120px;
+}
+.color-picker-row input[type=color] {
+  width: 40px; height: 32px; padding: 2px; border: 1px solid var(--ex-gray2);
+  border-radius: var(--r); cursor: pointer; background: #fff;
+}
+.color-picker-row .color-preview {
+  width: 80px; height: 28px; border-radius: var(--r);
+  border: 1px solid var(--ex-gray2); display: flex; align-items: center;
+  justify-content: center; font-size: 10px; font-weight: 600;
+}
+
+/* ═══════════ OT log entry ═══════════ */
+/* OT log entry */
+.ot-entry {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid var(--ex-gray1);
+  font-size: 12px;
+}
+.ot-entry:last-child { border-bottom: none; }
+.ot-date { color: var(--ex-gray4); min-width: 70px; }
+.ot-hours { font-weight: 700; color: var(--ex-navy); min-width: 40px; }
+.ot-name { color: var(--ex-gray4); min-width: 80px; }
+
+/* month summary table */
+.sum-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sum-tbl th { background: var(--ex-navy); color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.sum-tbl td { padding: 9px 10px; border-bottom: 1px solid var(--ex-gray1); }
+.sum-tbl tr:hover td { background: #FFFBEE; cursor: pointer; }
+.sum-tbl .tr-total td { font-weight: 700; background: var(--rev-bg) !important; border-top: 2px solid var(--ex-navy); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAAEYCAYAAACHjumMAAArNUlEQVR42u19+Vdc15Xud25VUQViBhWDGIQAoZlBSCA0WZInOc5zpNiZ2o6dxHmdl+50lO70e+8feO+tjnt1Yncnfq8TD1nLmTzJUxTHg2RJGDSjmUlIYhSTJqCgiqq6+/0At1ygKmqggHtv7W8tli2ouvcM+3xnf+fss48gIjAYDMZcQOImYDAYTDAMBoMJhsFgMJhgGAwGEwyDwWCCYTAYDCYYBoPBBMNgMJhgGAwGgwmGwWAwwTAYDCYYBoPBYIJhMBhMMAwGgwmGwWAwmGAYDAYTDIPBYIJhMBgMJhgGg8EEw2AwmGAYDAaDCYbBYKgUxoUugJ6uTRFCcN24bqqv37y+m+9FYjAYuvJgiAhCCJw/f54GBgZgNBo13YhEBIPBgI0bNwqz2QwA6O7upsbGRphMJs0bicvlwpo1a5CRkSEAwGaz4dSpU7qYmZxOJwoKClBYWCgAwO1248SJE2S32yFJ2l5BcLvdSExMRGVlpYgqglFw69YtdHd3w2w2a9otJSIYjUbIsuz5nc1mQ3d3NywWi6brJoSAw+FAYWHhFMK5ceOGLqSD3W5Henr6lL7s6+vD6OiopglGCAGXywWHwxF9Hozn5UYjYmJiYDKZdEEw3pAkSRd1E0KAiKYMNiGELjwzIQRkWYbBYJjye5PJBJPJpHmCUUM/GRd6YHr/aJlgfJVfD3VT6hHM7/TSd3rqt4WuA29TMxgMJhgGg8EEw2AwGEwwDAaDCYbBYDDBMBgMBhMMg8FggmEwGEwwDAaDwQTDYDCYYBgMBhMMg8FgMMEwGAwmGAaDwQTDYDAYTDAMBoMJhsFgMMEwGAwGEwyDwWCCYTAYTDAMBoPBBMNgMJhgGAwGEwyDwWAwwTAYDCYYBoPBBMNgMBhMMAwGgwmGwWAwmGAYDAYTDIPBYIJhMBgMJhgGg8EEw2AwmGAYDAaDCYbBYDDBMBgMJhgGg8FggmEwGEwwDAaDCYbBYDCYYBgMBhMMg8FggmEwGAwmGAaDwQTDYDCYYBgMBoMJhsFgMMEwGAwmGAaDwWCCYTAYTDAMBoMJhsFgMJhgGAwGEwyDwWCCYTAYDCYYBoPBBMNgMBhMMAwGgwmGwWAwwTAYDAYTDIPBYIJhMBhMMAwGg8EEw2AwmGAYDAYTDIPBYDDBMBgMJhgGg8EEw2AwGEwwDAaDCYbBYOgVRm4CBuMLCCGm/OihHuzBMBgqABFxI7AHw5iL2U7tM+F81p89GCYY3Q5oLRmvXuSQHkmVCSaK9DzXgcESiTFvA1NtAzYYiaQ3L8zXLB9KndRef7VMDEwwcwxJkiDLsi4Hp14nAUmSPD8skZhgVD8IWcszonUiMHJjq+/Z820ULJGE7myWJVIUzI56H5wskZg82YNZIK+DpQWDoXMPZj4Ht1brEejZQgifMzlLJIYmPJhokEh6k0TRHminhborEwNLJJ2sIcwkkfiMC08M7MFEWUfONcFoWe4FO8vrgUjUMMvr0W5UQzB67uCZ6qaVOkfrTpgaPJjZvJ8lks5YnXeRWCIxolgiaV3CLLRE8kWgLJEYqvdgojHQTq16ORolkh7SNfirA0sknc300USeLJF4PESlRFITwczFs6Zvec+HNIvUO9SYpoInASYYngW9MN/nY3zVw190r176iDPasURS3SzKEoknB66DCglGLy64HnbC/L1T72eRGCyReAZZIOKZizqopb+jQSJFNcHoxasgIp9bgnrfgmeJxHXQtQcT7e7tfBGoXvuIJRITDM8gCzxoAwXa6VFGsAfDEkkTsyVLJB6cTDAaGYRauIdGj+QQjVfHMlgiadoF19IgmcuzSGpIh+DvvA57MCyRVGWs02NFomF9icGIGg+GDX5uJRK3D3svmvRgtGrAoa4b6W2Q6vVWAeXffC9SFEskNRj39DL4M0YtXXQfwFB16cZwUnaWSJqcOdW2BhPpK0i1cnWHlvpIj+qAd5HmEHpOx8hxMOruC7V4ZkY2ZB5wM9UlGmNg9JSrlz0YHRiwFk/kBlsuTvrN0LUHo3aGVlzRmUiGJZK26sBHBXREMMp2IK/kM9RCNEwwOpNIepn1tOwFzFQvzmjHiAqJpMb4l5lmQb16Z3q60oMz2kWBB6P1+5v1LBui8WoPlkhRQjDRvA6glndG482OjCiQSGq9RtUXlJy8gQxYr7EyLJGYQFVLMHqdIdk7Y++G68ASKWKzeDiHCLXgkfgLRmOJxNAEwah18M2WMPS0i6T3NRiWSFEmkXhWYbBnPfs68GFHDbmpwRz9n2+vaSH7hyWSuqEWr9moFUNQ+zuCTRytxchlf1nf2FNRv01G/SKvjqNdhRCCWO7pn3jUTFBRTzB68aDm8toQNUwC0SSROMQgighmvuWRL08q3IjXcI1UK4cgWSIxVE0wgPrSNUTS2PRkvHwWSZt9sNA3IxjBiMhAipQxznQcYSEGfDgDTWuJ2dmziSKCUcOaQyS+F2kjXaiZyF8dtHxnkHfdOGWmjglGkUd6zWjHxssSKdplqZGNSUTMIPVoaP5uOORdpOixb80RjFqTGc2mHJGSSL4+H+7OlhqlI3sqLJFUMYvoydXWm6scDYOSDzuyRFLVrK1XvT4fRrpQbccejM4JZqE7ONIxL9FkvHx1LHswTDDsaanSSNW05qbnRV6WSDoapMGeptbaAA3n6litBdrxBKdjguFFXvaamHj020fswcyhB6OH+uk5HiQaJFLUn0XyjonRMpv7S8qk9TQO4Wa000qWQpZHOiYYvR8VYImkmboIPbYFS6QFaGg1RMVqUUZEUxspkx7vImmcYOZLHgUziCL9XDUOzHCTX03X8XohHL0QCUukAJ3Mu0gskRiRb3OOg9HRwGGS1F+dtW4LLJG8GmA+d0Xm47l6SbsYTqCdlojEXyoK3mHSEcFEw8lcrpN668AyliVSxBrYexdpLg87ehOomhKah1oWvU0A02OV9D7x8d3UEexItd1fpEYjDSeyU8/3h8903QxLJJZIPItwnVQxuTGiUCLN5yCZaRbUcpRytA5ClkjswaiqMSMZwLcQ9Qgl/YKeBp+/IEImGCYYTc+CnApAPf0T6CgJgyXSgg+I+T5NzZMA15k9mHnUunpKuq12iaRnD4YlEkskzXQkSySuB0skHRrJQl0Uz242SyRGFHgwC5EmUOsSaSboOYeO3gPtol0iCSEE6f0siNbXMPQeyctgiaR6I9HKUQEGy9uoIphId6QebolUm6HodReJJwH9SyTNd7A/GcQLhdHr/aisPAtaICN3KNc11PfqiTh91UNPuXo5DkanHoze5F80pWtgsAejeiNnicRg71vltwpobStXr+/Xer7kcN65EPmi52p8sURiiaR6iaQ2w51j+afr+CyWSDpwL1kiMRgq9mACDUy1ha/r4YqScGSs1uuqt6MC3tvSRES8ixRmR6otetdXvMEsL+9Sk3WTD9LRhWsmhKAZ7JLdz2iUSAu0GChCLRMbKYMJRiVrFRqazaORiDXRBZHyhJWJQQdmJ1gi6WSWny8drxZpqJdbEX0Rib8rZdnb16lE0kKMiZ+tXMHXknI9WCIt7Ewo9BqGzgNIm/XV+1mraJRImu/EhdrqXKgo29m+V019rufDnFHtwWhlgIUrkfR+5xODoXoPRi/H4tU+8NWQCH0hSWymC9WiLR0FezAq7iR/AzWQhFjojo70rojWBqC/+vuLCGeCiQKCUYv8Cebz/g4EskRisERiicQIQjZEm6zUA/myB6MT49PagbnZlEvvuywcaMcSad7e4a3RgzjSEDWyguvCUD3BaCG5sh5neh5Q3D7swejI0NRisLMlSz0MwkD3mLN3piOCmZZPRVcdofcFbJ7lGZrwYHgXicHQ79hiiaSiGXu+jSHY90WbjIiklGSJtMCVV8tC6FyUQe8XljHBMJhguG4MBksknq3V7SVMX5DnyF6uiyYIRu8pDdiDYbAHwx4KlyMIryVaZnmeFHRCMGpZp5jLBd5Qns13cbPXyRIpwpXXy6EylkgMBkukeR3wevVe9OTB6DmUgD0YHSXFDufdWjZk3kXiumjCg2Etz2CwRNIkW8+U6HkuyC1USRSofGoi5XATb2l1lueIa51IpLnEQi8ghyORtJLtX++L81wXJhiWSAwGSyRmd66DussdTalO2YOZxXdDyZ+70PULVH61Gfj0MuhJIum5blHvwURy8Gj9ugieKRm6Uwnh7mQwGAxGILAvyGAwmGAYDAYTDIPBYDDBMBgMJhiGxhDpTQMiAojbT6vQ7C4SEXk6w3t7l4juiWPw/mxQjTLLKFxf5fJlPN6fW4gtaiKKyHtlWZ6YrbzaXWnzUGNKlO/5ahPlPcG2l79+iOTn/X0n1GfMVF8tx+VojmBCNYJIYGxsDCaTCQaDYU7fK8ty2MYUKbII8aUgr75wuVxw2O0wmUyIMZtDKpsvQnK73bDb7RBCIC4uLmJttZD9NJMdO8edGB8fh8FggCXWopr6zgaaOirg3cjXrl6jxsZG3BwcxOjYKEgmyETIzMzEnr17hBDC8/m2K210+LPPYDSZQJOzgk+2lSTY7WMoLStDVVWVcLvdMBgM6OnupuvXr2PX/feLmTpaGUjnz58n2S2jrLxMeBvSZ4cOUePlRs/3LRYL0tPTUbS8GCUlJUKSpLCIQpZlfPrJp7Rz105hMBiCIqLe3l5qvHwZO3buFGGTkxAQAE4cP0Hnzp7F2NgYZJIhhAST0Yii4iLs3LVLGI3GGevlPYP39PRQQ0MDuju7YLfbPQNRkiQkJCSgYNkyrK9cL+Lj4/2Sl/K71uYWunX7Fqqqq0Uw72+/3k6dHZ3Ysm2L3897k2Dj5UZqbW3B7Vu3YbfbJ0jW7ULx8uV48MEH/T7D24autF6h8+fPoa+3D+POcYAIgIDBYEBKSgpKVpSgvKJCGAyGhZlEooVgSJ7o2OamJvrww7+CSMayZYVYvWYNUlKSYTAY4HK54XQ67/nu9evXYLfbsa1qI9xuGZLku5MEBFwuF6wZGVNmF7PFggMHDqCsrBxp6WmYyfiEEOjs6ITT6URZedmUz168cBHrSkuxtGApZJcbQ8ND6Ozswkcf/hUfvPc+7bx/F8rLy4Me8Mrn+vv6af/+/Vi5aiXl5OQE9f3h4WFcvHgRO3buDHv2HR8fx8svvURut4ytW7cgP3+piI2Lxfj4OHp7e+lYfT2e+5ef0Xef/R4yMjJ8lksZbENDQ3hn/zvU19eLkpIVuG/HDiy2LhaLFi2CLMsYGhpCT08PXbpwEcfq62ldaSl2P7JbKGkvpsvkSRJFR0cHqqqrgyK4wcFBNDc3Ycu2LX4/L4TAyZMn6chnh2GxWLCssBDlFeVISkyCkCQ4HA4YjAa/XrZS387OTnr/vffgHHdi9erVKC+vQFp6mrBYLHC5XLhz5w51dnSgoaEBhw4dom3bt6OqqkooniM0QjSaIBilU97d/w5dvHQRjz76KErLyoJuYSEECosKsWbt2pB6RTEQo9EI+5gd+99+m579r98POIBjYmJ8/t1sNmPZsmXIyc3x/HFdaSkAoKWlhfa/9TaaGpvom9/6pgjGJVbKcerkSSQlJuLUyZPIyckJaqYzGAyIjY0NX1sLgVdffoWys5fgsa88JqbXMyEhQRQXF+PYsWP04q9exL59+5CUnDSlbEodm5ub6fU//glV1VX4myf/xqcXZrFYYLVaRVlZGW7fvo333n2XfvFvP6dnv/99EZ8Q77POJpMJZi+pFnAwGI1+P688/7evvEo3b97EY3u+gqKiIhGOHR85fISOHD6Mh3c/jMoNG4Qv+4mLixPZ2dmoqq5GR0cHvfP2fjQ1NtK3n35aTEyG2oCkFXJ56823qPVKK376z/8sSssmpIcsy5Bl2aPfZ1rMdTgckGUZLpfL8z1/P9OfMTo6ivKKCthsNtTX1ZMkSZ4FuECLf9N/73A44F125X3Lly8X//1//g9hs43gd6+9FtQ7JEnC6Ogompqb8N9++EO0tLRidHQUitQKRE4zPX+m/hBC4OzZs+R0OvHYVx4T97TbZP3dbjeqq6vFtm3b0NffR74W4xsbG+l3r/0OTz/zNB586CFhMBim9On08sqyjJSUFDz9zDOivKICv/jFL8g2YvOZwCvUxX1/n1fq/J//7z/J5XbhH3/6T6KoqCgkG1Ts+OOPP6b6+jrs+8k+Ublhg+cZM9U3Ly9P/MO+H4uYmBi8+KsXSZH/TDARIpezZxqotaUF+37yE2E2mz0dLkkSJEmackWIv5nb+/OBfny58TEmE7729a/hg/ffh81mCzsjnXc5vd+nGMyz3/++6L3RiyNHjsxIMsq7z5w5Q8lJycjLzxNpqak4ffo0ef99rnDx4kVUT0oPZY3E026T9VPWDXbu2ilKSkqEUn/lO4ODg3jj9dfxgx/8LfLy84Xb7Z7yrOn3MintpZDX9vu2iy2bN+Pll1+muaqvYoMfffhXcrtc+N6zz3pIIVgbVJ5x6dIlOnn8JH68b5+IT0iY8oxA9ZVlGd/81rdEQnwC3nzjzYATEBNMkIPR4XDgwF8O4Kmnvw2j0bggq+mSJMFmsyErO1usXbcOb77xJs0m5aW/dyjxHs985zviyGeHMWrz740oxni2ocGzxlCzZTPOnDnjV/9HpE8m/2uz2ZCSmhrwXUo7Ta+DEAJvv/UWPfDAA8hessSzoB6sXRgMBrjdbty3c4eIi4vFkcNHIj6zK17WzcGbOHHiBJ5+5hnhTaih2PH4+Dg+eO99fPvpp2CxWEKyY4V8ZFnGk089Ka5ebUPblTYKxlNlggngip8+dZqysrKxZMkSMdtt3Bl/fEij6QRARNizd4+4du0qmpubIz6LCGnCiNLS01C8fDnqj9X79EaU9YCuri6y2+1YtXqVAICSkhLhdIyj/Xp7xAnQ8+7J/ybEx+PGjRsQQkDxPAINEO+yX21rI/uYHZtqaoQsy0GTi88+2bNXnDx5EuPj4xGdfJT2O3r0CJWWlSJuUVzIOzmKHdd9Xke5ubnIyc0Ny46VdwpJ4OGHd+PTTz5hiRQJXL58GevXV8xqsBARTCaTZ+ab7s4KISB8SCNfg8RsNmPv3r1440+vw+VyzYnXRkSoKC9HS1OzTw9BaYv6z+uwevUaz2wuSRLWrF2Dus8/x1zJJKUsW7duw6GDB3H37l2PZykHIGnvMh0/fgKlZWURaavUtFSkJCejqbGJlEEdKcInIrRfb0dl5YawtomVz1+4cB7VNZtmtdWsEOrqNauFzWbDzcGbmKuJRPcEI0kS3C4XbCMjyMvPF7OJdjUajejr7cOV1lZqaW6m1pbWKT9XWlupuamJ+vv7Aw5Mt9uNdaWlYvHixTjw5z/PiRYWQmBJbo5wOByeQLPpbWO323H16lXP1qXiAVRVVYtr169jbGxsTqSkYtC5ebnioYcfwgu/eJ5OnTxF09eT/LWhMkgGBwZQUlISETlHRCgsKsKVK60R9V4EBG7fvg0BAWuGNWQbVMjkzp07cLvdyMvLE5GIEjcYDMjIzMSVK63zst42G6hym1rpmLtDQzAYDEhMTAzaEH25n0ajEVevXYVbdk+4rNM2+YQkYB+zo6y8nKxWa6AErSAifP2b3xDP/ew52rhxI2VkZUYsIloZwHFxcYiJicGdO3coMzPTszWu1K+hoYHSFqcjNS3V8zsiQkpqCjIzMtDQ0EA1k/Ij0kSjlHFjVZXIyMikd995B3X1dVRRXoF1peuE0l/+oq7HRscAAClpqWK2BKMM2MysTFy9ejXi8ujWrVsUtygOBoMBMhGkEOKTFNy8eZPi4+MnPL0gnxEIVqsVg4M3VS+RVB0H43Q6KdQFNV+ftdvt2LRpE3Y/8ogI1mj9Pn9ycCUnJ+PBBx/AH37/B/zkn/4RMkV+RV8ySBgfH/dZtoYzDdi2fZtPw95YVYVDhw6ipqZm7hZ7J8kuf2m++Id9P0ZTUxMdP3Ycx+rrKTklBdXV1Vizdo3wJn2lfI5xBwgTsjVSsFgsnraKZJ0ddvsX60NBBrhNX2+y2+2QpNCeEbC+Zgvu3r3DazCz0flms3nCQN1ysISElpYW8rVj4XQ6A8bBBOuFKLJo+333Cbfbjdra2ohKJcVDcLvlKYFfisH29PTQ2OgoVq1aJbxD15VBvGLlCjE2Ooauri6aS42uvI+IsGLFCvH0M0+Lv/vR34u169biyOHDeOH556m9vZ2mH4EwWyyQhATnNPKcjacxOjoKy2RbRaK+SlljY2O/WGsLghdGRkbQ1tY2pQBxcXFfLIRHiPzG7GOzCpTkRV4ACZOxAneH7s5oON5G9u4773gIafotA6HGvwRjgN/41jfxlwMHMDw0FBEpopR5bHQULqcTycnJ98SP1NfVY3lJic8tbCKC0WjEqtWrUVc7d4u90yWKEqsRGxuLqqoq8cO//zuxZetWvPrKKzh96vQUoouNjQWBcHPwZkTWEIgIN3puIDklJeL1S01NE2NjYxOL6EIK2G/9ff305w8+mPK3tLQ0YRsZgdPpjIg8AoC+vl5YrVYmmHChbF3Gx8ejvb2dgonKFEIg1jw/rK5IhJycHFFZuQGv/+kNitRaBxGhs7OTzGYzzGbzlGC28fFxXL3ahi1bNgtfklD59+bNNeL6HC72+moP5T2KR1hRUSF+9KMfiT9/8AH6+iYied1uNwSAjIxMNDU1zpoAFYK72taG5cuLI77ONHG8Aejr7Q3KBg2SAbFmy5RnJCYmIiYmBteuXaNwI6i9y+VyutDf14+i4uJZr2FF9RoMAKxZtxanT55CWVlZUIY4F2shgSTCo19+VPyf//W/6cKFC7R27VoxGwNSJM+JEyexavUqz++U3zc1NdGNnhv44x/+SG63e8JtJ3zxX8XQDQbcuHEDLU3NVFpeJuYzQFF5j8vlQmpaGjZWVeFYXT0e2/OVydPCQHV1Nd568y3s3LVr1t5eb28vDQ8PY3lJiQgnB02gvigsWobjJ05gz549nrgWv9/BxKn+6bK2rKwMx+qPYfny5TOe6A806UqShHPnzlFySjKSk5NVn8ZBtQSjDN6Kigpx6OBBunb1KhUsWybU1qBKjM3jTzyOP/7pT1i7dq0nLiVcA+rv66eOjg488bUnPANGGUyf136OJ772BAqLioQsyzRDSgFxpfUK1R87htLysjmZ5QLFdCjlzszMwMULFydmYEmCTIS8/DyRnJJMhw4doh07doQUyTvdy93/9tvYVFPjicfxzPaSBLfsDroubrf7nnB9ANi6dat44YV/p507dyIxMTGkWBalDTZWV4m6ujpqa2ujwsLCkO1YeafL5cJHH/0VTz71FNTuvah+DQaY2GJ+9NFH8dprv5vQsJIEOYzBO5dEKMsyVq1eLXKX5ODjjz6m+IT4kN1gb4N79ZVX8cADD8BisUzJeNbf10/DQ0Oorq4WVqsVmZmZIiMj456fzMxMYbVaUbO5RgwPDeFGT8+cLPYGfOZkufv6+pGcnPzF9yYHzN6v7hW1R47i6pU2CoWUFZlhMBhw4IM/kyQZsKlmk4eMlUG3JGcJBvoHgh68nZ0dyMjMvEcGJyUnY8uWLXj1pVfIO2w/VDv+yt49+P1rv8PQ3Yn1umDr653J79WXXqG1a9cidzIimAkmAuscq9esERs2bMALz79AIyMjkCZnulB2gaafYA7lNHWwA+3r3/iGOHPmDC5dvITYaRnJvMtBsgzyep/3+sov/+M/qHh5ETZWbRTe27sAUFdXh5IVJRMzs9s949EHxXhXrlqJurr6iC32Ks84cfw4HTp40LOuMv1EsVt2T/QTAQ0NDSgtK52yZgIASUlJePKpp/Db3/4WTY2NZJjWr9PrpPxeWe85cOAAXbh4Ec985xkxfUGfiJCTmyvcsoyzZ8+SJElwuVw+28lgMMA2MoILFy5i/fr1U9Y1lAlkx84dIm1xOn7z69+Qp1+m2aC/4yaKHRcVFYld9+/CCy88T4MDg/CuL8nks77eku/ll14ig9GAR7/8ZaGVDHeqL6HSwQ/vfliUrluHn//bz6nu889JCY2XJAkGgwGSJCE2Ls5vo1ssFkiSBKPRGPJukvcC5kwEk5iUiPsfuB+1R44iJibG9yJ0bCyEJEGaLLPy3IaGBvrXnz1Hubl52LN37xQDUlz91pYWbKqp8Szu+jzy4HVSGwA2bdokrly54vH+vIPfwj7XBULBsmXis4Of4eTJk6S0v/f7DdKER/KbX/+aioqLkJuXNyWPjjLoCpYViO8++z28/dbb2P/2flLSTfiqn/L7np4e+r8vvkjt165j30/2CWUr/55+A/DVx7+Kd/e/g9aWVjIajfc802AwYHhoGC/+8kXatm0rUtNS75FASrs9+dSTIikxEc/9y8/o3NlzJCb/ptigkCTExsb6bFfFjms2bxa7H3kEL/7yV3T4s888ZCUk330ohEBTUxP968+eo4T4BHzne9+N6DpT1C/yenfO/Q8+IJavKKG/HPgL6urqKTcnB0tyliAlJWXCUIaHMTw8fE+8AhHh8qXLSEpKItktQ0j+Uzo4nU4syclBQUGBZ0C43W6Mjo0FVcb169eLdaXryDZiu+czdocdFy9cwNDQXVKytHV3d6OjoxNGgwF7v/pVrFi5Ygq5KP9/vP44LVq0CFarNag1AGUAp6WnIykpCcfq62nrtm2emd7tdnsiasPx1hYvXoy//eEP8Oorr+DyxUtUuaESmZmZwmQyYWRkhFpaWnDs2HEsW7YMjz/+uM8kXUqb5efni3/66U/x/vvv0b8//wLlL12KkpISZGVlIS4uThAR7t69S11dnWi83Ihbt26helM1tm7bJvytBXmONOTmiqe+/W36wx9+j6VLl1JFxXpkZmYIg8GA27dv06WLl3DmzBls3rIF2++7T8yUyY6I8MTXvyYuX7pMn37yCQ5++inl5edjyZJsJCYmQZIEOju7MObHVrxtJD8vH++99y6dPHGSipcXo6i4GFarVZhjzHC73bh16xa1t7ej8fJlOJ1O7H7kEaxZu0ZoLW2mppJ+ew+8vr4+ampsQn9fH0ZGRjy7Fjm5uXh498NTcvJ2tLdT3ed1nvwkMw0eu8OB1WtWo6KiwjPQBwcH0dLSQjU1NUHndu3oaMfWbduE4mkJIVBbW0uXL16CKcYEECEubhEyMjJQvLwYS3JyxPQ6ej/zXMNZWhQfj6LiopBSakIIXGu7SkNDd1FWXv5FnQYG0NrSSps214RltF8sOrpx9MhhutJ6BWNjY544nJTUVFRVVaGwqDDg873/fvv2bZw7e5bar7djZGQELrcbkhAwmkxISU5G8fLlKC0r9eT5DbTQ6YkedjhQe+QotbW1efLnmkwmZGVlYVNNDTIyM4KSHd6f6ejooJaWFgwODEym1hAYH3di1apV2LJta1A5eXu6u+n8+fPo7uqGJ95GkhATE4PFixdj5apVWLlqpU/bYIKZo10bLayej42FFmmplXrNtIukrGkYjcagd5q8dBdkuncAuVwuj5TxN0hDLaeyXmLwKmeoz5ttX/m71sXlck2RziG3IxNM5Ix7phO7wX7WnyfjLytZKAYtyzJ6untoSc4S4S/xkr/3RdKo/d0fFSkt7+v+HmUxNhzPyFdSJ3+/D2XdiGS6JzeNvzuJZmWDAjNG/YZS34W6Myuq1mCCJYFIfHamNZZQyqYYyenTp5GdswRiFuUIhVz8rUfMRZvM1DZhkcAMA2q25RUQ96y9zZbYI9GGc1VfJpgoga/dpHCMcC4+q8ZJg8ukL/Dd1PO0ZjSb7w4ODuLu3btBPa+rq4scDocm26qzs5PGI3DCOpL9dvfuXdy8eXPWfckEo5HB6h1BGWo0pXewVrjvDsfIpn8v1Pf39PTQ4OAgBTMgzp49C5vN5gnom6+2nU1bKesNZxsaPDtRoV43Mj0wL1IYHByknp4eCrfeFKbN+HqeFglOUxJp+gJdOImTw92ODVcTCyFg9IrY9LVDEMg9X7dunQjWZY+Li4PZbJ74XAgXsE+v32zXUMLJXTul7BFYt4mENCosLAy67aeXg4ggJtsx1F0gX/XSolzTBMF4cm3091NLS4tnh8JkMqGiokIEur1P6aymxiYaGx1Fb18f0heno7Kycsbj7t5G0dbWRv39/Z6t2FWrVom0tLSAhuN0juPMqdM0MmqDwWCA0+nEokWLUF5eLry3c2d6f3t7O5nNZninzvTVPgMDA7jS2goBQUaTEenp6Vi5cmVQsTtDQ0M4f/68J2m20WjE+vXrRbA3I3q/4+rVqzQwMAC3e+Iq35UrVwp/AYJK2fv6+qi19QoMRiMZDAZYrVaUTJ6ODlT2vr4+un79OmRZhtPpRGJiItatWydms0Pm/WyHw4G8aZHIvj7b3dlFAwMDsI874Ha7J45QuGWsWFGCzKyskOKNhBDo7+9HZ2cnORwOuFwuZGVlobi4WFPBdpogGCVQ6tKlS1ixYgWys7MFALS2ttInn3xCu3fvnjGZstIhZ06fRlpaGio3VIrk5OSgArSGhoZw9OhRWrx4MQoKCpCUlCSU4waBZhVJknDnzh3k5eWjsrJSxMZO3Nvc2NhIBw4coC996UtipkRXXhnskJiYiEyvg3jT24eIkJKSguysbJSUlCAxKVEYZ7gj2fv5vb29dPTIEVRVVyM7O1sQEdra2ujjjz+mBx98UCg3MgRqq5GRERw5coRSU1ORn5+P5ORkoYTn+yuH52aA1FSRnZ1NK1euxKJFizzkG6jsLS0t1NbWhtLSUqSkpAhgIvFYJBKJCyEwMDCAkZER5OXlBbyTvL2jA+3t7XjgwQdESkoKIIDB/kE6evQoNmzcQPn5+cEFHUKg9vNacjgcKCoqQmpqqrBYLJr0ZDQjkcxmM3bu3CmICAMDAzAYDCguLhY3Bwaps6OT8pfmzxjmDQDp1sXYtWuXCDYtgMPhwMGDB6mmpkaEkz1MlmVYrRkoK//iHm2z2YyysjIxNjpGLc3NtHLVqoARpDEmE0zGwF1lNBphiYtFfGK8iI+PD7qMJ0+cxMO7d4uEhATP71esWCEkSaLGxkYqLS0NWEan04lDnx6k9RsqPRNAKDCZTIiNtSAhIUHExcUFM+uAiNB0uRH/Zdrd2JFMJWk0GoPOHWyKMWHT5hqkp6d7SCcjM0M88qVHcPDgQcrLywuK1GqPHKW4RXHYsmWL5rewNCORZFnG8ePHyeFwICEhAXa7HS6XCyNDw0hMSgpK58qyDJvNhoSEhICfkyQJly5epKVLl8JqtcI75D9UknHLMgxeWhwA8vLz0NbWhpUhLIIG+z5PDuMZEkwrbTU4MAjXuBMOhwMjIyNTsvKZzWZcuXIFpaWlfuuttFXj5UbKyspCdna2mFVbBZuKY7I9zBYLrl29RgXLCoQvuRYJ2wtlsdo+uUjtXae4uDiYTCbY7Xa/5KeU+fat2xgaGsKWbVtFuMGKTDBhuKq1tbUUFxeHmsnTxMBEOP4br79BBSHseARl+JN/vnXzFio3VN6TZyTcBUPvf6vlXuGhoSFyy25PWlJvOeNyuVBYWBiUW37z5iDWrF6D2bZVqO26ZesWUVtbS83NzZSYmIis7CwUFBQs2Ij0zlHs3W6BiEpp+xu9NyhrSbYmj45okmCEEBi1jcI2MoLt27cL71wZsbGxqKysjPwNi5MpKCcWZV2a7VxC4ET4phgTCgoKPHlQwoVBMsA5y36gEO0CABYtWoSHHnpIDA0NYaB/gLq6utDY2Ej33XefiI2N1cwAVcppMplgs9kmSErWftyNquNgFBYfH3d4ru/wdhuVa0gibUNKZ+fk5qK5uYm8s+ZHOs4i0lCuxg0Uh6LUKSsrS7R3dGB8MjjP5XJ5dkCUpFbBtFVefj5ampsxm7YK5mZIXzbidruRmJiIwqJCsXXrVrFs2TKcOXOG1OQpBm1zOTnixo0bE56gQQorvkdNNqr6jHYTmd2TMWa349atW54BpCQ5so2MINJtqby3eHmxcDpdOH3qNE1PgqRWMk5NSUFLUzMFG29jMplQWlaKjz/+hEaGR2A0GmEwGDw/wcR+EBGWFiwVBpMRJ06cIO9kSUGnlQCQnJyM1pZWCkVi+TppPTw8jEWLFmnP4yRCbGwsSlaU4MMPP/Qk3wo1tkhNNqqZbeqamhpx/Phxys3NhdVqFePj49TT04Nz585h2/btQT0nlNlMGTg7duwQJ04cp48++oisViuSk5NhMBiQmpoqgjFif+8M5fqKYGYkJeva2rVrRe3RWqqrq6OMjAzk5eUJf7sgSh0LCwtFTEwM1R49SsmpKUhLS4PFYoHFYhGLFy8Ouq22bt0qTp065WkrJRFYUlKS5zrZmcpeVlYmao/WUn19PVmtVixdutTvjp+yZjE8PIzr169TcnIyxsfH0dPTAwBQcvfM9rR4pDyHYPpaaceS5SXCZDTRkc8OU0pqKtLS02A2mwP2h7LgXl9fT6Ojo9i1a9eCp9bUVLqG8fFxNDU10cRVnBLS0tKwePFiAQDx8fEBdw8GBweRnJwMozF0Xh0dHUVPTw/Z7XY4HA4UFxeLQBnmiQiDg4NIT0+/5zN2ux2jo6NITU0NGF9x9+5dzx1RwaK7u5tsNhsKCgpEoG1W7/d3d3fT0NAQbDYbrFYr8vLyQp4K7XY7uru7aWxsDHa7HYWFhSIlJSXo3Z2uri4aHR3FsmXLAgYjOhwOXLt2jcbGxmCxWJCSkoLMzMxZT99KWW02G1wuF5KSkoLqJ6PR6NN7Ghwc9BBusO8mInR1dZHNZsPIyIinPwKVo7e3l1wuF3JychY8KO//A8PNep7N7JkeAAAAAElFTkSuQmCC" 
+         alt="GENDAI SOUGO architects inc."
+         style="height:36px;width:auto;object-fit:contain;filter:brightness(0) invert(1) opacity(0.92)">
+    <div style="margin-left:4px">
+      <div class="logo-text" style="font-size:11px;letter-spacing:.08em;opacity:.65">PHỐI CẢNH PRO</div>
+      <div class="logo-sub" style="font-size:9px">作成数管理システム</div>
+    </div>
+  </div>
+  <div class="header-nav">
+    <button class="nav-btn active" id="navMain" onclick="showPage('main')">📋 Dự án / Tháng</button>
+    <button class="nav-btn" id="navDash" onclick="showPage('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" id="navStaff" onclick="showPage('staff')">👥 Nhân sự</button>
+    <button class="nav-btn" id="navSettings" onclick="showPage('settings')">⚙ Cài đặt</button>
+  </div>
+  <div class="header-right">
+    <button class="sync-status" id="syncBtn" onclick="openSyncPanel()" title="GitHub Sync">
+      <span class="dot"></span><span id="syncLabel">Sync</span>
+    </button>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.25)" onclick="openThemePicker()" title="Tuỳ chỉnh màu sắc">🎨</button>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.25)" onclick="openExportMenu()">📤 Xuất báo cáo</button>
+    <button class="btn btn-gold btn-sm" onclick="openAddProject()">＋ Dự án mới</button>
+  </div>
+</div>
+
+<!-- MONTH TABS -->
+<div class="month-strip" id="monthStrip"></div>
+
+<!-- ═══ PAGE: MAIN ═══ -->
+<div id="pageMain">
+  <div class="sidebar">
+    <div class="sidebar-hd">Dự án tháng <span id="pjCount">0</span></div>
+    <div class="pj-list" id="pjList"></div>
+    <div class="sidebar-ft">
+      <button class="btn btn-full btn-primary btn-sm" onclick="openAddProject()">＋ Thêm dự án</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="content-inner" id="contentInner">
+      <div class="empty-state"><div class="ei">📁</div><h3>Chọn dự án hoặc xem tổng kết tháng</h3><p style="margin-top:6px">Nhấn vào dự án bên trái hoặc xem Dashboard tổng hợp</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PAGE: DASHBOARD ═══ -->
+<div id="pageDashboard">
+  <div class="sect-hd">
+    <div><h2>Dashboard Tổng Hợp</h2><div class="sect-sub">Năng suất & hiệu suất toàn văn phòng</div></div>
+    <select class="sel-sm" id="dashYear" onchange="renderDashboard()" style="width:120px"></select>
+  </div>
+  <div id="dashContent"></div>
+</div>
+
+<!-- ═══ PAGE: STAFF ═══ -->
+<div id="pageStaff">
+  <div class="sect-hd">
+    <div><h2>Quản lý Nhân sự</h2><div class="sect-sub">Hiệu suất, OT và phân công từng tháng</div></div>
+    <div style="display:flex;gap:8px">
+      <select class="sel-sm" id="staffMonth" onchange="renderStaffPage()" style="width:130px"></select>
+    </div>
+  </div>
+  <div id="staffContent"></div>
+</div>
+
+<!-- ═══ PAGE: SETTINGS ═══ -->
+<div id="pageSettings">
+  <div class="sect-hd"><h2>Cài đặt hệ thống</h2></div>
+  <div id="settingsContent"></div>
+</div>
+
+<!-- MODAL CONTAINER & TOAST -->
+<div id="modalRoot"></div>
+<div id="toastEl" style="display:none" class="toast"></div>
+<canvas id="hiddenCanvas" style="display:none"></canvas>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   CONSTANTS & DEFAULTS
+══════════════════════════════════════════════════════ */
+const SK = 'phoicanh_pro_v2';
+
+function freshData() {
+  const now = new Date();
+  const mid = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  return {
+    settings: {
+      staffList: ['トゥアン','ヒエン','L.フォン','ハー','ズエン','タイン','M.フオン'],
+      typeList: ['外観パース','アプローチパース','エントランスパース','鳥瞰パース',
+        'ラウンジパース','スタイルラウンジ','内観パース','大浴場パース','大浴パース',
+        '和室パース','浴室パース','集会室パース','レストランパース','着色立面作成',
+        'スカイラウンジ','中庭パース','風除室パース','バルコニーパース','住戸内パース',
+        'コワーキングスペース','EVホールパース','玄関周りのパース'],
+      contactList: ['ソン','フン','ニャー','TT.チエン','N.ビン','ニュン','カイン',
+        'Inamura','Ogura','Okuda','Ushirozuru'],
+    },
+    months: {
+      [mid]: { projects: [], targetNew: 20, targetRev: 36 }
+    },
+    activeMonth: mid
+  };
+}
+
+let D = (() => {
+  try { const r = localStorage.getItem(SK); if(r) return JSON.parse(r); } catch(e){}
+  return freshData();
+})();
+
+function save() { localStorage.setItem(SK, JSON.stringify(D)); }
+
+let activePjId = null;
+let activePage = 'main';
+
+/* ══════════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════════ */
+function gid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+
+function x(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, dur=2800) {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.style.display='block';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.style.display='none', dur);
+}
+
+function curMonth() { return D.months[D.activeMonth] || {projects:[], targetNew:20, targetRev:36}; }
+function curProjects() { return curMonth().projects || []; }
+function getPj(id) { return curProjects().find(p=>p.id===id); }
+function getAllProjects() {
+  return Object.entries(D.months).flatMap(([mid, m])=>(m.projects||[]).map(p=>({...p,_month:mid})));
+}
+
+function totalNew(p) { return (p.records||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0); }
+function totalRev(p) { return (p.records||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0); }
+
+function monthLabel(mid) {
+  const [y,m] = mid.split('-');
+  return `T${parseInt(m)}/${y}`;
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGE NAVIGATION
+══════════════════════════════════════════════════════ */
+function showPage(p) {
+  activePage = p;
+  ['main','dashboard','staff','settings'].forEach(pg => {
+    document.getElementById('page'+pg.charAt(0).toUpperCase()+pg.slice(1)).style.display = pg===p ? (pg==='main'?'flex':'block') : 'none';
+    document.getElementById('nav'+pg.charAt(0).toUpperCase()+pg.slice(1))?.classList.toggle('active', pg===p);
+  });
+  if (p==='dashboard') renderDashboard();
+  else if (p==='staff') renderStaffPage();
+  else if (p==='settings') renderSettings();
+}
+
+/* ══════════════════════════════════════════════════════
+   MONTH STRIP
+══════════════════════════════════════════════════════ */
+function renderMonthStrip() {
+  const strip = document.getElementById('monthStrip');
+  const months = Object.keys(D.months).sort();
+  strip.innerHTML = months.map(mid => `
+    <button class="mtab ${mid===D.activeMonth?'active':''}" onclick="switchMonth('${mid}')">${monthLabel(mid)}</button>
+  `).join('') + `<button class="mtab mtab-add" title="Thêm tháng mới" onclick="addMonth()">＋</button>`;
+  // populate selects
+  populateMonthSelects(months);
+}
+function populateMonthSelects(months) {
+  const staffSel = document.getElementById('staffMonth');
+  if (staffSel) {
+    staffSel.innerHTML = months.map(mid=>`<option value="${mid}" ${mid===D.activeMonth?'selected':''}>${monthLabel(mid)}</option>`).join('');
+  }
+  const dashY = document.getElementById('dashYear');
+  if (dashY) {
+    const years = [...new Set(months.map(m=>m.split('-')[0]))].sort();
+    dashY.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    dashY.value = new Date().getFullYear();
+  }
+}
+
+function switchMonth(mid) {
+  D.activeMonth = mid; activePjId = null; save();
+  renderAll();
+}
+function addMonth() {
+  const months = Object.keys(D.months).sort();
+  const last = months[months.length-1];
+  let [y,m] = last.split('-').map(Number);
+  m++; if(m>12){m=1;y++;}
+  const newMid = `${y}-${String(m).padStart(2,'0')}`;
+  if (!D.months[newMid]) D.months[newMid] = {projects:[], targetNew:20, targetRev:36};
+  D.activeMonth = newMid; activePjId = null; save();
+  renderAll(); toast(`✓ Đã thêm ${monthLabel(newMid)}`);
+}
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════ */
+function renderSidebar() {
+  const pjs = curProjects();
+  document.getElementById('pjCount').textContent = pjs.length;
+  const list = document.getElementById('pjList');
+  if (!pjs.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ex-gray4);font-size:11px">Chưa có dự án</div>';
+    return;
+  }
+  list.innerHTML = pjs.map(p=>`
+    <div class="pj-item ${p.id===activePjId?'active':''}" onclick="selectPj('${p.id}')">
+      <div class="pj-title">${x(p.nameVN||p.nameJP||'—')}</div>
+      <div class="pj-sub">
+        <span class="badge badge-${p.office==='大阪'?'osaka':'tokyo'}">${p.office||'?'}</span>
+        <span class="chip chip-green" style="padding:0 5px;font-size:9px">新${totalNew(p)}</span>
+        <span class="chip chip-gold" style="padding:0 5px;font-size:9px">修${totalRev(p)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════
+   SELECT PROJECT
+══════════════════════════════════════════════════════ */
+function selectPj(id) {
+  activePjId = id;
+  renderSidebar();
+  renderContent();
+}
+
+/* ══════════════════════════════════════════════════════
+   CONTENT AREA (month summary or project detail)
+══════════════════════════════════════════════════════ */
+function renderContent() {
+  const ci = document.getElementById('contentInner');
+  if (activePjId) {
+    const p = getPj(activePjId);
+    if (!p) { activePjId=null; renderContent(); return; }
+    renderProjectDetail(ci, p);
+  } else {
+    renderMonthOverview(ci);
+  }
+}
+
+/* ── MONTH OVERVIEW ── */
+function renderMonthOverview(ci) {
+  const pjs = curProjects();
+  const m = curMonth();
+  const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
+  const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
+  const sumAll = sumNew+sumRev;
+  const tgtNew = m.targetNew||0;
+  const tgtRev = m.targetRev||0;
+  const tgtAll = tgtNew+tgtRev;
+  const pctNew = tgtNew>0?Math.min(100,Math.round(sumNew/tgtNew*100)):0;
+  const pctRev = tgtRev>0?Math.min(100,Math.round(sumRev/tgtRev*100)):0;
+
+  // Staff OT sum
+  const otMap = {};
+  D.settings.staffList.forEach(s=>otMap[s]=0);
+  pjs.forEach(p=>(p.otLog||[]).forEach(e=>{if(otMap[e.staff]!==undefined)otMap[e.staff]+=(e.hours||0);}));
+  const totalOT = Object.values(otMap).reduce((s,v)=>s+v,0);
+
+  ci.innerHTML = `
+  <!-- HERO STATS -->
+  <div class="hero-stats">
+    <div class="hero-box green">
+      <div>
+        <div class="hero-num">${sumNew}</div>
+        <div class="hero-label">作成 — Làm mới</div>
+        <div class="hero-jp">Mục tiêu: ${tgtNew}</div>
+      </div>
+      <div class="hero-progress">
+        <div class="progress-track"><div class="progress-fill green" style="width:${pctNew}%"></div></div>
+        <div class="progress-label"><span>${pctNew}% đạt mục tiêu</span><span>${sumNew}/${tgtNew}</span></div>
+      </div>
+    </div>
+    <div class="hero-box gold">
+      <div>
+        <div class="hero-num">${sumRev}</div>
+        <div class="hero-label">修正 — Sửa lại</div>
+        <div class="hero-jp">Mục tiêu: ${tgtRev}</div>
+      </div>
+      <div class="hero-progress">
+        <div class="progress-track"><div class="progress-fill" style="width:${pctRev}%"></div></div>
+        <div class="progress-label"><span>${pctRev}% đạt mục tiêu</span><span>${sumRev}/${tgtRev}</span></div>
+      </div>
+    </div>
+    <div class="hero-box navy">
+      <div>
+        <div class="hero-num">${sumAll}</div>
+        <div class="hero-label">Tổng phối cảnh</div>
+        <div class="hero-jp">Mục tiêu: ${tgtAll}</div>
+      </div>
+      <div class="hero-progress">
+        <div class="progress-track"><div class="progress-fill" style="width:${tgtAll>0?Math.min(100,Math.round(sumAll/tgtAll*100)):0}%;background:var(--ex-navy3)"></div></div>
+        <div class="progress-label"><span>${tgtAll>0?Math.min(100,Math.round(sumAll/tgtAll*100)):0}%</span><span>${pjs.length} dự án</span></div>
+      </div>
+    </div>
+    <div class="hero-box orange">
+      <div>
+        <div class="hero-num">${D.settings.staffList.filter(s=>otMap[s]>0).length}</div>
+        <div class="hero-label">Nhân sự có OT</div>
+        <div class="hero-jp">Phát sinh trong tháng</div>
+      </div>
+      <div style="margin-top:10px">
+        ${D.settings.staffList.filter(s=>otMap[s]>0).map(s=>`
+          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;align-items:center">
+            <span style="color:var(--ex-gray4)">${s}</span>
+            <span style="font-weight:700;color:var(--ex-orange);background:#fff8f3;padding:1px 7px;border-radius:99px">${otMap[s].toFixed(1)}h</span>
+          </div>`).join('')||'<div style="font-size:11px;color:var(--ex-gray3);text-align:center;padding:6px 0">Chưa có OT</div>'}
+      </div>
+    </div>
+    <div class="hero-target-box">
+      <div class="tgt-title">🎯 Mục tiêu tháng</div>
+      <div class="hero-target-row">
+        <label>作成 Mới</label>
+        <input class="hero-target-input" type="number" value="${tgtNew}" onchange="updateMonthTarget('targetNew',+this.value)">
+      </div>
+      <div class="hero-target-row">
+        <label>修正 Sửa</label>
+        <input class="hero-target-input" type="number" value="${tgtRev}" onchange="updateMonthTarget('targetRev',+this.value)">
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px">Tổng = ${tgtAll} phối cảnh</div>
+    </div>
+  </div>
+
+  <!-- PROJECT SUMMARY TABLE -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-hd-title">📋 Chi tiết tất cả dự án — ${monthLabel(D.activeMonth)}</span>
+    </div>
+    <div class="tbl-wrap">
+      <table class="sum-tbl">
+        <thead><tr>
+          <th>#</th><th>Dự án</th><th>Văn phòng</th><th>Liên hệ JP</th>
+          <th style="text-align:center">作成 Mới</th>
+          <th style="text-align:center">修正 Sửa</th>
+          <th style="text-align:center">Tổng</th>
+          <th>OT (h)</th>
+        </tr></thead>
+        <tbody>
+          ${pjs.length===0?'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ex-gray4)">Chưa có dự án trong tháng này</td></tr>':''}
+          ${pjs.map((p,i)=>{
+            const otH = (p.otLog||[]).reduce((s,e)=>s+(e.hours||0),0);
+            return `<tr onclick="selectPj('${p.id}')">
+              <td style="color:var(--ex-gray4)">${i+1}</td>
+              <td><div style="font-weight:600">${x(p.nameVN||p.nameJP||'—')}</div>
+                  <div style="font-size:10px;color:var(--ex-gray4)">${x(p.nameJP||'')}</div></td>
+              <td><span class="badge badge-${p.office==='大阪'?'osaka':'tokyo'}">${p.office||'—'}</span></td>
+              <td>${x(p.contact||'—')}</td>
+              <td class="num-c" style="color:var(--new-text)">${totalNew(p)}</td>
+              <td class="num-c" style="color:var(--rev-text)">${totalRev(p)}</td>
+              <td class="num-c" style="font-weight:700">${totalNew(p)+totalRev(p)}</td>
+              <td style="font-size:11px">${otH>0?otH.toFixed(1)+'h':'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr class="tr-total">
+          <td colspan="4" style="font-weight:700">Tổng cộng</td>
+          <td class="num-c" style="color:var(--new-text)">${sumNew}</td>
+          <td class="num-c" style="color:var(--rev-text)">${sumRev}</td>
+          <td class="num-c">${sumAll}</td>
+          <td>${totalOT.toFixed(1)}h</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- STAFF SUMMARY FOR MONTH -->
+  ${renderMonthStaffCard(pjs)}
+  `;
+}
+
+function renderMonthStaffCard(pjs) {
+  const sm = {};
+  D.settings.staffList.forEach(s=>sm[s]={new:0,rev:0,ot:0});
+  pjs.forEach(p=>{
+    (p.records||[]).forEach(r=>{
+      if(r.staff&&sm[r.staff]){
+        if(r.status==='new') sm[r.staff].new+=(r.qty||0);
+        else sm[r.staff].rev+=(r.qty||0);
+      }
+    });
+    (p.otLog||[]).forEach(e=>{if(e.staff&&sm[e.staff])sm[e.staff].ot+=(e.hours||0);});
+  });
+  const active = D.settings.staffList.filter(s=>sm[s].new+sm[s].rev+sm[s].ot>0);
+  if (!active.length) return '';
+  const tn=active.reduce((s,k)=>s+sm[k].new,0);
+  const tr=active.reduce((s,k)=>s+sm[k].rev,0);
+  const to=active.reduce((s,k)=>s+sm[k].ot,0);
+  return `<div class="card">
+    <div class="card-hd"><span class="card-hd-title">👥 Tổng kết nhân sự tháng</span></div>
+    <div class="tbl-wrap">
+    <table class="perf-table">
+      <thead><tr><th>Nhân sự</th><th style="text-align:center">作成 Mới</th><th style="text-align:center">修正 Sửa</th><th style="text-align:center">Tổng</th><th style="text-align:center">OT (h)</th></tr></thead>
+      <tbody>
+        ${active.map(s=>`<tr>
+          <td style="font-weight:600">${s}</td>
+          <td class="num-c" style="color:var(--new-text)">${sm[s].new}</td>
+          <td class="num-c" style="color:var(--rev-text)">${sm[s].rev}</td>
+          <td class="num-c">${sm[s].new+sm[s].rev}</td>
+          <td class="num-c" style="color:var(--ex-orange)">${sm[s].ot>0?sm[s].ot.toFixed(1):'—'}</td>
+        </tr>`).join('')}
+        <tr class="total-row"><td>Tổng</td><td class="num-c">${tn}</td><td class="num-c">${tr}</td><td class="num-c">${tn+tr}</td><td class="num-c">${to>0?to.toFixed(1):'—'}</td></tr>
+      </tbody>
+    </table></div></div>`;
+}
+
+function updateMonthTarget(field, val) {
+  if (!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],targetNew:20,targetRev:36};
+  D.months[D.activeMonth][field] = val;
+  save();
+}
+
+/* ══════════════════════════════════════════════════════
+   PROJECT DETAIL
+══════════════════════════════════════════════════════ */
+function renderProjectDetail(ci, p) {
+  const tn=totalNew(p), tr2=totalRev(p), ta=tn+tr2;
+  const m = curMonth();
+  const tgtNew=m.targetNew||0, tgtRev=m.targetRev||0;
+  const otTotal = (p.otLog||[]).reduce((s,e)=>s+(e.hours||0),0);
+  const photos = p.photos||[];
+
+  ci.innerHTML = `
+  <!-- HERO STATS FOR THIS PROJECT -->
+  <div class="hero-stats" style="grid-template-columns:1fr 1fr 1fr auto">
+    <div class="hero-box green">
+      <div class="hero-num">${tn}</div>
+      <div class="hero-label">作成 — Làm mới</div>
+    </div>
+    <div class="hero-box gold">
+      <div class="hero-num">${tr2}</div>
+      <div class="hero-label">修正 — Sửa lại</div>
+    </div>
+    <div class="hero-box navy">
+      <div class="hero-num">${ta}</div>
+      <div class="hero-label">Tổng phối cảnh</div>
+      <div class="hero-jp">OT: ${otTotal.toFixed(1)} giờ</div>
+    </div>
+    <div class="hero-target-box" style="min-width:160px">
+      <div class="tgt-title">📌 THÁNG ${monthLabel(D.activeMonth)}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px">Mục tiêu tháng:</div>
+      <div style="font-size:13px;font-weight:600;color:var(--ex-gold)">${tgtNew} mới / ${tgtRev} sửa</div>
+      <button class="btn btn-xs" style="margin-top:8px;background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2)" onclick="activePjId=null;renderSidebar();renderContent()">← Về tổng kết tháng</button>
+    </div>
+  </div>
+
+  <!-- PROJECT INFO -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-hd-title">📂 Thông tin dự án
+        <span class="badge badge-${p.office==='大阪'?'osaka':'tokyo'}">${p.office||'—'}</span>
+      </span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="openEditProject('${p.id}')">✏ Sửa</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePj('${p.id}')">🗑</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="info-grid c4">
+        <div class="field"><label>Tên dự án (VN)</label>
+          <input value="${x(p.nameVN||'')}" onchange="updPj('${p.id}','nameVN',this.value)" placeholder="Tên gợi nhớ…"></div>
+        <div class="field"><label>Tên dự án (JP)</label>
+          <input value="${x(p.nameJP||'')}" onchange="updPj('${p.id}','nameJP',this.value)" placeholder="例：吹田市古江台計画"></div>
+        <div class="field"><label>Văn phòng</label>
+          <select onchange="updPj('${p.id}','office',this.value)">
+            <option ${p.office==='大阪'?'selected':''}>大阪</option>
+            <option ${p.office==='東京'?'selected':''}>東京</option>
+          </select></div>
+        <div class="field"><label>Người liên hệ JP</label>
+          <input list="cl-${p.id}" value="${x(p.contact||'')}" onchange="updPj('${p.id}','contact',this.value)">
+          <datalist id="cl-${p.id}">${D.settings.contactList.map(c=>`<option value="${c}">`).join('')}</datalist></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHOTOS -->
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">🖼 Hình ảnh phối cảnh (tối đa 6 ảnh)</span></div>
+    <div class="card-body">
+      <div class="photos-grid" id="photoGrid-${p.id}">
+        ${renderPhotoSlots(p)}
+      </div>
+    </div>
+  </div>
+
+  <!-- RENDER RECORDS TABLE -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-hd-title">🎨 Hạng mục phối cảnh</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-new" onclick="addRecord('${p.id}','new')">＋ 作成 Mới</button>
+        <button class="btn btn-sm btn-rev" onclick="addRecord('${p.id}','rev')">＋ 修正 Sửa</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="rtbl">
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th style="min-width:200px">Hạng mục / 作業種類</th>
+          <th style="width:130px">Trạng thái</th>
+          <th style="width:140px">Người thực hiện</th>
+          <th style="width:80px;text-align:center">Số (mai)</th>
+          <th>Ghi chú</th>
+          <th style="width:30px"></th>
+        </tr></thead>
+        <tbody id="rbody-${p.id}">${renderRbody(p)}</tbody>
+        <tfoot><tr>
+          <td colspan="4" style="font-weight:700;text-align:right">Tổng:</td>
+          <td style="text-align:center;font-weight:700">${ta}</td>
+          <td colspan="2">
+            <span class="chip chip-green">新${tn}</span>
+            <span class="chip chip-gold" style="margin-left:4px">修${tr2}</span>
+          </td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- OT LOG -->
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-hd-title">⏱ Theo dõi OT — Làm thêm giờ</span>
+      <button class="btn btn-sm" onclick="openAddOT('${p.id}')">＋ Ghi OT</button>
+    </div>
+    <div class="card-body">
+      <div id="otLog-${p.id}">${renderOTLog(p)}</div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--ex-gray2);display:flex;gap:12px;align-items:center">
+        <span style="font-weight:700;font-size:13px;color:var(--ex-navy)">Tổng OT dự án này: <span style="color:var(--ex-orange)">${otTotal.toFixed(1)} giờ</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">📝 Ghi chú dự án / LƯU Ý ĐẶC BIỆT</span></div>
+    <div class="card-body">
+      <textarea class="note-ta" rows="4" onchange="updPj('${p.id}','notes',this.value)"
+        placeholder="Ghi chú deadline, yêu cầu đặc biệt, tính phí, lưu ý khi sửa…">${x(p.notes||'')}</textarea>
+    </div>
+  </div>
+  `;
+}
+
+/* ── PHOTO SLOTS ── */
+function renderPhotoSlots(p) {
+  const photos = p.photos||[];
+  let html='';
+  for(let i=0;i<6;i++){
+    const ph=photos[i];
+    if(ph){
+      html+=`<div class="photo-slot has-img">
+        <img src="${ph}" alt="Photo ${i+1}">
+        <button class="ph-del" onclick="delPhoto('${p.id}',${i})" title="Xóa ảnh">✕</button>
+      </div>`;
+    } else {
+      html+=`<label class="photo-slot">
+        <span class="ph-placeholder">🖼</span>
+        <span class="ph-plus">Thêm ảnh</span>
+        <input type="file" accept="image/*" onchange="uploadPhoto('${p.id}',${i},this)">
+      </label>`;
+    }
+  }
+  return html;
+}
+
+function uploadPhoto(pjId, slot, input) {
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const p = getPj(pjId); if(!p) return;
+    if(!p.photos) p.photos=[];
+    p.photos[slot] = e.target.result;
+    save();
+    const grid = document.getElementById(`photoGrid-${pjId}`);
+    if(grid) grid.innerHTML = renderPhotoSlots(p);
+    toast('✓ Đã thêm ảnh');
+  };
+  reader.readAsDataURL(file);
+}
+
+function delPhoto(pjId, slot) {
+  const p = getPj(pjId); if(!p||!p.photos) return;
+  p.photos[slot] = null;
+  p.photos = p.photos.filter((_,i)=>i!==slot);
+  save();
+  const grid = document.getElementById(`photoGrid-${pjId}`);
+  if(grid) grid.innerHTML = renderPhotoSlots(p);
+}
+
+/* ── RENDER TABLE BODY ── */
+function renderRbody(p) {
+  const recs = p.records||[];
+  if(!recs.length) return '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--ex-gray4)">Chưa có hạng mục — nhấn + để thêm</td></tr>';
+  return recs.map((r,i)=>`
+    <tr class="row-${r.status}" data-rid="${r.id}">
+      <td style="color:var(--ex-gray4)">${i+1}</td>
+      <td>
+        <input class="type-inp" list="tl-${p.id}" value="${x(r.type||'')}"
+          onchange="updRec('${p.id}','${r.id}','type',this.value)"
+          placeholder="Chọn hoặc nhập hạng mục…">
+        <datalist id="tl-${p.id}">${D.settings.typeList.map(t=>`<option value="${t}">`).join('')}</datalist>
+      </td>
+      <td>
+        <div class="status-toggle">
+          <button class="st-opt new ${r.status==='new'?'selected':''}"
+            onclick="updRec('${p.id}','${r.id}','status','new');this.classList.add('selected');this.nextSibling.classList.remove('selected');refreshRow('${p.id}','${r.id}')">作成 Mới</button>
+          <button class="st-opt rev ${r.status==='rev'?'selected':''}"
+            onclick="updRec('${p.id}','${r.id}','status','rev');this.classList.add('selected');this.previousSibling.classList.remove('selected');refreshRow('${p.id}','${r.id}')">修正 Sửa</button>
+        </div>
+      </td>
+      <td>
+        <select class="sel-sm" onchange="updRec('${p.id}','${r.id}','staff',this.value)">
+          <option value="">— Chọn —</option>
+          ${D.settings.staffList.map(s=>`<option ${r.staff===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td style="text-align:center">
+        <input class="qty-inp" type="number" min="0" value="${r.qty||0}"
+          onchange="updRec('${p.id}','${r.id}','qty',+this.value);refreshTotals('${p.id}')">
+      </td>
+      <td>
+        <input style="width:100%;padding:4px 7px;border:1px solid var(--ex-gray2);border-radius:var(--r);font-family:inherit;font-size:11px"
+          value="${x(r.note||'')}" onchange="updRec('${p.id}','${r.id}','note',this.value)" placeholder="Ghi chú…">
+      </td>
+      <td>
+        <button class="btn btn-xs btn-ghost btn-danger" onclick="delRec('${p.id}','${r.id}')">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function refreshRow(pjId, recId) {
+  const p = getPj(pjId); if(!p) return;
+  const r = p.records.find(x=>x.id===recId); if(!r) return;
+  // Update row class
+  const tr = document.querySelector(`tr[data-rid="${recId}"]`);
+  if(tr) { tr.className = `row-${r.status}`; }
+  refreshTotals(pjId);
+}
+
+function refreshTotals(pjId) {
+  const p = getPj(pjId); if(!p) return;
+  const tn=totalNew(p),tr2=totalRev(p),ta=tn+tr2;
+  // update hero nums
+  const heros = document.querySelectorAll('.hero-num');
+  if(heros[0]) heros[0].textContent=tn;
+  if(heros[1]) heros[1].textContent=tr2;
+  if(heros[2]) heros[2].textContent=ta;
+  // update tfoot
+  const tfoot = document.querySelector('.rtbl tfoot td:nth-child(2)');
+  if(tfoot) tfoot.textContent=ta;
+  renderSidebar();
+}
+
+function addRecord(pjId, status) {
+  const p = getPj(pjId); if(!p) return;
+  if(!p.records) p.records=[];
+  p.records.push({id:gid(),type:'',status,staff:'',qty:0,note:''});
+  save();
+  const tbody = document.getElementById(`rbody-${pjId}`);
+  if(tbody) tbody.innerHTML = renderRbody(p);
+  refreshTotals(pjId);
+}
+
+function updRec(pjId, recId, field, val) {
+  const p = getPj(pjId); if(!p) return;
+  const r = p.records.find(x=>x.id===recId); if(!r) return;
+  r[field]=val; save();
+}
+
+function delRec(pjId, recId) {
+  const p = getPj(pjId); if(!p) return;
+  p.records = p.records.filter(r=>r.id!==recId); save();
+  const tbody = document.getElementById(`rbody-${pjId}`);
+  if(tbody) tbody.innerHTML = renderRbody(p);
+  refreshTotals(pjId);
+}
+
+/* ── OT LOG ── */
+function renderOTLog(p) {
+  const log = (p.otLog||[]).slice().sort((a,b)=>b.date>a.date?1:-1);
+  if(!log.length) return '<div style="color:var(--ex-gray4);font-size:11px;padding:8px 0">Chưa có bản ghi OT</div>';
+  return log.map(e=>`
+    <div class="ot-entry">
+      <span class="ot-date">${e.date}</span>
+      <span class="ot-name">${e.staff}</span>
+      <span class="ot-hours">${e.hours}h</span>
+      <span style="flex:1;color:var(--ex-gray4);font-size:11px">${x(e.note||'')}</span>
+      <button class="btn btn-xs btn-ghost btn-danger" onclick="delOT('${p.id}','${e.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function openAddOT(pjId) {
+  const staffOpts = D.settings.staffList.map(s=>`<option>${s}</option>`).join('');
+  const today = new Date().toISOString().split('T')[0];
+  showModal(`
+    <h3>⏱ Ghi nhận OT</h3>
+    <div class="info-grid c2" style="gap:12px">
+      <div class="field"><label>Ngày</label>
+        <input type="date" id="ot-date" value="${today}"></div>
+      <div class="field"><label>Nhân sự</label>
+        <select id="ot-staff"><option value="">— Chọn —</option>${staffOpts}</select></div>
+    </div>
+    <div class="info-grid c2" style="gap:12px;margin-top:10px">
+      <div class="field"><label>Số giờ OT</label>
+        <input type="number" id="ot-hours" min="0.5" step="0.5" placeholder="2.5"></div>
+      <div class="field"><label>Ghi chú</label>
+        <input id="ot-note" placeholder="Lý do OT…"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="confirmOT('${pjId}')">Lưu OT</button>
+    </div>
+  `);
+}
+
+function confirmOT(pjId) {
+  const d=document.getElementById('ot-date').value;
+  const s=document.getElementById('ot-staff').value;
+  const h=+document.getElementById('ot-hours').value;
+  const n=document.getElementById('ot-note').value;
+  if(!d||!s||!h){alert('Vui lòng điền đủ ngày, nhân sự và số giờ');return;}
+  const p=getPj(pjId); if(!p) return;
+  if(!p.otLog) p.otLog=[];
+  p.otLog.push({id:gid(),date:d,staff:s,hours:h,note:n});
+  save(); closeModal();
+  const el=document.getElementById(`otLog-${pjId}`);
+  if(el) el.innerHTML=renderOTLog(p);
+  // refresh OT total
+  const otEl=document.querySelector(`#otLog-${pjId}`+' ~ div span span');
+  const otTotal=(p.otLog||[]).reduce((s,e)=>s+(e.hours||0),0);
+  toast(`✓ Ghi OT ${h}h cho ${s}`);
+  // re-render hero nums
+  const heros=document.querySelectorAll('.hero-num');
+  if(heros[2]) heros[2].nextElementSibling&&(heros[2].nextElementSibling.textContent=`OT: ${otTotal.toFixed(1)} giờ`);
+}
+
+function delOT(pjId, otId) {
+  const p=getPj(pjId); if(!p) return;
+  p.otLog=p.otLog.filter(e=>e.id!==otId); save();
+  const el=document.getElementById(`otLog-${pjId}`);
+  if(el) el.innerHTML=renderOTLog(p);
+}
+
+/* ══════════════════════════════════════════════════════
+   PROJECT CRUD
+══════════════════════════════════════════════════════ */
+function updPj(pjId, field, val) {
+  const p=getPj(pjId); if(!p) return;
+  p[field]=val; save(); renderSidebar();
+}
+
+function openAddProject() {
+  const cOpts=D.settings.contactList.map(c=>`<option value="${c}">`).join('');
+  showModal(`
+    <h3>＋ Thêm dự án mới</h3>
+    <div class="info-grid" style="gap:12px">
+      <div class="field"><label>Tên dự án (VN)</label>
+        <input id="ap-nameVN" placeholder="Tên gợi nhớ…"></div>
+      <div class="field"><label>Tên dự án (JP)</label>
+        <input id="ap-nameJP" placeholder="例：吹田市古江台計画"></div>
+      <div class="field"><label>Văn phòng</label>
+        <select id="ap-office"><option>大阪</option><option>東京</option></select></div>
+    </div>
+    <div class="info-grid c2" style="gap:12px;margin-top:12px">
+      <div class="field"><label>Người liên hệ JP</label>
+        <input id="ap-contact" list="ap-cl" placeholder="ソン, フン…">
+        <datalist id="ap-cl">${cOpts}</datalist></div>
+      <div class="field"><label>Người triển khai chính</label>
+        <select id="ap-staff">
+          <option value="">— Chọn —</option>
+          ${D.settings.staffList.map(s=>`<option>${s}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="confirmAddProject()">Thêm dự án</button>
+    </div>
+  `);
+}
+
+function confirmAddProject() {
+  const nVN=document.getElementById('ap-nameVN').value.trim();
+  const nJP=document.getElementById('ap-nameJP').value.trim();
+  const office=document.getElementById('ap-office').value;
+  const contact=document.getElementById('ap-contact').value.trim();
+  const staff=document.getElementById('ap-staff').value;
+  if(!nVN&&!nJP){alert('Vui lòng nhập tên dự án');return;}
+  const pj={id:gid(),nameVN:nVN,nameJP:nJP,office,contact,mainStaff:staff,
+    records:[],photos:[],otLog:[],notes:''};
+  if(!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],targetNew:20,targetRev:36};
+  D.months[D.activeMonth].projects.push(pj);
+  save(); closeModal(); activePjId=pj.id;
+  renderSidebar(); renderContent();
+  toast('✓ Đã thêm dự án');
+}
+
+function openEditProject(id) {
+  const p=getPj(id); if(!p) return;
+  const cOpts=D.settings.contactList.map(c=>`<option value="${c}">`).join('');
+  showModal(`
+    <h3>✏ Sửa thông tin dự án</h3>
+    <div class="info-grid" style="gap:12px">
+      <div class="field"><label>Tên dự án (VN)</label>
+        <input id="ep-nameVN" value="${x(p.nameVN||'')}"></div>
+      <div class="field"><label>Tên dự án (JP)</label>
+        <input id="ep-nameJP" value="${x(p.nameJP||'')}"></div>
+      <div class="field"><label>Văn phòng</label>
+        <select id="ep-office">
+          <option ${p.office==='大阪'?'selected':''}>大阪</option>
+          <option ${p.office==='東京'?'selected':''}>東京</option>
+        </select></div>
+    </div>
+    <div class="info-grid c2" style="gap:12px;margin-top:12px">
+      <div class="field"><label>Người liên hệ JP</label>
+        <input id="ep-contact" list="ep-cl" value="${x(p.contact||'')}">
+        <datalist id="ep-cl">${cOpts}</datalist></div>
+      <div class="field"><label>Người triển khai chính</label>
+        <select id="ep-staff">
+          <option value="">— Chọn —</option>
+          ${D.settings.staffList.map(s=>`<option ${p.mainStaff===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="confirmEditProject('${id}')">Lưu thay đổi</button>
+    </div>
+  `);
+}
+
+function confirmEditProject(id) {
+  const p=getPj(id); if(!p) return;
+  p.nameVN=document.getElementById('ep-nameVN').value.trim();
+  p.nameJP=document.getElementById('ep-nameJP').value.trim();
+  p.office=document.getElementById('ep-office').value;
+  p.contact=document.getElementById('ep-contact').value.trim();
+  p.mainStaff=document.getElementById('ep-staff').value;
+  save(); closeModal(); renderSidebar(); renderContent();
+  toast('✓ Đã lưu');
+}
+
+function deletePj(id) {
+  if(!confirm('Xóa dự án này? Tất cả dữ liệu sẽ bị mất.')) return;
+  D.months[D.activeMonth].projects = D.months[D.activeMonth].projects.filter(p=>p.id!==id);
+  save(); activePjId=null; renderSidebar(); renderContent();
+  toast('✓ Đã xóa dự án');
+}
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD PAGE
+══════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const year = document.getElementById('dashYear')?.value || new Date().getFullYear().toString();
+  const months = Object.keys(D.months).filter(m=>m.startsWith(year)).sort();
+  const dc = document.getElementById('dashContent'); if(!dc) return;
+
+  // Aggregate data
+  const monthlyData = months.map(mid=>{
+    const m=D.months[mid]||{projects:[]};
+    const pjs=m.projects||[];
+    const sn=pjs.reduce((s,p)=>s+totalNew(p),0);
+    const sr=pjs.reduce((s,p)=>s+totalRev(p),0);
+    const ot=pjs.reduce((s,p)=>s+(p.otLog||[]).reduce((x,e)=>x+(e.hours||0),0),0);
+    return {mid, label:monthLabel(mid), new:sn, rev:sr, total:sn+sr, ot, pjCount:pjs.length, targetNew:m.targetNew||0, targetRev:m.targetRev||0};
+  });
+
+  // Staff annual data
+  const staffAnnual = {};
+  D.settings.staffList.forEach(s=>staffAnnual[s]={new:0,rev:0,ot:0,months:{}});
+  months.forEach(mid=>{
+    const pjs=(D.months[mid]||{projects:[]}).projects||[];
+    D.settings.staffList.forEach(s=>{
+      if(!staffAnnual[s].months[mid]) staffAnnual[s].months[mid]={new:0,rev:0,ot:0};
+    });
+    pjs.forEach(p=>{
+      (p.records||[]).forEach(r=>{
+        if(r.staff&&staffAnnual[r.staff]){
+          if(r.status==='new'){staffAnnual[r.staff].new+=(r.qty||0);staffAnnual[r.staff].months[mid]&&(staffAnnual[r.staff].months[mid].new+=(r.qty||0));}
+          else{staffAnnual[r.staff].rev+=(r.qty||0);staffAnnual[r.staff].months[mid]&&(staffAnnual[r.staff].months[mid].rev+=(r.qty||0));}
+        }
+      });
+      (p.otLog||[]).forEach(e=>{
+        const mid2=e.date.substring(0,7);
+        if(e.staff&&staffAnnual[e.staff]&&mid2===mid){
+          staffAnnual[e.staff].ot+=(e.hours||0);
+          staffAnnual[e.staff].months[mid]&&(staffAnnual[e.staff].months[mid].ot+=(e.hours||0));
+        }
+      });
+    });
+  });
+
+  const activeStaff = D.settings.staffList.filter(s=>staffAnnual[s].new+staffAnnual[s].rev+staffAnnual[s].ot>0);
+
+  dc.innerHTML = `
+  <!-- KPI SUMMARY ROW -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+    ${[
+      {val:monthlyData.reduce((s,m)=>s+m.new,0), lbl:'Tổng Làm mới', cls:'green', jp:'作成 累計'},
+      {val:monthlyData.reduce((s,m)=>s+m.rev,0), lbl:'Tổng Sửa lại', cls:'gold', jp:'修正 累計'},
+      {val:monthlyData.reduce((s,m)=>s+m.total,0), lbl:'Tổng phối cảnh', cls:'navy', jp:'合計'},
+      {val:monthlyData.reduce((s,m)=>s+m.pjCount,0), lbl:'Tổng dự án', cls:'orange', jp:'プロジェクト数'},
+      {val:monthlyData.reduce((s,m)=>s+m.ot,0).toFixed(1)+'h', lbl:'Tổng OT', cls:'gray', jp:'OT累計時間'}
+    ].map(k=>`<div class="hero-box ${k.cls}" style="padding:14px">
+      <div class="hero-num" style="font-size:32px">${k.val}</div>
+      <div class="hero-label">${k.lbl}</div>
+      <div class="hero-jp">${k.jp}</div>
+    </div>`).join('')}
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="dash-grid" style="margin-bottom:14px">
+    <div class="chart-box">
+      <h4>Phối cảnh theo tháng — ${year}</h4>
+      <canvas id="chartMonthly" height="180"></canvas>
+    </div>
+    <div class="chart-box">
+      <h4>Năng suất nhân sự (tổng ${year})</h4>
+      <canvas id="chartStaff" height="180"></canvas>
+    </div>
+  </div>
+  <div class="dash-grid c3" style="margin-bottom:14px">
+    <div class="chart-box">
+      <h4>Tỉ lệ Mới vs Sửa</h4>
+      <canvas id="chartRatio" height="160"></canvas>
+    </div>
+    <div class="chart-box">
+      <h4>OT nhân sự cả năm</h4>
+      <canvas id="chartOT" height="160"></canvas>
+    </div>
+    <div class="chart-box">
+      <h4>Tiến độ vs Mục tiêu</h4>
+      <canvas id="chartTarget" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- STAFF PERFORMANCE TABLE -->
+  <div class="card">
+    <div class="card-hd"><span class="card-hd-title">📊 Hiệu suất chi tiết từng nhân sự — ${year}</span></div>
+    <div class="tbl-wrap">
+    <table class="perf-table">
+      <thead><tr>
+        <th>Nhân sự</th>
+        <th style="text-align:center">作成 Mới</th>
+        <th style="text-align:center">修正 Sửa</th>
+        <th style="text-align:center">Tổng</th>
+        <th style="text-align:center">OT (h)</th>
+        <th style="min-width:160px">Năng suất</th>
+        <th>Đánh giá</th>
+      </tr></thead>
+      <tbody>
+        ${(()=>{
+          const maxT=Math.max(1,...activeStaff.map(s=>staffAnnual[s].new+staffAnnual[s].rev));
+          const maxOT=Math.max(1,...activeStaff.map(s=>staffAnnual[s].ot));
+          return activeStaff.map(s=>{
+            const v=staffAnnual[s];
+            const t=v.new+v.rev;
+            const pct=Math.round(t/maxT*100);
+            const otPct=Math.round(v.ot/maxOT*100);
+            const grade = t>=maxT*0.8?'🟢 Xuất sắc':t>=maxT*0.6?'🟡 Tốt':t>=maxT*0.4?'🟠 Khá':'🔴 Cần cải thiện';
+            return `<tr>
+              <td style="font-weight:600">${s}</td>
+              <td class="num-c" style="color:var(--new-text)">${v.new}</td>
+              <td class="num-c" style="color:var(--rev-text)">${v.rev}</td>
+              <td class="num-c" style="font-weight:700">${t}</td>
+              <td class="num-c" style="color:var(--ex-orange)">${v.ot>0?v.ot.toFixed(1):'—'}</td>
+              <td>
+                <div class="mini-bar">
+                  <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+                  <span style="font-size:10px;color:var(--ex-gray4);min-width:32px;text-align:right">${pct}%</span>
+                </div>
+                ${v.ot>0?`<div class="mini-bar" style="margin-top:3px">
+                  <div class="mini-bar-track"><div class="mini-bar-fill blue" style="width:${otPct}%"></div></div>
+                  <span style="font-size:10px;color:var(--ex-gray4);min-width:32px;text-align:right">${v.ot.toFixed(1)}h</span>
+                </div>`:''}
+              </td>
+              <td style="font-size:12px">${grade}</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--ex-gray4)">Chưa có dữ liệu</td></tr>';
+        })()}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  `;
+
+  // Draw charts after DOM ready
+  setTimeout(()=>{
+    drawMonthlyChart(monthlyData);
+    drawStaffChart(activeStaff, staffAnnual);
+    drawRatioChart(monthlyData);
+    drawOTChart(activeStaff, staffAnnual);
+    drawTargetChart(monthlyData);
+  }, 50);
+}
+
+function drawMonthlyChart(md) {
+  const el = document.getElementById('chartMonthly'); if(!el) return;
+  if(el._chart) el._chart.destroy();
+  el._chart = new Chart(el, {
+    type:'bar',
+    data:{
+      labels:md.map(m=>m.label),
+      datasets:[
+        {label:'作成 Mới', data:md.map(m=>m.new), backgroundColor:'#70AD47', borderRadius:3},
+        {label:'修正 Sửa', data:md.map(m=>m.rev), backgroundColor:'#FFC000', borderRadius:3},
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{font:{size:11},color:'#595959'}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#595959',font:{size:10}}},
+              y:{ticks:{color:'#595959',font:{size:10}},grid:{color:'#f0f0f0'}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+function drawStaffChart(staffList, data) {
+  const el = document.getElementById('chartStaff'); if(!el) return;
+  if(el._chart) el._chart.destroy();
+  el._chart = new Chart(el, {
+    type:'bar',
+    data:{
+      labels:staffList,
+      datasets:[
+        {label:'作成 Mới', data:staffList.map(s=>data[s].new), backgroundColor:'#70AD47', borderRadius:3},
+        {label:'修正 Sửa', data:staffList.map(s=>data[s].rev), backgroundColor:'#FFC000', borderRadius:3},
+      ]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{labels:{font:{size:11},color:'#595959'}}},
+      scales:{x:{grid:{color:'#f0f0f0'},ticks:{color:'#595959',font:{size:10}}},
+              y:{grid:{display:false},ticks:{color:'#595959',font:{size:10}}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+function drawRatioChart(md) {
+  const el = document.getElementById('chartRatio'); if(!el) return;
+  if(el._chart) el._chart.destroy();
+  const tn=md.reduce((s,m)=>s+m.new,0), tr=md.reduce((s,m)=>s+m.rev,0);
+  el._chart = new Chart(el, {
+    type:'doughnut',
+    data:{
+      labels:['作成 Mới','修正 Sửa'],
+      datasets:[{data:[tn,tr],backgroundColor:['#70AD47','#FFC000'],borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},color:'#595959'}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+function drawOTChart(staffList, data) {
+  const el = document.getElementById('chartOT'); if(!el) return;
+  if(el._chart) el._chart.destroy();
+  const withOT = staffList.filter(s=>data[s].ot>0);
+  el._chart = new Chart(el, {
+    type:'bar',
+    data:{
+      labels:withOT.length?withOT:['Chưa có dữ liệu'],
+      datasets:[{label:'OT (giờ)', data:withOT.map(s=>data[s].ot), backgroundColor:'#ED7D31', borderRadius:3}]
+    },
+    options:{
+      plugins:{legend:{labels:{font:{size:11},color:'#595959'}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#595959',font:{size:10}}},
+              y:{ticks:{color:'#595959',font:{size:10}},grid:{color:'#f0f0f0'}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+function drawTargetChart(md) {
+  const el = document.getElementById('chartTarget'); if(!el) return;
+  if(el._chart) el._chart.destroy();
+  el._chart = new Chart(el, {
+    type:'bar',
+    data:{
+      labels:md.map(m=>m.label),
+      datasets:[
+        {label:'Thực tế', data:md.map(m=>m.total), backgroundColor:'#4472C4', borderRadius:3},
+        {label:'Mục tiêu', data:md.map(m=>m.targetNew+m.targetRev), backgroundColor:'rgba(255,192,0,.3)', borderColor:'#FFC000', borderWidth:1, borderRadius:3},
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{font:{size:11},color:'#595959'}}},
+      scales:{x:{grid:{display:false},ticks:{color:'#595959',font:{size:10}}},
+              y:{ticks:{color:'#595959',font:{size:10}},grid:{color:'#f0f0f0'}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   STAFF PAGE
+══════════════════════════════════════════════════════ */
+function renderStaffPage() {
+  const mid = document.getElementById('staffMonth')?.value || D.activeMonth;
+  const sc = document.getElementById('staffContent'); if(!sc) return;
+  const pjs = (D.months[mid]||{projects:[]}).projects||[];
+
+  const staffData = {};
+  D.settings.staffList.forEach(s=>staffData[s]={new:0,rev:0,ot:0,projects:[],otLog:[]});
+  pjs.forEach(p=>{
+    (p.records||[]).forEach(r=>{
+      if(r.staff&&staffData[r.staff]){
+        if(r.status==='new') staffData[r.staff].new+=(r.qty||0);
+        else staffData[r.staff].rev+=(r.qty||0);
+        if(!staffData[r.staff].projects.includes(p.nameVN||p.nameJP)) staffData[r.staff].projects.push(p.nameVN||p.nameJP||'?');
+      }
+    });
+    (p.otLog||[]).forEach(e=>{
+      if(e.staff&&staffData[e.staff]){
+        staffData[e.staff].ot+=(e.hours||0);
+        staffData[e.staff].otLog.push({...e,pjName:p.nameVN||p.nameJP||'?'});
+      }
+    });
+  });
+
+  sc.innerHTML = `
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">
+    ${D.settings.staffList.map(s=>{
+      const v=staffData[s];
+      const t=v.new+v.rev;
+      return `<div class="card">
+        <div class="card-hd">
+          <span class="card-hd-title" style="font-size:14px">${s}</span>
+          <div style="display:flex;gap:4px">
+            <span class="chip chip-green">新${v.new}</span>
+            <span class="chip chip-gold">修${v.rev}</span>
+            ${v.ot>0?`<span class="chip" style="background:#fde8d8;color:#7f3500">OT${v.ot.toFixed(1)}h</span>`:''}
+          </div>
+        </div>
+        <div class="card-body" style="padding:12px 14px">
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;color:var(--ex-gray4)">Tổng phối cảnh</span>
+              <span style="font-weight:700;font-size:15px">${t}</span>
+            </div>
+            <div class="progress-track" style="height:8px">
+              <div class="progress-fill green" style="width:${t>0?Math.min(100,Math.round(v.new/t*100)):0}%;float:left"></div>
+              <div class="progress-fill" style="width:${t>0?Math.min(100,Math.round(v.rev/t*100)):0}%;float:left;background:var(--ex-gold)"></div>
+            </div>
+            <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Mới ${v.new} | Sửa ${v.rev}</div>
+          </div>
+          ${v.projects.length?`<div style="font-size:10px;color:var(--ex-gray4);margin-bottom:8px">
+            <strong>Dự án:</strong> ${v.projects.slice(0,3).map(n=>`<span style="background:var(--ex-gray1);padding:1px 6px;border-radius:3px;margin:1px">${x(n)}</span>`).join('')}
+            ${v.projects.length>3?`+${v.projects.length-3} nữa`:''}
+          </div>`:''}
+          ${v.otLog.length?`<div style="border-top:1px solid var(--ex-gray1);padding-top:8px">
+            <div style="font-size:10px;color:var(--ex-gray4);font-weight:600;margin-bottom:6px">OT gần đây:</div>
+            ${v.otLog.sort((a,b)=>b.date>a.date?1:-1).slice(0,4).map(e=>`
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+                <span style="color:var(--ex-gray4)">${e.date}</span>
+                <span style="color:var(--ex-gray4);flex:1;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(e.pjName)}</span>
+                <span style="font-weight:600;color:var(--ex-orange)">${e.hours}h</span>
+              </div>
+            `).join('')}
+            ${v.otLog.length>4?`<div style="font-size:10px;color:var(--ex-gray4)">+${v.otLog.length-4} bản ghi khác</div>`:''}
+          </div>`:''}
+          ${!t&&!v.ot?'<div style="font-size:11px;color:var(--ex-gray3);text-align:center;padding:10px">Chưa có hoạt động trong tháng này</div>':''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════
+   SETTINGS PAGE
+══════════════════════════════════════════════════════ */
+function renderSettings() {
+  const sc = document.getElementById('settingsContent'); if(!sc) return;
+  sc.innerHTML = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-hd"><span class="card-hd-title">👤 Danh sách nhân sự</span></div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--ex-gray4);margin-bottom:10px">Chỉnh sửa tên, thêm hoặc xóa nhân sự</p>
+        <div class="tag-cloud" id="staffTags">
+          ${D.settings.staffList.map(s=>`<div class="tag-edit"><input value="${x(s)}" style="width:90px"><span class="tdel" onclick="this.parentElement.remove()">×</span></div>`).join('')}
+        </div>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="addTagTo('staffTags',90)">+ Thêm</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span class="card-hd-title">📞 Người liên hệ JP</span></div>
+      <div class="card-body">
+        <div class="tag-cloud" id="contactTags">
+          ${D.settings.contactList.map(c=>`<div class="tag-edit"><input value="${x(c)}" style="width:80px"><span class="tdel" onclick="this.parentElement.remove()">×</span></div>`).join('')}
+        </div>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="addTagTo('contactTags',80)">+ Thêm</button>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-hd"><span class="card-hd-title">🏷 Danh mục hạng mục phối cảnh (Tùy biến)</span></div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--ex-gray4);margin-bottom:10px">Chỉnh sửa tên hạng mục, thêm mới hoặc xóa bớt theo nhu cầu</p>
+        <div class="tag-cloud" id="typeTags">
+          ${D.settings.typeList.map(t=>`<div class="tag-edit"><input value="${x(t)}" style="width:140px"><span class="tdel" onclick="this.parentElement.remove()">×</span></div>`).join('')}
+        </div>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="addTagTo('typeTags',140)">+ Thêm hạng mục</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+    <button class="btn btn-gold" onclick="saveSettings()">💾 Lưu tất cả cài đặt</button>
+  </div>
+  `;
+}
+
+function addTagTo(containerId, w) {
+  const c=document.createElement('div'); c.className='tag-edit';
+  c.innerHTML=`<input style="width:${w}px" placeholder="Nhập…"><span class="tdel" onclick="this.parentElement.remove()">×</span>`;
+  document.getElementById(containerId).appendChild(c);
+  c.querySelector('input').focus();
+}
+
+function saveSettings() {
+  D.settings.staffList=[...document.querySelectorAll('#staffTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
+  D.settings.typeList=[...document.querySelectorAll('#typeTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
+  D.settings.contactList=[...document.querySelectorAll('#contactTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
+  save(); toast('✓ Đã lưu cài đặt hệ thống');
+}
+
+/* ══════════════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════════════ */
+function showModal(html) {
+  const bg=document.createElement('div'); bg.className='modal-bg'; bg.id='activeModal';
+  bg.innerHTML=`<div class="modal">${html}</div>`;
+  bg.onclick=e=>{if(e.target===bg)closeModal();};
+  document.getElementById('modalRoot').appendChild(bg);
+}
+function closeModal() { document.getElementById('activeModal')?.remove(); }
+
+/* ══════════════════════════════════════════════════════
+   PWA MANIFEST (injected dynamically)
+══════════════════════════════════════════════════════ */
+(function injectPWA() {
+  const manifest = {
+    name: 'Phối Cảnh Pro',
+    short_name: 'PC Pro',
+    description: 'Quản lý phối cảnh kiến trúc Nhật Bản',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#1F3864',
+    theme_color: '#1F3864',
+    icons: [{
+      src: `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAATUklEQVR42u1dd3gTV7a/o1FzxTLVYB4lGydh8xH2LQ+b4g2GTSjZLKa3wFKMaQZMKAHjYFzwEooxzobi4IWwlIANmCQQethHSWDf9wKGLO9L7GRtFhdwt1xkSTPvD4E8aEajkTR3JFnn9+UL0vjqnrn3/u65555z5g7RKyIGAQCOQgZdAAACAYBAACAQAAgEAACBAEAgABAIAAQCAIBAACAQAAgEAAIBAEAgABAIAAQCtBvInfz9N0cTHj16pFAoaJrGd5cURalUqsnLsxFClw6tLSsrwyqRIAij0ejn5zd+yW6E0LmclZWVlbgl6vX6Tp06jZ2/EyF0eveSxsZGkiRxSwwJCXlr9lZXEqimpuaXX35RqVS4CeTr62v6XFlZiVsiQRAGg0Gj0Zi+PnnypKSkRKlUYpXY2tpKUZTpa2lpaU1NjVwuxypRp9MplUoXayC5XK5UKrF2rolA5qZKIJEgCJlMplAoTF8VCoUEEk2CmBJxE4imablc7mIC0QzgIxCzfpCIQyIY0QDYhQGAQAAgEAAABAIAgQBAIAAQCAAAAgGAQAAgEAAIBAAAgQBAIAAQCAAEAgCAQAAgEAAIBAACAYBAAAAQCAAEAgCBAEAgAAAIBAACAYBAACAQAAAEAgCBAEAgABAIAAACAYBAACAQAAgEAAIBAEAgABAIAAQCAIEAACAQAAgEAAIBgEAAABAIAAQCuCHk0AVuCOI53F8EaCCvpqmXaiBmy5mfLV7g6HAHsWenxPrA9NJWmUzGfAmmuANvEuF8VXJPZI+14RTYHTaLibuCCKnHpkSs9PVGDeQMgewdTtlzYH2HMlvhSaDzvJFAInau6dXXnMsi7vHjJ70HGdFyl3SQM9NFeMsdLsPWBxJoIJMIryOQ8/ch3ESQzKT1nm28WyxhElh/jmkgh1nL1gfOb1iESBS3je1cA9n1E9EJ5G76gN0hoIHE1EP4ljBrNhBTA0kwnCZxNrUUaCAH+8IbNBCbTxI4DtxiF8a+D9H7WmIj2kIfuNAicUAoP+csGuX6JUwap62rnDSuIpAzGki4O95dljDhOxQng1M89iaO4ZTSBuKMvnmEx0EiI9pJPrFtoHYZWOAJpuKQ6BbBVHH9wi7c6LmDVwZ5IOTu0HiB4XGzfYB7RNn6QHoNhHtv6zEaSHRPtPmrEPXu8NoqwdbStZRF7pNQJn0szKyEJLOBRJmsbmh1MTcKnrGNd0YlWEh00sDk15oWEnFPfVctmu3EBhI4osI7V5TIiYXOk9IvDMFULCOKac9iUx+0S7Q3TzR7SbLmVfMGT7TZ6pJsp+lhS5i9Gc04NBC/OJqmcecHsu10b/QDSdC5yGui8Y610eF9ibs81uMm5oK4VhGn46Cd+YHcQgMh/Old5iFkTh2seyLprS7O2K3LU9gkWsJwz05kv5Ne3FnhKaEMT9VAWJcS0wemSStBth6SPIXNe/1A0gynvcTlfFzQ+XVZsuAJckUGkltoINETv9kaCEkSwXXJo83eGMqQxqTl7GvHJNqV8SnZdPLeJQxZdxmL2Ok0TfN0Lo6Olv7RZu/VQLgTTF2iHiROx3FJOof7ng8k+kbMgcCCiOFbD3pKS/qR8kgbSJSp43INhKw/pWWmLO5ubLd+IItKOHdhWG+Jxw+EyeTy0AQSD96FSWZmuWR0JaCsKEpO7laKR4i+dWY4hf+KoijpY+NSHjDlXRqInWsm/RbJ4xJI7DqRyL12YaJvxCRO77LQQEiSwILEjzJ6rw2EJM9AksYrI71EN3oqA6slZNJA0j905yaBBUxy3et0Dgk0EO6np52ZoGLFbpmUJUkSjvnFZRJJfKSVZGdlIA+EGz3WY++2CCuVRYzXOvCqA7HyTT1jF4b7OVGLShygrAM3wJ9+hEnheaknWoLjXZwkkJMbAvfxA+E7A8mtCSR6dEwCDYRspVu0g52mW2ggJNVjPS7fxiMJzy30onyg8OjEs/vjcUem8BHIWj0u8Tx548tWpNdACP9zoljbyLOESSzRw84HEsvQbscaSOIljCCI8OhEj9dA9qZJhEcnXjq0tl2+bAVOKMOogSRQ7xaPJkqcnQOHbOJtGHsXLb0ScpUICZxeriSQAyatiO8Xwzeu0msgpmh3O7LC3TWQXbEw3E8ssF0V3xxNkGA4nTdpBXapiFFhNzrizq6f8DzajGODJv0uDKsGErFmNz2hjD8MJM2LbVxIIA+CaBmJDriVmb4We4fT3lXPQm9jyi9z5u0L0qfxe7wNZNf5LM7rA3t9DbjfJGyzS4FA7rWptvcnTJNWoEUiVj+ERyfezNvkLQRCGM6VYgeGpHx/oKv8QBJbRR7sB7K3baIHGm3+HGto09oZSLh71X01kMRbiXapgaTvUjfSQBK49SycbPi61STodn6aawkkk8nE9SuyYdFGt9BAIo4us/ssmkqSJO7OZbfII4bTBQqyV0SMk1V8dzo1YvyHuDtXYsYAhGpKj7hLYE971kAA0EAAABAIAAQCAIEAQCAAAAgEAAIBgEAAIBAAAAQCAIEAQCAAEAgAAAIBgEAAIBAACAQAAkEXAIBAACAQAAgEAAIBAEAgABAIAATydtxx3bPuUorG+2Tq5zvnlz4uJRAiCMJgNEZGRoaPT0QIfZ4x/6cffwwMDKRoCiECISQjiNbW1tCePaev+itC6MSuBYGBgaPn7rCo8Nz+eJKUj5q7HSF0Zm/cve/vdgjqYDQaZTKyd+/e0Us+4bmZvUkTFyWf5PzTkW1zZq45yN+WnNRplU+f+gf40xSt1Wr7vtR3Svx+drHcrNiS4mJSRipVSoqiWlp0arVqwG9+M2xyskXJY9vnTl99gF3Dwc0z5mw4anHx65yVP/34k8FgIOVynU736muv/nHhxxZl8rIWFhcXkzKZSbSuRaeyIlpE4Hrp7vXjG69euaLX69/f/nXb1YwLpn9ra2sjI4cNn/lnaz836PUnc/PY17VaLUk+u+ea6ppB4YNGz8tACH13KqWgoCB96fCET65xVvjdqdRdmZn/ffzD301NtfjT7fy0O7fv8Dcnc81YtVr9QdYV85Wsdb6fJk9ZkHSCWSw9LqpRq1214wLz4tUj62/dvHVg84y5DFrcykv+/vv/5ZT1tLLS4srW+LeKin7+z4G/ZVDhkkWZ9LgorbZh1Y7zXKKnz91wzJOWsDv5m8+f/zop++astYe4aSuXyxUKnhr8/Pw7dux4aMssi+skSZrPIpLL5ej5OTIREzbGbsoLj4hIXjiMs8KCgntjxo794cEP7D+FRyfK5XwT6eJna1RqtYWKWr7lq5CQbswrmxYMiYyMnJNgqTxGzPzz2sxLBoP+0+QpbZqfIKwJVbzYM2lL3gx7JSwu/QyPIkniFa3XG5iiPYBAV69c+eO4cTwFaJqmKIqnQGNj44iRI8vLy27kJln8kPOzCSNnbenfv//ejRPYFVZVVc1e97eG+npr98NzM6WPH4eFhbGv/yE2q023rh4dNSIqcmqKtUoWJOU2NTVeOLjaplDm9c+2vNe3b5/oxXxLc8bq0VFRfKJjN+U2NTWeP7DKMwh05fC6DkEdbB7IouDVQDSiCQKtzbx86eJFu6SPX7q7oaHB0hTLmN+rVy+EUK8+vdlazSYCAwNLS0t5CnxzNEGtUr85fTN/PSs+Onu/oMAu0WWPS2es5jPOrh1NUKvUw2cIEX3fMwhUUlzy0ku/slnsyZMnfLdFEE3NzQihbl27Hd0+x64b6NYt5Oz+eOaV4n/9yzQMU+P3//vRI3tbNCFub1lpae6uWGsFigoLX3n1FSFVqdVq00lkNLJ9JPnVw+s7de7MX6awsChMmGgfHx8ch6CJb0Q3NTW9PWcbfxmapgvu3duTOJ6iKQIRBEG06lv/a9CgIRPbFixSRiKEFqedTpw3yK4bCA4Orquta5ujxzbcv982+YI0msuHPvj97I/sqnPtrst7N078aMXIPn36sDdfLS0tI2cJqlCj0VRVViFhZ9rX1tZoNBr+Mi0tzb8XLrqqyiN2YYKO+x81evQgy2XuLGfhyMjIrQGBa3ddFiieJGU03WZg/fDgQb9+/RD6wvS1X7/Xvr9714FWLUo5iRA6tmPutvi3fHx949LPCDShXtCsMhm/8ccERdEkSdqcijhEu3IJU6nU145t4HCQ7Ir9Yt8y5qwVWOGouTtkpOzLfcsQQkYBXVBXV+/n72/+qtcbRr63xfx1+Ix0Ajl+Buj0VQfWZF4KeyUseeHQa0cTntlzSuX1ExuF/Lyurj4oKAghJOQeAgIC2Pacye+wb9Mk02elYNH19XUm0e6ugbp261pcXMwxV4xGmnLwdSerMy4m/KkaISQnSZsarqysNH7rOTNr7969m5cVazRSMhlBUTRJyu7dvSfEc8iDt/+0DSGU/nwfEBoaWlRYKGwU64dNSRbY/FFzt29//21OrWM0GJ+J7tlToOi6unocHkXxNdC7sVmPSko41y1nqu0/4I2D6TP8/P359fCNE0lGY1uBX37+ecCANxQKhUqlNP1frlD0H/DGo0clzrfUPKH/sGBXeVm5zfKfbXmvd+/ebfOHtrosMYxunwsHVnPaAKYP78RkChF9aMsss2gP8AMNHDhwy/IR/Ku1vS/Nm7Yyp6qq6sH9Bz4+vjyVXL50yeyNvX5io1qtnrzi03GLP4lesvvZf4s/mbw8OyAg4OqR9U42s6FBa/48dNjQ1EWRPIW/3Le8orxiSvynpq8REz6sqa3lXJ4IWdtMi0s/c+vmTZZt9MIUGho5LMW26HKzaA8g0Oh5GS+/HJa25M2rh9cxbCOVebxpmlar1fy2IZscq3Zc+J9//INZRu3TVslX2Ss2LRgyfESU+UrBvYLXft2Ps/7XX3/d7Be5k7+Zn823T6clxQy2uLgncXxoz9A2S39q6qCI8JRFkUxXoRk5qdP+7+HDtZkvxB9efvlXmWvfsSh58fyF3w4cyLwyZuyY5NihJz9eaL7C3KsihCKnpEQMjki1Lvrhw4drMi8hPMAYTP32VMqdO3dadTp/P3+lUllcXDx4yJAx8zNMrSovK+vYqaPZKiIIQq/Xh/ToPmnZPoTQ8Z3zAwIDx87faVHn/pSpwcGaCXF7EULHdswrLCzs3j1Ep9M1Njb6+/svTj3NLJyxavT7L8aGmNi5ZszKbc/idPuSJi1MzuN3Fd68caNTp05BQRqdrqX0cWmP0B6z1x1ml/xLwrjm5qbg4I7+/v5Go6Gmplarbejbt+/kFRwK4HhmTNFPhSHdQ3x8fOvqaiufVg4eMngEw+Rn8qCy8qmvr5+fr29VdZW/n//itNMcopuagjuaRddotdo+ffpi0j3YCWTGrbxkvb5VrlAMnbSJqatf2PITiKaoiAkb7ar5+vGNFEWp1CrcR+WbaVRfV6dUqcbMy+AveeVv67RarVxOajTBQyYl8Re+cHB1S3NzYGCHqJnpNu/h758nIoTenJbGL5qUk8EazRBGh3swgUTHzdxNQydvQgA3gEcmlJWVlsHIAYGccF4pbLuvbua5RkV9dzoVCNQeMJRr+b92bMM3z93HmMAfJG5/kOOr+ot9y2QyGU3T7zLyZpg4sTNGqVZZS3Y5l7PSYDBoNJrIKZaZLq2tutxdsX7+fgaDITAwcDhXHgXnS6iqq6pra2rOH1jFTpZFCN3ITaqurjZ5HEbN2W7VSj28zhSHeScm09LKPpLwz4f/PLs/nv0nc6OMRmOHDh3YiZF2dOyeOLlSYTQaKaNxnPVUodv5aZWVlUajsUuXLvg2GRgJZE7azd+9lJ2t/GX2coPewMmea8c2VFdXs/fwDE8a3fM/upt0zMmPF93ITWI76UuKOXzNmmBNQGDAW7O3cmwVTyY/qaiIXrLbdANXDq8bybWdPr4zRqlUcv4JIRQ1Mz1/z1Jr7Dn1l8U8jWLj7P744ODgwayd6dPKp/M/PG76fHT7HM6EoYsH11RUVLDzpj2GQN+eSqmurjY56Cq4fO0qlcqaZiovL5+2MoencrXax7xCTVy2N3/PUnYZzoQ1kiStBaF+Lizq0TP0dn4aRVEEQRQVFXGMaPaK4I4dB0/k8zVYS1S9nZ/2+N+P7RsbuZzzXaJdunY1f+7cpcu3p1LYJKuvr5u0PNuDl7CSkpKpz/NmclKmsgvQNH3rZLKFU9WEoA5B/JUzszWQlcg2p3OZ08H9zBiUyZQKhcFgIAjCaDTO5JrWLboWfvYg6yGa8OjEG7lJeVmxFEWHdA9hr8vCq9Lr9fwtun5io8Fg8GAb6NrRBBkjkaVrt27cPigryqC+ro6/fosfctZj7aI1oQEBAUNtBat9ff1suqB4oiLmdTaPEZdwZONj6xXHkVNSnBTh4l3Y8BnpzBAxZ3Ceoihrfd2jZ2heFl/7LaYX52zjvPi7qalPyis463x30cfHd8aY/LzWMGZ+Rll5GX8UVicgz0lgKou1LmI2zVqZ4ODg/N1LJHA3YPREn9kb98xkUalGce16+HEuZ6Ver9doNOwNi8Xax2kE3MpLthZD+DJ7uTXz6/KhD5pbmkmS5LF2rx5Z39TUxLO7/Cp7RecundmPFVw9sr6hoUGhUNhlSnPa+5xLP6cZbjAYOnfuzC7P0wl24f8BXJjUgRgUJTIAAAAASUVORK5CYII=`,
+      sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  document.getElementById('pwaManifest').href = url;
+
+  // Register service worker for offline
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE='phoicanh-v1';
+      self.addEventListener('install',e=>e.waitUntil(
+        caches.open(CACHE).then(c=>c.addAll(['.']))
+      ));
+      self.addEventListener('fetch',e=>e.respondWith(
+        caches.match(e.request).then(r=>r||fetch(e.request))
+      ));
+    `;
+    const swBlob = new Blob([swCode], {type:'text/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+  }
+})();
+
+/* ══════════════════════════════════════════════════════
+   SYNC SYSTEM — Password-based, 2-level access
+   Backend: JSONBin.io (free, no signup needed for users)
+   
+   CÁCH HOẠT ĐỘNG:
+   - Admin (chủ app) tạo 1 bin trên jsonbin.io, lấy BIN_ID + API_KEY
+   - Đặt mật khẩu EDIT và mật khẩu VIEW (lưu trong D.settings.sync)
+   - Người khác chỉ cần nhập đúng mật khẩu để đọc hoặc sửa
+   - Toàn bộ dữ liệu được mã hoá AES trước khi lên cloud
+══════════════════════════════════════════════════════ */
+
+const SYNC = {
+  // Credentials chỉ admin biết (lưu localStorage, không chia sẻ)
+  get binId()  { return localStorage.getItem('sync_bin_id')||''; },
+  get apiKey() { return localStorage.getItem('sync_api_key')||''; },
+  set binId(v)  { localStorage.setItem('sync_bin_id', v); },
+  set apiKey(v) { localStorage.setItem('sync_api_key', v); },
+  get lastSync() { return localStorage.getItem('sync_last')||''; },
+  set lastSync(v){ localStorage.setItem('sync_last', v); },
+  // Session: quyền hiện tại sau khi đăng nhập
+  get role() { return sessionStorage.getItem('sync_role')||'none'; }, // 'admin'|'edit'|'view'|'none'
+  set role(v) { sessionStorage.setItem('sync_role', v); },
+  get autoOn() { return localStorage.getItem('sync_auto')==='1'; },
+  set autoOn(v) { localStorage.setItem('sync_auto', v?'1':'0'); }
+};
+
+/* ── AES-GCM encryption (pure Web Crypto, no libs) ── */
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: enc.encode(salt), iterations:100000, hash:'SHA-256' },
+    keyMaterial, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+
+async function encryptData(data, password) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, 'phoicanh_salt_v1');
+  const enc = new TextEncoder();
+  const encrypted = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc.encode(JSON.stringify(data)));
+  // Pack: iv(12 bytes) + encrypted
+  const combined = new Uint8Array(12 + encrypted.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(encrypted), 12);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptData(b64, password) {
+  const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const data = combined.slice(12);
+  const key = await deriveKey(password, 'phoicanh_salt_v1');
+  const dec = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, data);
+  return JSON.parse(new TextDecoder().decode(dec));
+}
+
+/* ── Hash password for comparison (stored in D.settings.sync) ── */
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw+'pc_salt'));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ── JSONBin API ── */
+const JBIN = 'https://api.jsonbin.io/v3';
+
+async function syncPush() {
+  if (!SYNC.binId || !SYNC.apiKey) return false;
+  const editPw = D.settings?.sync?.editPw || 'gendai2024';
+  try {
+    const payload = await encryptData(D, editPw);
+    const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key': SYNC.apiKey },
+      body: JSON.stringify({ data: payload, ts: Date.now() })
+    });
+    if (!res.ok) throw new Error(res.status);
+    SYNC.lastSync = new Date().toLocaleString('vi-VN');
+    setSyncStatus('synced', SYNC.autoOn?'⚡ Auto':'✓ Đã lưu');
+    return true;
+  } catch(e) {
+    setSyncStatus('error','Lỗi lưu');
+    return false;
+  }
+}
+
+async function syncPull(password) {
+  if (!SYNC.binId) return null;
+  try {
+    const headers = SYNC.apiKey
+      ? { 'X-Master-Key': SYNC.apiKey }
+      : {};
+    const res = await fetch(`${JBIN}/b/${SYNC.binId}/latest`, { headers });
+    if (!res.ok) throw new Error(res.status);
+    const json = await res.json();
+    const payload = json.record?.data;
+    if (!payload) throw new Error('no_data');
+    return await decryptData(payload, password);
+  } catch(e) {
+    if (e.message === 'no_data') throw e;
+    throw new Error('wrong_password');
+  }
+}
+
+/* ── STATUS BAR ── */
+function setSyncStatus(state, label) {
+  const btn = document.getElementById('syncBtn');
+  const lbl = document.getElementById('syncLabel');
+  if (!btn) return;
+  btn.className = `sync-status ${state}`;
+  lbl.textContent = label;
+}
+
+/* ── AUTO SYNC hook (called by save()) ── */
+function triggerAutoSync() {
+  if (SYNC.autoOn && SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
+    clearTimeout(triggerAutoSync._t);
+    setSyncStatus('syncing','Đang lưu…');
+    triggerAutoSync._t = setTimeout(syncPush, 4000);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   SYNC PANEL UI
+══════════════════════════════════════════════════════ */
+function openSyncPanel() {
+  const role = SYNC.role;
+  const isAdmin = role === 'admin';
+  const hasSetup = !!(D.settings?.sync?.editHash);
+  const autoOn = SYNC.autoOn;
+  const lastSync = SYNC.lastSync;
+
+  if (!hasSetup && !SYNC.binId) {
+    // First time setup for admin
+    showSyncSetup();
+  } else {
+    // Login panel
+    showSyncLogin();
+  }
+}
+
+function showSyncSetup() {
+  showModal(`
+    <h3>☁ Thiết lập đồng bộ đám mây</h3>
+    <div style="background:#EEF3FB;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1F3864;line-height:1.75">
+      <strong>Bước 1 — Tạo kho lưu trữ miễn phí:</strong><br>
+      1. Vào <a href="https://jsonbin.io" target="_blank" style="color:#4472C4;font-weight:600">jsonbin.io</a> → đăng ký miễn phí (chỉ cần email)<br>
+      2. Vào Dashboard → <strong>API Keys</strong> → copy <strong>Master Key</strong><br>
+      3. Bấm <strong>+ New Bin</strong> → đặt tên "phoicanh" → tạo → copy <strong>Bin ID</strong> (dạng <code>64abc...</code>)<br>
+      4. Điền 2 thông tin đó vào ô dưới (chỉ cần làm 1 lần)
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="field"><label>Master Key (bí mật)</label>
+        <input type="password" id="su-apikey" placeholder="$2a$10$..." style="font-family:monospace;font-size:11px">
+        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Chỉ bạn biết, không chia sẻ</div>
+      </div>
+      <div class="field"><label>Bin ID</label>
+        <input id="su-binid" placeholder="64abc123def456..." style="font-family:monospace;font-size:11px">
+        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Dùng để kết nối mọi thiết bị</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="field">
+        <label>🔐 Mật khẩu ADMIN (toàn quyền)</label>
+        <input type="password" id="su-admin-pw" placeholder="Mật khẩu mạnh…">
+        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Dùng để đồng bộ & chỉnh sửa</div>
+      </div>
+      <div class="field">
+        <label>✏️ Mật khẩu EDIT (chỉnh sửa)</label>
+        <input type="password" id="su-edit-pw" placeholder="Chia sẻ với nhân sự…">
+        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Nhân sự nhập liệu hàng ngày</div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>👁 Mật khẩu VIEW (chỉ xem)</label>
+      <input type="password" id="su-view-pw" placeholder="Chia sẻ với sếp / khách…">
+      <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Xem được tất cả nhưng không sửa được</div>
+    </div>
+    <div style="background:#fff8ee;border:1px solid #ffd966;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#7F6000">
+      💡 Sau khi lưu, mọi người chỉ cần nhập <strong>Bin ID + mật khẩu</strong> để truy cập — không cần tài khoản
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="confirmSyncSetup()">✓ Lưu cấu hình & Đẩy lên cloud</button>
+    </div>
+  `);
+}
+
+async function confirmSyncSetup() {
+  const apiKey = document.getElementById('su-apikey')?.value.trim();
+  const binId  = document.getElementById('su-binid')?.value.trim();
+  const adminPw = document.getElementById('su-admin-pw')?.value;
+  const editPw  = document.getElementById('su-edit-pw')?.value;
+  const viewPw  = document.getElementById('su-view-pw')?.value;
+
+  if (!apiKey||!binId) { alert('Vui lòng điền Master Key và Bin ID'); return; }
+  if (!adminPw||!editPw||!viewPw) { alert('Vui lòng đặt đủ 3 mật khẩu'); return; }
+
+  // Save admin credentials locally
+  SYNC.apiKey = apiKey;
+  SYNC.binId  = binId;
+  SYNC.role   = 'admin';
+
+  // Store hashed passwords + binId in app data (shared)
+  if (!D.settings.sync) D.settings.sync = {};
+  D.settings.sync.adminHash = await hashPw(adminPw);
+  D.settings.sync.editHash  = await hashPw(editPw);
+  D.settings.sync.viewHash  = await hashPw(viewPw);
+  D.settings.sync.editPw    = editPw;  // needed for encryption key (stored locally only via admin)
+  D.settings.sync.binId     = binId;   // public — needed by all devices to find data
+
+  save();
+  setSyncStatus('syncing','Đang lưu…');
+  closeModal();
+
+  const ok = await syncPush();
+  if (ok) {
+    toast('✓ Đã thiết lập xong! Chia sẻ Bin ID + mật khẩu cho team');
+    setSyncStatus('synced','✓ Admin');
+    setTimeout(()=>showSyncStatus(), 800);
+  } else {
+    toast('✗ Lỗi kết nối — kiểm tra lại Master Key và Bin ID');
+  }
+}
+
+function showSyncLogin() {
+  const role = SYNC.role;
+  const binId = D.settings?.sync?.binId || SYNC.binId || '';
+  const lastSync = SYNC.lastSync;
+
+  const roleInfo = {
+    admin: { label:'ADMIN', color:'#1F3864', bg:'#EEF3FB', desc:'Toàn quyền · Auto sync bật được' },
+    edit:  { label:'EDIT',  color:'#375623', bg:'#E2EFDA', desc:'Nhập liệu, chỉnh sửa được' },
+    view:  { label:'VIEW',  color:'#7F6000', bg:'#FFF2CC', desc:'Chỉ xem, không sửa được' },
+    none:  { label:'Chưa đăng nhập', color:'#595959', bg:'#F2F2F2', desc:'' }
+  }[role] || { label:'—', color:'#595959', bg:'#F2F2F2', desc:'' };
+
+  const autoOn = SYNC.autoOn;
+
+  showModal(`
+    <h3>☁ Đồng bộ đám mây</h3>
+
+    ${role !== 'none' ? `
+    <div style="background:${roleInfo.bg};border:1px solid;border-color:${roleInfo.color}40;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+      <div style="width:36px;height:36px;background:${roleInfo.color};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;flex-shrink:0">${roleInfo.label}</div>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:${roleInfo.color}">Đang đăng nhập — ${roleInfo.label}</div>
+        <div style="font-size:11px;color:var(--ex-gray4)">${roleInfo.desc}</div>
+        ${lastSync?`<div style="font-size:10px;color:var(--ex-gray4);margin-top:2px">Sync cuối: ${lastSync}</div>`:''}
+      </div>
+      <button class="btn btn-xs btn-ghost btn-danger" onclick="syncLogout()" style="margin-left:auto;flex-shrink:0">Đăng xuất</button>
+    </div>` : ''}
+
+    <div class="field" style="margin-bottom:10px">
+      <label>Bin ID (mã kho dữ liệu)</label>
+      <input id="li-binid" value="${binId}" placeholder="64abc123..." style="font-family:monospace;font-size:11px">
+      <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Nhận từ người quản lý app</div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Mật khẩu truy cập</label>
+      <input type="password" id="li-pw" placeholder="Nhập mật khẩu Admin / Edit / View…"
+        onkeydown="if(event.key==='Enter')syncDoLogin()">
+      <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">
+        Hệ thống tự nhận ra quyền: Admin → Edit → View
+      </div>
+    </div>
+
+    ${role === 'admin' ? `
+    <!-- AUTO SYNC (admin only) -->
+    <div style="background:${autoOn?'#E2EFDA':'#F9F9F9'};border:1px solid ${autoOn?'#a9d18e':'var(--ex-gray2)'};border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:600;font-size:12px">⚡ Tự động đồng bộ</div>
+        <div style="font-size:11px;color:var(--ex-gray4);margin-top:1px">Sau mỗi chỉnh sửa, dữ liệu tự lên cloud sau 4 giây</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;cursor:pointer">
+        <input type="checkbox" ${autoOn?'checked':''} onchange="toggleAutoSync(this.checked)" style="opacity:0;width:0;height:0">
+        <span id="asSl" style="position:absolute;inset:0;background:${autoOn?'#70AD47':'#ccc'};border-radius:13px;transition:.2s"></span>
+        <span id="asTh" style="position:absolute;top:3px;left:${autoOn?'23':'3'}px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s"></span>
+      </label>
+    </div>` : ''}
+
+    <div style="background:#f0f4ff;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#1F3864;line-height:1.6">
+      🔑 <strong>Admin</strong> — toàn quyền, bật auto sync<br>
+      ✏️ <strong>Edit</strong> — nhập liệu, kéo dữ liệu về<br>
+      👁 <strong>View</strong> — chỉ xem, không thay đổi được
+    </div>
+
+    <div class="modal-ft" style="flex-wrap:wrap;gap:8px">
+      <button class="btn" onclick="closeModal()">Đóng</button>
+      ${role!=='none'?`<button class="btn btn-sm" style="background:#EEF3FB;color:#1F3864;border-color:#4472C4" onclick="syncPullWithRole()">⬇ Tải dữ liệu mới nhất</button>`:''}
+      ${role==='admin'?`<button class="btn btn-sm" style="background:var(--new-bg);color:var(--new-text);border-color:#a9d18e" onclick="doSyncPush()">⬆ Đẩy lên cloud ngay</button>`:''}
+      ${role==='edit'?`<button class="btn btn-sm" style="background:var(--new-bg);color:var(--new-text);border-color:#a9d18e" onclick="doSyncPush()">⬆ Lưu thay đổi</button>`:''}
+      <button class="btn btn-gold" onclick="syncDoLogin()">🔓 Đăng nhập / Đổi quyền</button>
+    </div>
+  `);
+}
+
+async function syncDoLogin() {
+  const binId = document.getElementById('li-binid')?.value.trim();
+  const pw    = document.getElementById('li-pw')?.value;
+  if (!binId) { alert('Vui lòng nhập Bin ID'); return; }
+  if (!pw)    { alert('Vui lòng nhập mật khẩu'); return; }
+
+  setSyncStatus('syncing','Đang xác thực…');
+  closeModal();
+
+  try {
+    // Pull data first — it contains the hashed passwords
+    const pulled = await syncPull(pw).catch(async () => {
+      // If decrypt fails, try to get raw to check passwords (admin case)
+      throw new Error('wrong_password');
+    });
+
+    // Check hash against passwords in settings
+    const h = await hashPw(pw);
+    const sync = pulled?.settings?.sync || D.settings?.sync || {};
+
+    let role = 'none';
+    if (sync.adminHash && h === sync.adminHash) role = 'admin';
+    else if (sync.editHash  && h === sync.editHash)  role = 'edit';
+    else if (sync.viewHash  && h === sync.viewHash)  role = 'view';
+
+    if (role === 'none') {
+      setSyncStatus('error','Sai mật khẩu');
+      toast('✗ Sai mật khẩu — thử lại');
+      setTimeout(()=>openSyncPanel(), 1200);
+      return;
+    }
+
+    // Save session
+    SYNC.role = role;
+    SYNC.binId = binId;
+    if (role === 'admin') SYNC.apiKey = SYNC.apiKey; // keep existing
+    // Store editPw locally for encryption/decryption
+    if (role === 'admin' && sync.editPw) localStorage.setItem('sync_edit_pw', sync.editPw);
+    else if (role === 'edit') localStorage.setItem('sync_edit_pw', pw);
+
+    // Load pulled data
+    if (role === 'view') {
+      // View: load data but disable all edit functions
+      D = pulled; save(); renderAll();
+      enableViewOnlyMode(true);
+    } else {
+      D = pulled; save(); renderAll();
+      enableViewOnlyMode(false);
+    }
+
+    SYNC.lastSync = new Date().toLocaleString('vi-VN');
+    const roleLabels = {admin:'✓ Admin', edit:'✓ Edit', view:'👁 View'};
+    setSyncStatus('synced', SYNC.autoOn && role==='admin' ? '⚡ Auto' : roleLabels[role]);
+    toast(`✓ Đăng nhập thành công — quyền ${role.toUpperCase()}`);
+
+    // Auto setup auto-sync for admin
+    if (role === 'admin' && SYNC.autoOn) {
+      setSyncStatus('synced','⚡ Auto');
+    }
+
+  } catch(e) {
+    setSyncStatus('error','Lỗi');
+    toast('✗ Không thể kết nối hoặc sai mật khẩu');
+    setTimeout(()=>openSyncPanel(), 1500);
+  }
+}
+
+async function syncPullWithRole() {
+  const role = SYNC.role;
+  const pw = role==='admin' ? localStorage.getItem('sync_edit_pw')||''
+           : role==='edit'  ? localStorage.getItem('sync_edit_pw')||''
+           : null;
+
+  if (!pw && role!=='view') { toast('⚠ Phiên làm việc hết hạn — đăng nhập lại'); openSyncPanel(); return; }
+
+  setSyncStatus('syncing','Đang tải…');
+  closeModal();
+  try {
+    const pulled = await syncPull(pw || D.settings?.sync?.editPw || '');
+    D = pulled; save(); renderAll();
+    SYNC.lastSync = new Date().toLocaleString('vi-VN');
+    setSyncStatus('synced', SYNC.autoOn&&role==='admin'?'⚡ Auto':'✓ Đã tải');
+    toast('✓ Dữ liệu đã được cập nhật');
+  } catch(e) {
+    setSyncStatus('error','Lỗi tải');
+    toast('✗ Lỗi: '+e.message);
+  }
+}
+
+async function doSyncPush() {
+  const role = SYNC.role;
+  if (role==='view') { toast('⛔ Chế độ VIEW không thể lưu'); return; }
+  closeModal();
+  setSyncStatus('syncing','Đang lưu…');
+  const ok = await syncPush();
+  if (ok) toast('✓ Đã lưu lên cloud');
+}
+
+function syncLogout() {
+  SYNC.role = 'none';
+  sessionStorage.removeItem('sync_role');
+  localStorage.removeItem('sync_edit_pw');
+  enableViewOnlyMode(false);
+  setSyncStatus('', 'Sync');
+  closeModal();
+  toast('Đã đăng xuất');
+}
+
+function toggleAutoSync(on) {
+  SYNC.autoOn = on;
+  const sl = document.getElementById('asSl');
+  const th = document.getElementById('asTh');
+  if (sl) sl.style.background = on?'#70AD47':'#ccc';
+  if (th) th.style.left = on?'23px':'3px';
+  if (on && SYNC.role==='admin') setSyncStatus('synced','⚡ Auto');
+  toast(on?'⚡ Auto sync bật':'Auto sync tắt');
+}
+
+/* VIEW-ONLY MODE: disable all inputs */
+function enableViewOnlyMode(on) {
+  const banner = document.getElementById('viewOnlyBanner');
+  if (on) {
+    if (!banner) {
+      const b = document.createElement('div');
+      b.id = 'viewOnlyBanner';
+      b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#7F6000;color:#FFF2CC;text-align:center;padding:8px;font-size:12px;font-weight:600;z-index:500;letter-spacing:.04em';
+      b.innerHTML = '👁 CHẾ ĐỘ CHỈ XEM — Mọi thay đổi sẽ không được lưu';
+      document.body.appendChild(b);
+    }
+    // Intercept save to prevent writes
+    window._viewOnlyMode = true;
+  } else {
+    if (banner) banner.remove();
+    window._viewOnlyMode = false;
+  }
+}
+
+function showSyncStatus() {
+  // Show quick status after setup
+  const role = SYNC.role;
+  const binId = D.settings?.sync?.binId || SYNC.binId;
+  toast(`✓ Thiết lập xong! Bin ID: ${binId.slice(0,8)}…`);
+}
+
+// Update sync status on load
+setTimeout(()=>{
+  const role = SYNC.role;
+  if (role === 'admin' && SYNC.binId) {
+    setSyncStatus('synced', SYNC.autoOn ? '⚡ Auto' : '✓ Admin');
+  } else if (role === 'edit') {
+    setSyncStatus('synced', '✓ Edit');
+  } else if (role === 'view') {
+    setSyncStatus('synced', '👁 View');
+    enableViewOnlyMode(true);
+  }
+}, 150);
+
+// Auto-push on data change — hooks into every save() call
+const _origSave = save;
+function save() {
+  if (window._viewOnlyMode) return; // block saves in view mode
+  localStorage.setItem(SK, JSON.stringify(D));
+  triggerAutoSync();
+}
+
+/* ══════════════════════════════════════════════════════
+   EXPORT MENU
+══════════════════════════════════════════════════════ */
+function openExportMenu() {
+  const [y,m] = D.activeMonth.split('-');
+  const ml = monthLabel(D.activeMonth);
+  showModal(`
+    <h3>📤 Xuất báo cáo — ${ml}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+      <div style="border:1px solid var(--ex-gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
+        onclick="closeModal();exportProjectReport()"
+        onmouseover="this.style.borderColor='#1F3864';this.style.background='#EEF3FB'"
+        onmouseout="this.style.borderColor='var(--ex-gray2)';this.style.background=''"
+      >
+        <div style="font-size:32px;margin-bottom:10px">📋</div>
+        <div style="font-weight:700;font-size:14px;color:#1F3864;margin-bottom:6px">Báo cáo Dự án</div>
+        <div style="font-size:11px;color:var(--ex-gray4);line-height:1.6">
+          Tổng kết tất cả dự án trong tháng<br>
+          Số phối cảnh <strong>mới</strong> và <strong>sửa</strong><br>
+          Chi tiết theo từng hạng mục
+        </div>
+        <div style="margin-top:12px;background:#1F3864;color:#FFC000;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">
+          Xuất & In PDF
+        </div>
+      </div>
+      <div style="border:1px solid var(--ex-gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
+        onclick="closeModal();exportOTReport()"
+        onmouseover="this.style.borderColor='#ED7D31';this.style.background='#FFF5EE'"
+        onmouseout="this.style.borderColor='var(--ex-gray2)';this.style.background=''"
+      >
+        <div style="font-size:32px;margin-bottom:10px">⏱</div>
+        <div style="font-weight:700;font-size:14px;color:#C55A11;margin-bottom:6px">Báo cáo OT</div>
+        <div style="font-size:11px;color:var(--ex-gray4);line-height:1.6">
+          Chỉ nhân sự <strong>có phát sinh OT</strong><br>
+          Chi tiết ngày giờ theo dự án<br>
+          Tổng OT tháng từng người
+        </div>
+        <div style="margin-top:12px;background:#ED7D31;color:#fff;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">
+          Xuất & In PDF
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:10px 14px;background:var(--ex-gray1);border-radius:6px;font-size:11px;color:var(--ex-gray4)">
+      💡 Sau khi xem trước, bấm <strong>Ctrl+P</strong> (hoặc nút In) → chọn <em>"Save as PDF"</em> để lưu file.
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Đóng</button>
+    </div>
+  `);
+}
+
+/* ══════════════════════════════════════════════════════
+   REPORT 1: DỰ ÁN THÁNG
+══════════════════════════════════════════════════════ */
+function exportProjectReport() {
+  const pjs = curProjects();
+  const m = curMonth();
+  const ml = monthLabel(D.activeMonth);
+  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
+  const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
+  const sumAll = sumNew+sumRev;
+  const sumOT = pjs.reduce((s,p)=>s+(p.otLog||[]).reduce((x,e)=>x+(e.hours||0),0),0);
+  const tgtNew = m.targetNew||0, tgtRev = m.targetRev||0;
+  const pctNew = tgtNew>0?Math.round(sumNew/tgtNew*100):0;
+  const pctRev = tgtRev>0?Math.round(sumRev/tgtRev*100):0;
+
+  // Build per-project blocks
+  const pjBlocks = pjs.map((p,i) => {
+    const recs = p.records||[];
+    const tn=totalNew(p), tr2=totalRev(p);
+    if(tn+tr2===0) return '';
+    const rows = recs.filter(r=>r.qty>0).map(r=>`
+      <tr>
+        <td>${x(r.type||'—')}</td>
+        <td class="${r.status==='new'?'c-new':'c-rev'}">${r.status==='new'?'作成 Mới':'修正 Sửa'}</td>
+        <td style="text-align:center;font-weight:600">${x(r.staff||'—')}</td>
+        <td class="c-tot">${r.qty}</td>
+        <td style="font-size:10px;color:#595959">${x(r.note||'')}</td>
+      </tr>`).join('');
+    return `<div class="pj-block">
+      <div class="pj-block-hd">
+        <div>
+          <div class="pj-name">${i+1}. ${x(p.nameVN||p.nameJP||'—')}</div>
+          ${p.nameJP&&p.nameVN?`<div style="font-size:10px;color:#595959;margin-top:1px">${x(p.nameJP)}</div>`:''}
+        </div>
+        <div class="pj-chips">
+          <span class="${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span>
+          <span style="font-size:10px;color:#595959">${x(p.contact||'')}</span>
+          <span class="chip-new">新 ${tn}</span>
+          <span class="chip-rev">修 ${tr2}</span>
+          <span class="chip-tot">計 ${tn+tr2}</span>
+        </div>
+      </div>
+      ${rows?`<table>
+        <thead><tr>
+          <th>Hạng mục</th><th>Trạng thái</th><th style="text-align:center">Nhân sự</th>
+          <th style="text-align:center">Số (mai)</th><th>Ghi chú</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="3" style="text-align:right">Tổng dự án:</td>
+          <td class="c-tot">${tn+tr2}</td><td style="font-size:10px">(Mới: ${tn} / Sửa: ${tr2})</td>
+        </tr></tfoot>
+      </table>`:'<div style="padding:10px 14px;font-size:11px;color:#BFBFBF">Chưa có hạng mục</div>'}
+    </div>`;
+  }).join('');
+
+  const html = `<div class="report-doc">
+    <div class="doc-header">
+      <div class="doc-logo">
+        <div class="doc-logo-mark" style="padding:4px;background:#fff">
+  <img src="data:image/png;base64,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" style="width:34px;height:34px;object-fit:contain;border-radius:4px">
+</div>
+        <div>
+          <div class="doc-title-main">BẢNG THỐNG KÊ PHỐI CẢNH THÁNG</div>
+          <div class="doc-title-sub">作成数報告書 — ${ml} / Phối Cảnh Pro System</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div><strong>Tháng báo cáo:</strong> ${ml}</div>
+        <div><strong>Ngày xuất:</strong> ${now}</div>
+        <div><strong>Số dự án:</strong> ${pjs.filter(p=>totalNew(p)+totalRev(p)>0).length}</div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-box green">
+        <div class="kpi-num">${sumNew}</div>
+        <div class="kpi-lbl">作成 Làm mới</div>
+        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtNew} — ${pctNew}%</div>
+      </div>
+      <div class="kpi-box gold">
+        <div class="kpi-num">${sumRev}</div>
+        <div class="kpi-lbl">修正 Sửa lại</div>
+        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtRev} — ${pctRev}%</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num">${sumAll}</div>
+        <div class="kpi-lbl">Tổng phối cảnh</div>
+        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtNew+tgtRev}</div>
+      </div>
+      <div class="kpi-box orange">
+        <div class="kpi-num">${sumOT>0?sumOT.toFixed(1):'0'}<span style="font-size:16px">h</span></div>
+        <div class="kpi-lbl">OT tháng</div>
+        <div style="font-size:10px;color:#595959;margin-top:4px">Toàn nhân sự</div>
+      </div>
+    </div>
+
+    <div class="section-title">I. TỔNG HỢP THEO DỰ ÁN</div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Tên dự án</th><th>VP</th><th>Người liên hệ JP</th>
+        <th style="text-align:center">作成 Mới</th>
+        <th style="text-align:center">修正 Sửa</th>
+        <th style="text-align:center">Tổng</th>
+      </tr></thead>
+      <tbody>
+        ${pjs.map((p,i)=>`<tr>
+          <td style="color:#595959">${i+1}</td>
+          <td><strong>${x(p.nameVN||p.nameJP||'—')}</strong>
+            ${p.nameJP&&p.nameVN?`<br><span style="font-size:10px;color:#595959">${x(p.nameJP)}</span>`:''}
+          </td>
+          <td><span class="${p.office==='大阪'?'b-osaka':'b-tokyo'}">${p.office||'—'}</span></td>
+          <td>${x(p.contact||'—')}</td>
+          <td class="c-new">${totalNew(p)}</td>
+          <td class="c-rev">${totalRev(p)}</td>
+          <td class="c-tot">${totalNew(p)+totalRev(p)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="4" style="font-weight:700">TỔNG CỘNG</td>
+        <td class="c-new">${sumNew}</td><td class="c-rev">${sumRev}</td><td class="c-tot">${sumAll}</td>
+      </tr></tfoot>
+    </table>
+
+    <div class="section-title">II. CHI TIẾT TỪNG DỰ ÁN</div>
+    ${pjBlocks||'<p style="color:#BFBFBF;font-size:11px">Không có dữ liệu</p>'}
+
+    <div class="sign-section">
+      <div class="sign-box">Người lập báo cáo<br><br><br></div>
+      <div class="sign-box">Trưởng nhóm xác nhận<br><br><br></div>
+    </div>
+    <div class="doc-footer">
+      <span>GENDAI SOUGO architects inc. — 作成数管理システム</span>
+      <span>Xuất lúc ${new Date().toLocaleString('vi-VN')} | ${ml}</span>
+    </div>
+  </div>`;
+
+  showReportOverlay('📋 Báo cáo Dự án — ' + ml, html);
+}
+
+/* ══════════════════════════════════════════════════════
+   REPORT 2: OT NHÂN SỰ
+══════════════════════════════════════════════════════ */
+function exportOTReport() {
+  const pjs = curProjects();
+  const ml = monthLabel(D.activeMonth);
+  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // Collect OT per staff
+  const staffOT = {};
+  D.settings.staffList.forEach(s=>staffOT[s]={total:0,entries:[]});
+  pjs.forEach(p=>{
+    (p.otLog||[]).forEach(e=>{
+      if(e.staff&&staffOT[e.staff]){
+        staffOT[e.staff].total+=(e.hours||0);
+        staffOT[e.staff].entries.push({...e, pjName:p.nameVN||p.nameJP||'?', pjOffice:p.office||''});
+      }
+    });
+  });
+
+  const activeStaff = D.settings.staffList.filter(s=>staffOT[s].total>0);
+
+  if(!activeStaff.length) {
+    toast('Tháng này chưa có nhân sự nào phát sinh OT');
+    return;
+  }
+
+  const totalOT = activeStaff.reduce((s,k)=>s+staffOT[k].total,0);
+
+  const staffBlocks = activeStaff.map(s=>{
+    const v = staffOT[s];
+    const entries = v.entries.slice().sort((a,b)=>a.date>b.date?1:-1);
+    return `<div class="ot-staff-block">
+      <div class="ot-staff-hd">
+        <span class="sname">${s}</span>
+        <span class="stotal">Tổng: ${v.total.toFixed(1)} giờ</span>
+      </div>
+      <table style="margin-bottom:0;border-radius:0 0 6px 6px;overflow:hidden">
+        <thead><tr>
+          <th style="background:#2E4A7A">Ngày</th>
+          <th style="background:#2E4A7A">Dự án</th>
+          <th style="background:#2E4A7A">Văn phòng</th>
+          <th style="background:#2E4A7A;text-align:center">Số giờ OT</th>
+          <th style="background:#2E4A7A">Ghi chú</th>
+        </tr></thead>
+        <tbody>
+          ${entries.map(e=>`<tr>
+            <td>${e.date}</td>
+            <td>${x(e.pjName)}</td>
+            <td><span class="${e.pjOffice==='大阪'?'b-osaka':'b-tokyo'}">${e.pjOffice||'—'}</span></td>
+            <td class="c-ot">${e.hours}h</td>
+            <td style="font-size:10px;color:#595959">${x(e.note||'')}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td colspan="3" style="text-align:right">Tổng OT ${s}:</td>
+          <td class="c-ot" style="font-size:13px">${v.total.toFixed(1)}h</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>`;
+  }).join('');
+
+  const html = `<div class="report-doc">
+    <div class="doc-header">
+      <div class="doc-logo">
+        <div class="doc-logo-mark" style="padding:4px;background:#fff">
+  <img src="data:image/png;base64,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" style="width:34px;height:34px;object-fit:contain;border-radius:4px">
+</div>
+        <div>
+          <div class="doc-title-main">BÁO CÁO OT NHÂN SỰ</div>
+          <div class="doc-title-sub">残業時間報告書 — ${ml} / Phối Cảnh Pro System</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div><strong>Tháng báo cáo:</strong> ${ml}</div>
+        <div><strong>Ngày xuất:</strong> ${now}</div>
+        <div><strong>Nhân sự có OT:</strong> ${activeStaff.length} người</div>
+      </div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi-box orange">
+        <div class="kpi-num">${totalOT.toFixed(1)}<span style="font-size:16px">h</span></div>
+        <div class="kpi-lbl">Tổng OT tháng</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-num">${activeStaff.length}</div>
+        <div class="kpi-lbl">Nhân sự có OT</div>
+      </div>
+      <div class="kpi-box gold">
+        <div class="kpi-num">${activeStaff.length>0?(totalOT/activeStaff.length).toFixed(1):0}<span style="font-size:16px">h</span></div>
+        <div class="kpi-lbl">Trung bình/người</div>
+      </div>
+    </div>
+
+    <div class="section-title">I. TỔNG HỢP OT THEO NHÂN SỰ</div>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Nhân sự</th>
+        <th style="text-align:center">Số ngày OT</th>
+        <th style="text-align:center">Tổng giờ OT</th>
+        <th>Dự án liên quan</th>
+      </tr></thead>
+      <tbody>
+        ${activeStaff.map((s,i)=>{
+          const v=staffOT[s];
+          const pjNames=[...new Set(v.entries.map(e=>e.pjName))];
+          return `<tr>
+            <td style="color:#595959">${i+1}</td>
+            <td style="font-weight:700">${s}</td>
+            <td class="c-tot">${v.entries.length}</td>
+            <td class="c-ot" style="font-size:14px">${v.total.toFixed(1)}h</td>
+            <td style="font-size:10px;color:#595959">${pjNames.map(n=>x(n)).join(', ')}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="2" style="font-weight:700">TỔNG CỘNG</td>
+        <td class="c-tot">${activeStaff.reduce((s,k)=>s+staffOT[k].entries.length,0)}</td>
+        <td class="c-ot" style="font-size:14px">${totalOT.toFixed(1)}h</td>
+        <td></td>
+      </tr></tfoot>
+    </table>
+
+    <div class="section-title">II. CHI TIẾT OT TỪNG NHÂN SỰ</div>
+    ${staffBlocks}
+
+    <div class="sign-section">
+      <div class="sign-box">Người lập báo cáo<br><br><br></div>
+      <div class="sign-box">Trưởng nhóm xác nhận<br><br><br></div>
+    </div>
+    <div class="doc-footer">
+      <span>GENDAI SOUGO architects inc. — 作成数管理システム</span>
+      <span>Xuất lúc ${new Date().toLocaleString('vi-VN')} | ${ml}</span>
+    </div>
+  </div>`;
+
+  showReportOverlay('⏱ Báo cáo OT Nhân sự — ' + ml, html);
+}
+
+/* ── REPORT OVERLAY RENDERER ── */
+function showReportOverlay(title, bodyHtml) {
+  const overlay = document.createElement('div');
+  overlay.className = 'rpt-overlay';
+  overlay.id = 'rptOverlay';
+  overlay.innerHTML = `
+    <div class="rpt-container">
+      <div class="rpt-header">
+        <h2>${title}</h2>
+        <div class="rpt-actions">
+          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.3)" onclick="printReport()">🖨 In / Lưu PDF</button>
+          <button class="btn btn-sm btn-gold" onclick="closeReport()">✕ Đóng</button>
+        </div>
+      </div>
+      <div class="rpt-body" id="rptBody">${bodyHtml}</div>
+    </div>
+  `;
+  overlay.onclick = e => { if(e.target===overlay) closeReport(); };
+  document.body.appendChild(overlay);
+}
+
+function printReport() {
+  const body = document.getElementById('rptBody');
+  if (!body) return;
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Báo cáo Phối Cảnh Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:12px;color:#1a1a1a;background:#fff}
+      @page{size:A4;margin:0}
+      @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+      ${[...document.styleSheets].flatMap(s=>{try{return[...s.cssRules].filter(r=>r.selectorText?.includes('.report-doc')||r.selectorText?.includes('.doc-')||r.selectorText?.includes('.kpi-')||r.selectorText?.includes('.pj-block')||r.selectorText?.includes('.ot-staff')||r.selectorText?.includes('.sign-')||r.selectorText?.includes('.c-new')||r.selectorText?.includes('.c-rev')||r.selectorText?.includes('.c-tot')||r.selectorText?.includes('.c-ot')||r.selectorText?.includes('.b-osaka')||r.selectorText?.includes('.b-tokyo')||r.selectorText?.includes('.chip-')||r.selectorText?.includes('.section-title')).map(r=>r.cssText)}catch(e){return[];}}).join('\n')}
+    </style>
+  </head><body>${body.innerHTML}</body></html>`);
+  w.document.close();
+  setTimeout(()=>{ w.focus(); w.print(); },600);
+}
+
+function closeReport() { document.getElementById('rptOverlay')?.remove(); }
+
+/* ══════════════════════════════════════════════════════
+   THEME SYSTEM
+══════════════════════════════════════════════════════ */
+const THEMES = {
+  'navy-gold': {
+    name: 'Navy & Gold', emoji: '🔷',
+    '--ex-navy':'#1F3864','--ex-navy2':'#2E4A7A','--ex-navy3':'#4472C4',
+    '--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31',
+    '--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000'
+  },
+  'charcoal-gold': {
+    name: 'Charcoal & Gold', emoji: '⬛',
+    '--ex-navy':'#2C2C2C','--ex-navy2':'#3D3D3D','--ex-navy3':'#666666',
+    '--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31',
+    '--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000'
+  },
+  'forest-amber': {
+    name: 'Forest & Amber', emoji: '🌲',
+    '--ex-navy':'#1B4332','--ex-navy2':'#2D6A4F','--ex-navy3':'#52B788',
+    '--ex-gold':'#F4A261','--ex-gold2':'#FBBF69','--ex-orange':'#E76F51',
+    '--new-bg':'#D8F3DC','--new-text':'#1B4332','--rev-bg':'#FFF3E0','--rev-text':'#7B3F00'
+  },
+  'navy-red': {
+    name: 'Navy & Red', emoji: '🔴',
+    '--ex-navy':'#1A1A2E','--ex-navy2':'#16213E','--ex-navy3':'#0F3460',
+    '--ex-gold':'#E94560','--ex-gold2':'#FF6B6B','--ex-orange':'#C23152',
+    '--new-bg':'#E8F4FD','--new-text':'#0F3460','--rev-bg':'#FDEAEA','--rev-text':'#7B1A1A'
+  },
+  'slate-teal': {
+    name: 'Slate & Teal', emoji: '🩵',
+    '--ex-navy':'#2D4156','--ex-navy2':'#3D5A73','--ex-navy3':'#5B8FB9',
+    '--ex-gold':'#00B4D8','--ex-gold2':'#48CAE4','--ex-orange':'#0096C7',
+    '--new-bg':'#E0F7FA','--new-text':'#006064','--rev-bg':'#E3F2FD','--rev-text':'#0D47A1'
+  },
+  'midnight-purple': {
+    name: 'Midnight Purple', emoji: '🟣',
+    '--ex-navy':'#240046','--ex-navy2':'#3C096C','--ex-navy3':'#7B2FBE',
+    '--ex-gold':'#C77DFF','--ex-gold2':'#E0AAFF','--ex-orange':'#9D4EDD',
+    '--new-bg':'#F3E8FF','--new-text':'#5B21B6','--rev-bg':'#FFF0FB','--rev-text':'#86198F'
+  },
+  'custom': { name: 'Tùy chỉnh', emoji: '✏️' }
+};
+
+function applyTheme(themeKey) {
+  const theme = THEMES[themeKey];
+  if (!theme) return;
+  const root = document.documentElement;
+  Object.entries(theme).forEach(([k,v]) => {
+    if (k.startsWith('--')) root.style.setProperty(k, v);
+  });
+  // Update header bg if needed
+  document.querySelector('.header').style.background = theme['--ex-navy']||'';
+  document.querySelector('.month-strip').style.background = theme['--ex-navy2']||'';
+  localStorage.setItem('app_theme', themeKey);
+  if (themeKey !== 'custom') localStorage.setItem('app_theme_data', JSON.stringify(theme));
+}
+
+function applyCustomColor(varName, val) {
+  document.documentElement.style.setProperty(varName, val);
+  // Save to custom theme
+  const saved = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
+  saved[varName] = val;
+  localStorage.setItem('app_custom_theme', JSON.stringify(saved));
+  localStorage.setItem('app_theme', 'custom');
+}
+
+function loadSavedTheme() {
+  const key = localStorage.getItem('app_theme');
+  if (!key) return;
+  if (key === 'custom') {
+    const custom = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
+    if (Object.keys(custom).length) {
+      const root = document.documentElement;
+      Object.entries(custom).forEach(([k,v]) => root.style.setProperty(k, v));
+    }
+  } else if (THEMES[key]) {
+    applyTheme(key);
+  }
+}
+
+function openThemePicker() {
+  const currentKey = localStorage.getItem('app_theme')||'navy-gold';
+  const root = document.documentElement;
+  const getCss = v => getComputedStyle(root).getPropertyValue(v).trim();
+
+  showModal(`
+    <h3>🎨 Tuỳ chỉnh màu sắc giao diện</h3>
+
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ex-gray4);font-weight:600;margin-bottom:10px">Chủ đề có sẵn</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${Object.entries(THEMES).filter(([k])=>k!=='custom').map(([key, t]) => `
+          <div onclick="applyTheme('${key}');document.querySelectorAll('.tsw').forEach(s=>s.classList.remove('active'));this.querySelector('.tsw').classList.add('active');updateColorInputs()"
+            style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:2px solid ${currentKey===key?t['--ex-navy']:'var(--ex-gray2)'};border-radius:8px;cursor:pointer;transition:all .15s;background:${currentKey===key?'#EEF3FB':''}"
+            id="themeBtn-${key}"
+            onmouseover="this.style.borderColor='${t['--ex-navy']}'"
+            onmouseout="this.style.borderColor='${currentKey===key?t['--ex-navy']:'var(--ex-gray2)'}'">
+            <span class="tsw theme-swatch ${currentKey===key?'active':''}"
+              style="background:${t['--ex-navy']};width:24px;height:24px;border-radius:50%;flex-shrink:0"></span>
+            <span class="tsw theme-swatch" style="background:${t['--ex-gold']};width:16px;height:16px;border-radius:50%;flex-shrink:0;margin-left:-8px"></span>
+            <span style="font-size:11px;font-weight:600">${t.name}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ex-gray4);font-weight:600;margin-bottom:10px">✏️ Tuỳ chỉnh từng màu</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['--ex-navy',   'Màu chính (Header, tiêu đề)'],
+          ['--ex-navy2',  'Màu phụ (Thanh tháng)'],
+          ['--ex-gold',   'Màu nhấn (Gold / Accent)'],
+          ['--ex-orange', 'Màu OT & cảnh báo'],
+          ['--new-bg',    'Nền hạng mục Mới'],
+          ['--rev-bg',    'Nền hạng mục Sửa'],
+        ].map(([varName, label]) => `
+          <div class="color-picker-row" style="gap:8px;margin-bottom:8px">
+            <input type="color" id="cp-${varName.replace(/--/g,'').replace(/-/g,'_')}"
+              value="${cssToHex(getCss(varName))}"
+              oninput="applyCustomColor('${varName}',this.value)"
+              style="width:36px;height:32px;padding:2px;border:1px solid var(--ex-gray2);border-radius:4px;cursor:pointer">
+            <label style="font-size:11px;color:var(--ex-gray4);line-height:1.3">${label}</label>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="modal-ft">
+      <button class="btn btn-danger btn-sm" onclick="resetTheme()">↺ Đặt lại mặc định</button>
+      <button class="btn btn-gold" onclick="closeModal()">✓ Xong</button>
+    </div>
+  `);
+}
+
+function updateColorInputs() {
+  // Update color pickers to reflect new theme
+  const root = document.documentElement;
+  const vars = ['--ex-navy','--ex-navy2','--ex-gold','--ex-orange','--new-bg','--rev-bg'];
+  vars.forEach(v => {
+    const id = 'cp-'+v.replace(/--/g,'').replace(/-/g,'_');
+    const el = document.getElementById(id);
+    if (el) el.value = cssToHex(getComputedStyle(root).getPropertyValue(v).trim());
+  });
+}
+
+function cssToHex(color) {
+  if (!color) return '#1F3864';
+  color = color.trim();
+  if (color.startsWith('#') && color.length===7) return color;
+  if (color.startsWith('#') && color.length===4) {
+    return '#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
+  }
+  // rgb(r,g,b) → hex
+  const m = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (m) return '#'+[m[1],m[2],m[3]].map(n=>parseInt(n).toString(16).padStart(2,'0')).join('');
+  return '#1F3864';
+}
+
+function resetTheme() {
+  localStorage.removeItem('app_theme');
+  localStorage.removeItem('app_custom_theme');
+  localStorage.removeItem('app_theme_data');
+  applyTheme('navy-gold');
+  closeModal();
+  toast('↺ Đã đặt lại màu mặc định');
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER ALL
+══════════════════════════════════════════════════════ */
+function renderAll() {
+  renderMonthStrip();
+  renderSidebar();
+  if (activePage==='main') renderContent();
+  else if (activePage==='dashboard') renderDashboard();
+  else if (activePage==='staff') renderStaffPage();
+  else if (activePage==='settings') renderSettings();
+}
+
+// Init
+loadSavedTheme();
+showPage('main');
+renderAll();
+</script>
+</body>
+</html>
