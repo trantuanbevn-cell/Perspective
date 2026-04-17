@@ -79,23 +79,23 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 #pageDashboard,#pageStaff,#pageSettings{display:none;padding:18px 22px;overflow-y:auto;height:calc(100vh - 93px)}
 
 /* SIDEBAR */
-.sidebar{width:200px;min-width:178px;background:#f4f5f7;border-right:1px solid var(--gray2);display:flex;flex-direction:column;overflow:hidden}
-.sidebar-hd{padding:9px 12px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold)}
+.sidebar{width:220px;min-width:200px;background:#f4f5f7;border-right:1px solid var(--gray2);display:flex;flex-direction:column;flex-shrink:0;height:100%;overflow:hidden}
+.sidebar-hd{padding:9px 12px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0}
 .sidebar-hd span{background:var(--gold);color:var(--navy);border-radius:99px;padding:1px 7px;font-size:10px}
-.pj-list{flex:1;overflow-y:auto;padding:8px 7px;display:flex;flex-direction:column;gap:6px}
+.pj-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 7px;display:flex;flex-direction:column;gap:6px;min-height:0;scroll-behavior:smooth}
 /* Project card in sidebar */
-.pj-card{background:#fff;border-radius:8px;border:2px solid transparent;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:all .15s}
+.pj-card{background:#fff;border-radius:8px;border:2px solid transparent;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s,transform .15s;flex-shrink:0;width:100%}
 .pj-card:hover{border-color:var(--gold2);box-shadow:0 3px 10px rgba(0,0,0,.13);transform:translateY(-1px)}
 .pj-card.active{border-color:var(--gold);box-shadow:0 3px 12px rgba(255,192,0,.3)}
-.pj-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);overflow:hidden;position:relative}
-.pj-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pj-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);overflow:hidden;position:relative;flex-shrink:0;display:block}
+.pj-thumb img{width:100%;height:100%;object-fit:cover;display:block;flex-shrink:0}
 .pj-thumb-ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.25);font-size:24px}
 .pj-thumb-num{position:absolute;top:5px;left:5px;background:var(--gold);color:var(--navy);font-size:10px;font-weight:800;border-radius:4px;padding:1px 5px;line-height:1.4}
-.pj-card-body{padding:7px 9px 8px}
-.pj-card-name{font-weight:700;font-size:11px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--dark);margin-bottom:4px}
+.pj-card-body{padding:7px 9px 8px;flex-shrink:0}
+.pj-card-name{font-weight:700;font-size:11px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--dark);margin-bottom:4px;word-break:break-word}
 .pj-card-name-jp{font-size:9px;color:var(--gray4);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:4px}
 .pj-card-sub{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px}
-.sidebar-ft{padding:7px 8px;border-top:1px solid var(--gray2);background:#eaecf0}
+.sidebar-ft{padding:7px 8px;border-top:1px solid var(--gray2);background:#eaecf0;flex-shrink:0}
 
 /* CONTENT */
 .content{flex:1;overflow-y:auto;background:#EAECF0}
@@ -435,8 +435,9 @@ let D = (() => {
   return freshData();
 })();
 
+// save() defined later in sync section (overrides this stub)
 function save() {
-  if (window._viewOnly) return;
+  if (window._viewOnly || window._viewOnlyMode) return;
   localStorage.setItem(SK, JSON.stringify(D));
   triggerAutoSync();
 }
@@ -2199,6 +2200,12 @@ async function syncPush() {
   // editPw stored locally during setup/login — never leaves device
   const editPw = localStorage.getItem('sync_edit_pw') || D.settings?.sync?.editPw || '';
   if (!editPw) { setSyncStatus('error','Cần đăng nhập lại'); toast('⚠ Phiên hết hạn — đăng nhập lại để sync'); return false; }
+  // Safety: never push empty data (no projects at all AND no staffProfiles)
+  const totalPjs = Object.values(D.months||{}).reduce((s,m)=>s+(m.projects||[]).length,0);
+  const hasProfiles = Object.keys(D.settings?.staffProfiles||{}).length > 0;
+  if (totalPjs === 0 && !hasProfiles && !D.settings?.sync?.adminHash) {
+    toast('⚠ Dữ liệu trống — không đồng bộ để tránh ghi đè'); return false;
+  }
   try {
     const payload = await encryptData(D, editPw);
     const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
@@ -2444,96 +2451,91 @@ async function syncDoLogin() {
   closeModal();
 
   try {
-    // Step 1: Set binId so syncPull can use it
     localStorage.setItem('sync_bin_id_public', binId);
     SYNC.binId = binId;
 
-    // Step 2: Hash the entered password to compare
     const h = await hashPw(pw);
-
-    // Step 3: We need to get the hashed passwords from cloud.
-    //   They're stored in D.settings.sync (encrypted with editPw).
-    //   Problem: we don't know editPw yet. Strategy:
-    //   - First try to decrypt with pw as editPw (works for Admin/Edit)
-    //   - If that fails, use stored local editPw (returning user)
-    //   - If both fail, try raw fetch to get unencrypted sync config (not available — fail gracefully)
-
-    let pulled = null;
-    let decryptPw = pw; // try user's pw first (Admin/Edit case)
-
-    // Also try stored editPw (for View role)
     const storedEditPw = localStorage.getItem('sync_edit_pw') || '';
 
-    // Try decrypt with user pw
-    try {
-      pulled = await syncPull(pw);
-    } catch(e1) {
-      // Try with stored editPw (View role scenario)
-      if (storedEditPw && storedEditPw !== pw) {
-        try {
-          pulled = await syncPull(storedEditPw);
-          decryptPw = storedEditPw;
-        } catch(e2) {
-          pulled = null;
+    // ── Verify password & determine role ──
+    // Priority: check LOCAL hashes first (fast, no network)
+    // Then pull from cloud if needed (Edit/View on new device)
+    const localSync = D.settings?.sync || {};
+    let role = 'none';
+    let pulled = null;
+
+    // Check local hashes
+    if (localSync.adminHash && h === localSync.adminHash) {
+      role = 'admin';
+    } else if (localSync.editHash && h === localSync.editHash) {
+      role = 'edit';
+    } else if (localSync.viewHash && h === localSync.viewHash) {
+      role = 'view';
+    } else {
+      // Local check failed → try pulling from cloud to get latest hashes
+      // Edit/View role: data encrypted with editPw, try pw as editPw first
+      setSyncStatus('syncing', 'Đang kết nối…');
+      try {
+        pulled = await syncPull(pw); // works if pw == editPw (Edit role)
+      } catch(e1) {
+        if (storedEditPw && storedEditPw !== pw) {
+          try { pulled = await syncPull(storedEditPw); } catch(e2) {}
         }
+      }
+      if (pulled) {
+        const cloudSync = pulled.settings?.sync || {};
+        if (cloudSync.adminHash && h === cloudSync.adminHash) role = 'admin';
+        else if (cloudSync.editHash && h === cloudSync.editHash) role = 'edit';
+        else if (cloudSync.viewHash && h === cloudSync.viewHash) role = 'view';
       }
     }
 
-    // Step 4: Determine role from hashed passwords
-    // Use pulled data's sync config, or fall back to local D.settings.sync
-    const syncCfg = pulled?.settings?.sync || D.settings?.sync || {};
-
-    let role = 'none';
-    if (syncCfg.adminHash && h === syncCfg.adminHash) role = 'admin';
-    else if (syncCfg.editHash && h === syncCfg.editHash)   role = 'edit';
-    else if (syncCfg.viewHash && h === syncCfg.viewHash)   role = 'view';
-
     if (role === 'none') {
-      setSyncStatus('error','Sai mật khẩu');
+      setSyncStatus('error', 'Sai mật khẩu');
       toast('✗ Sai mật khẩu — vui lòng kiểm tra lại');
       setTimeout(() => openSyncPanel(), 1500);
       return;
     }
 
-    // Step 5: Save credentials for this session
+    // ── Save session ──
     SYNC.role  = role;
     SYNC.binId = binId;
 
-    // Store editPw for future encrypt/decrypt
-    if (role === 'admin') {
-      // Admin pw IS the editPw (admin knows all)
-      const ep = syncCfg.editPw || pw;
-      localStorage.setItem('sync_edit_pw', ep);
-    } else if (role === 'edit') {
-      // Edit pw == editPw (data encrypted with editPw)
+    // editPw storage:
+    // - Admin: editPw was set at confirmSyncSetup → already in localStorage
+    //   If not found (new device), admin must use "Tải dữ liệu" after login
+    // - Edit: pw IS the editPw (data encrypted with editPw)
+    // - View: uses storedEditPw for decryption
+    if (role === 'edit') {
       localStorage.setItem('sync_edit_pw', pw);
-    } else if (role === 'view' && decryptPw) {
-      // Keep using stored editPw for decrypt
-      localStorage.setItem('sync_edit_pw', decryptPw);
+    }
+    // For admin: do NOT overwrite editPw with adminPw — they are different!
+    // editPw should already be stored from setup. If missing, warn.
+    if (role === 'admin' && !storedEditPw) {
+      // Admin on new device — needs to re-enter editPw separately
+      toast('⚠ Admin trên thiết bị mới — vui lòng dùng nút "Tải dữ liệu" sau khi nhập Edit Password');
     }
 
-    // Step 6: Load data if successfully pulled
+    // ── Load cloud data if pulled ──
     if (pulled) {
       D = pulled; save(); renderAll();
     }
 
-    // Step 7: View-only mode
     enableViewOnlyMode(role === 'view');
 
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     const roleLabels = {admin:'✓ Admin', edit:'✓ Edit', view:'👁 View'};
-    setSyncStatus('synced', SYNC.autoOn && role==='admin' ? '⚡ Auto' : roleLabels[role]);
-    toast('✓ Đăng nhập thành công — quyền ' + role.toUpperCase() +
-          (pulled ? '' : ' (dữ liệu local)'));
+    setSyncStatus('synced', SYNC.autoOn && role === 'admin' ? '⚡ Auto' : roleLabels[role]);
+    toast('✓ Đăng nhập thành công — quyền ' + role.toUpperCase() + (pulled ? ' (đã tải dữ liệu mới)' : ''));
 
   } catch(e) {
-    setSyncStatus('error','Lỗi kết nối');
-    const msg = e.message||'';
-    if (msg.includes('no_bin_id')) toast('✗ Bin ID không hợp lệ');
+    setSyncStatus('error', 'Lỗi kết nối');
+    const msg = e.message || '';
+    if (msg.includes('no_bin_id'))         toast('✗ Bin ID không hợp lệ');
     else if (msg.includes('connect_http_401')) toast('✗ Master Key sai hoặc hết hạn');
     else if (msg.includes('connect_http_404')) toast('✗ Bin ID không tồn tại');
-    else if (msg.includes('decrypt_fail')) toast('✗ Sai mật khẩu — không giải mã được dữ liệu');
-    else toast('✗ Lỗi kết nối: ' + msg);
+    else if (msg.includes('decrypt_fail'))     toast('✗ Sai mật khẩu — không giải mã được');
+    else toast('✗ Lỗi: ' + msg);
     setTimeout(() => openSyncPanel(), 2000);
   }
 }
@@ -2602,9 +2604,11 @@ function enableViewOnlyMode(on) {
     }
     // Intercept save to prevent writes
     window._viewOnlyMode = true;
+    window._viewOnly = true;
   } else {
     if (banner) banner.remove();
     window._viewOnlyMode = false;
+    window._viewOnly = false;
   }
 }
 
