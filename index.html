@@ -1443,13 +1443,41 @@ function renderRatingCell(pjId, gId, rId, field, val, color) {
   const v = val || 0;
   const dc = ratingColor(v);
   const display = v > 0 ? String(v) : '-';
+  // Use data-attributes to avoid quote injection in HTML attributes
   return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
     + '<div style="font-size:14px;font-weight:800;color:' + dc + ';line-height:1">' + display + '</div>'
     + '<input type="range" min="0" max="10" step="1" value="' + v + '"'
+    + ' class="rating-slider"'
+    + ' data-pj="' + x(pjId) + '" data-g="' + x(gId) + '" data-r="' + x(rId) + '" data-f="' + x(field) + '"'
     + ' style="width:44px;height:3px;accent-color:' + color + ';cursor:pointer"'
     + ' title="' + display + '/10"'
-    + ' oninput="var n=+this.value;this.previousElementSibling.textContent=n||\'-\';this.previousElementSibling.style.color=ratingColor(n);updRowRating(' + JSON.stringify(pjId) + ',' + JSON.stringify(gId) + ',' + JSON.stringify(rId) + ',' + JSON.stringify(field) + ',n)">'
+    + ' oninput="ratingSliderInput(this)">'
     + '</div>';
+}
+
+function ratingSliderInput(el) {
+  const n = +el.value;
+  const prev = el.previousElementSibling;
+  if (prev) { prev.textContent = n || '-'; prev.style.color = ratingColor(n); }
+  updRowRating(el.dataset.pj, el.dataset.g, el.dataset.r, el.dataset.f, n);
+}
+
+
+// ── Contract date handler (uses data-staff attr to avoid quote injection) ──
+function contractDateChanged(el) {
+  const staffName = el.dataset.staff;
+  if (!staffName) return;
+  const p = getStaffProfile(staffName);
+  p.contractEnd = el.value;
+  persistD();
+  // Update display without full re-render
+  const block = el.closest('[style*="f0f8ff"]') || el.parentElement;
+  const next = contractNextAnnual(el.value, localDateStr(new Date()));
+  const days = contractDaysUntil(next, localDateStr(new Date()));
+  const info = contractAlertInfo(days);
+  const statusEl = block ? block.querySelector('.contract-status') : null;
+  if (statusEl) statusEl.innerHTML = renderDateStatus(next, days, info);
+  renderStaffPage();
 }
 
 // Rating save — immediate, uses getPjGlobal for cross-navigation safety
@@ -2108,8 +2136,9 @@ function renderContractBlock(staffName, prof, todayStr) {
   return '<div style="margin-bottom:10px;padding:7px 9px;background:#f0f8ff;border-radius:var(--r);border:1px dashed #90cdf4">'
     + '<div style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📄 Hết hạn hợp đồng</div>'
     + '<input type="date" value="' + contractEnd + '"'
+    + ' class="contract-date-input" data-staff="' + x(staffName) + '"'
     + ' style="width:100%;padding:4px 7px;border:1px solid ' + cdBorder + ';border-radius:var(--r);font-size:11px;background:' + cdBg + '"'
-    + (' onchange="saveStaffProfile('+JSON.stringify(staffName)+',' + JSON.stringify('contractEnd') + ',this.value);renderStaffPage()">')
+    + ' onchange="contractDateChanged(this)">'
     + renderDateStatus(nextContract, cdDays, cdInfo)
     + '</div>';
 }
