@@ -438,21 +438,36 @@ function freshData() {
 }
 
 let D = (() => {
-  try { const r = localStorage.getItem(SK); if(r) return JSON.parse(r); } catch(e){}
+  try {
+    const r = localStorage.getItem(SK);
+    if(r) return JSON.parse(r);
+  } catch(e){}
+  // Also try sessionStorage as fallback for file:// protocol
+  try {
+    const r = sessionStorage.getItem(SK+'_backup');
+    if(r) return JSON.parse(r);
+  } catch(e){}
   return freshData();
 })();
 
-// save() - primary implementation (sync section has identical override)
-function save() {
+
+/* ── persistD: save to localStorage AND sessionStorage (file:// fallback) ── */
+function persistD() {
   if (window._viewOnly || window._viewOnlyMode) return;
+  // Ensure contractEnd in all profiles
   if (D.settings && D.settings.staffProfiles) {
     Object.values(D.settings.staffProfiles).forEach(p => {
       if (p.contractEnd === undefined) p.contractEnd = '';
     });
   }
-  localStorage.setItem(SK, JSON.stringify(D));
+  const json = JSON.stringify(D);
+  try { localStorage.setItem(SK, json); } catch(e) {}
+  try { sessionStorage.setItem(SK+'_backup', json); } catch(e) {}
   triggerAutoSync();
 }
+
+// save() - primary implementation (sync section has identical override)
+function save() { persistD(); }
 
 let activePjId = null;
 let activePage = 'main';
@@ -1409,17 +1424,14 @@ function renderRatingCell(pjId, gId, rId, field, val, color) {
 
 // Rating save — immediate, uses getPjGlobal for cross-navigation safety
 function updRowRating(pjId, gId, rId, field, val) {
-  // Must find project across ALL months/sections regardless of current navigation state
   const p = getPjGlobal(pjId);
-  if (!p) { console.warn('updRowRating: project not found', pjId); return; }
+  if (!p) return;
   const g = (p.groups||[]).find(g => g.id === gId);
   if (!g) return;
   const r = g.rows.find(r => r.id === rId);
   if (!r) return;
-  r[field] = val;
-  // Save to D object immediately (synchronous), then persist
-  localStorage.setItem(SK, JSON.stringify(D));
-  if (!window._viewOnly && !window._viewOnlyMode) triggerAutoSync();
+  r[field] = +val;
+  persistD();
 }
 
 
@@ -1796,11 +1808,7 @@ function updRow(pjId,gid2,rid,field,val) {
   const g=(p.groups||[]).find(g=>g.id===gid2); if(!g) return;
   const r=g.rows.find(r=>r.id===rid); if(!r) return;
   r[field]=val;
-  // Write directly to localStorage immediately for reliability
-  if (!window._viewOnly && !window._viewOnlyMode) {
-    localStorage.setItem(SK, JSON.stringify(D));
-    triggerAutoSync();
-  }
+  persistD();
   // Leave conflict check when staff, dateFrom or dateTo changes
   if(['staff','dateFrom','dateTo'].includes(field) && r.staff && (r.dateFrom||r.dateTo)) {
     const conflicts = checkLeaveConflict(r.staff, r.dateFrom||r.dateTo, r.dateTo||r.dateFrom);
@@ -2085,11 +2093,7 @@ function getStaffProfile(name) {
 function saveStaffProfile(name, field, val) {
   const p = getStaffProfile(name);
   p[field] = val;
-  // Save directly - bypass any potential issues with the save() override chain
-  if (!window._viewOnly && !window._viewOnlyMode) {
-    localStorage.setItem(SK, JSON.stringify(D));
-    triggerAutoSync();
-  }
+  persistD();
 }
 
 // Get all leaves for a staff across all months
@@ -2587,7 +2591,10 @@ async function hashPw(pw) {
 const JBIN = 'https://api.jsonbin.io/v3';
 
 async function syncPush() {
-  if (!SYNC.binId || !SYNC.apiKey) return false;
+  if (!SYNC.binId || !SYNC.apiKey) {
+    // Silently skip — not configured, not an error
+    return false;
+  }
   // editPw stored locally during setup/login — never leaves device
   const editPw = localStorage.getItem('sync_edit_pw') || D.settings?.sync?.editPw || '';
   if (!editPw) { setSyncStatus('error','Cần đăng nhập lại'); toast('⚠ Phiên hết hạn — đăng nhập lại để sync'); return false; }
@@ -2609,7 +2616,8 @@ async function syncPush() {
     setSyncStatus('synced', SYNC.autoOn?'⚡ Auto':'✓ Đã lưu');
     return true;
   } catch(e) {
-    setSyncStatus('error','Lỗi lưu');
+    // Only show error if we actually tried to push
+    if (SYNC.binId && SYNC.apiKey) setSyncStatus('error','Lỗi lưu');
     return false;
   }
 }
@@ -2669,20 +2677,28 @@ function triggerAutoSync() {
 
 /* ── Quick Sync: 1-click push/pull without password ── */
 async function quickSync() {
-  if (!SYNC.binId) {
-    toast('☁ Chưa cấu hình sync — giữ nút Sync để mở cài đặt');
+  // If not configured or not logged in → open panel
+  if (!SYNC.binId || SYNC.role === 'none') {
+    openSyncPanel();
     return;
   }
   if (SYNC.role === 'admin' || SYNC.role === 'edit') {
-    // Push local → cloud
+    if (!SYNC.apiKey && SYNC.role === 'admin') {
+      toast('⚠ Chưa có Master Key — mở cài đặt Sync');
+      openSyncPanel();
+      return;
+    }
     setSyncStatus('syncing', 'Đang lưu…');
     const ok = await syncPush();
-    if (ok) toast('✓ Đã đồng bộ lên cloud');
+    if (ok) {
+      toast('✓ Đã đồng bộ lên cloud');
+    } else {
+      setSyncStatus('synced', SYNC.role === 'admin' ? '✓ Admin' : '✓ Edit');
+      toast('⚠ Không sync được — dữ liệu đã lưu local');
+    }
   } else if (SYNC.role === 'view') {
-    // Pull cloud → local (view only)
     await syncPullWithRole();
   } else {
-    // Not logged in — open login
     openSyncPanel();
   }
 }
@@ -3102,872 +3118,10 @@ setTimeout(()=>{
   } else if (role === 'edit') {
     setSyncStatus('synced', '✓ Edit');
   } else if (role === 'view') {
-    setSyncStatus('synced', '👁 View');
-    enableViewOnlyMode(true);
+    setSyncStatus('synced', '👁 View'); enableViewOnlyMode(true);
+  } else {
+    setSyncStatus('', 'Sync');
   }
-}, 150);
-
-// Auto-push on data change — hooks into every save() call
-const _origSave = save;
-function save() {
-  if (window._viewOnlyMode) return; // block saves in view mode
-  // Ensure contractEnd exists in all profiles before saving
-  if (D.settings && D.settings.staffProfiles) {
-    Object.values(D.settings.staffProfiles).forEach(p => {
-      if (p.contractEnd === undefined) p.contractEnd = '';
-    });
-  }
-  localStorage.setItem(SK, JSON.stringify(D));
-  triggerAutoSync();
-}
-
-
-/* ══════════════════════════════════════════════════════
-   THEME SYSTEM
-══════════════════════════════════════════════════════ */
-const THEMES = {
-  'navy-gold': {
-    name: 'Navy & Gold', emoji: '🔷',
-    '--ex-navy':'#1F3864','--ex-navy2':'#2E4A7A','--ex-navy3':'#4472C4',
-    '--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31',
-    '--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000'
-  },
-  'charcoal-gold': {
-    name: 'Charcoal & Gold', emoji: '⬛',
-    '--ex-navy':'#2C2C2C','--ex-navy2':'#3D3D3D','--ex-navy3':'#666666',
-    '--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31',
-    '--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000'
-  },
-  'forest-amber': {
-    name: 'Forest & Amber', emoji: '🌲',
-    '--ex-navy':'#1B4332','--ex-navy2':'#2D6A4F','--ex-navy3':'#52B788',
-    '--ex-gold':'#F4A261','--ex-gold2':'#FBBF69','--ex-orange':'#E76F51',
-    '--new-bg':'#D8F3DC','--new-text':'#1B4332','--rev-bg':'#FFF3E0','--rev-text':'#7B3F00'
-  },
-  'navy-red': {
-    name: 'Navy & Red', emoji: '🔴',
-    '--ex-navy':'#1A1A2E','--ex-navy2':'#16213E','--ex-navy3':'#0F3460',
-    '--ex-gold':'#E94560','--ex-gold2':'#FF6B6B','--ex-orange':'#C23152',
-    '--new-bg':'#E8F4FD','--new-text':'#0F3460','--rev-bg':'#FDEAEA','--rev-text':'#7B1A1A'
-  },
-  'slate-teal': {
-    name: 'Slate & Teal', emoji: '🩵',
-    '--ex-navy':'#2D4156','--ex-navy2':'#3D5A73','--ex-navy3':'#5B8FB9',
-    '--ex-gold':'#00B4D8','--ex-gold2':'#48CAE4','--ex-orange':'#0096C7',
-    '--new-bg':'#E0F7FA','--new-text':'#006064','--rev-bg':'#E3F2FD','--rev-text':'#0D47A1'
-  },
-  'midnight-purple': {
-    name: 'Midnight Purple', emoji: '🟣',
-    '--ex-navy':'#240046','--ex-navy2':'#3C096C','--ex-navy3':'#7B2FBE',
-    '--ex-gold':'#C77DFF','--ex-gold2':'#E0AAFF','--ex-orange':'#9D4EDD',
-    '--new-bg':'#F3E8FF','--new-text':'#5B21B6','--rev-bg':'#FFF0FB','--rev-text':'#86198F'
-  },
-  'custom': { name: 'Tùy chỉnh', emoji: '✏️' }
-};
-
-function applyTheme(themeKey) {
-  const theme = THEMES[themeKey];
-  if (!theme) return;
-  const root = document.documentElement;
-  Object.entries(theme).forEach(([k,v]) => {
-    if (k.startsWith('--')) root.style.setProperty(k, v);
-  });
-  // Update header bg if needed
-  document.querySelector('.header').style.background = theme['--ex-navy']||'';
-  document.querySelector('.month-strip').style.background = theme['--ex-navy2']||'';
-  localStorage.setItem('app_theme', themeKey);
-  if (themeKey !== 'custom') localStorage.setItem('app_theme_data', JSON.stringify(theme));
-}
-
-function applyCustomColor(varName, val) {
-  document.documentElement.style.setProperty(varName, val);
-  // Save to custom theme
-  const saved = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
-  saved[varName] = val;
-  localStorage.setItem('app_custom_theme', JSON.stringify(saved));
-  localStorage.setItem('app_theme', 'custom');
-}
-
-function loadSavedTheme() {
-  const key = localStorage.getItem('app_theme');
-  if (!key) return;
-  if (key === 'custom') {
-    const custom = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
-    if (Object.keys(custom).length) {
-      const root = document.documentElement;
-      Object.entries(custom).forEach(([k,v]) => root.style.setProperty(k, v));
-    }
-  } else if (THEMES[key]) {
-    applyTheme(key);
-  }
-}
-
-function openThemePicker() {
-  const currentKey = localStorage.getItem('app_theme')||'navy-gold';
-  const root = document.documentElement;
-  const getCss = v => getComputedStyle(root).getPropertyValue(v).trim();
-
-  showModal(`
-    <h3>🎨 Tuỳ chỉnh màu sắc giao diện</h3>
-
-    <div style="margin-bottom:18px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ex-gray4);font-weight:600;margin-bottom:10px">Chủ đề có sẵn</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px">
-        ${Object.entries(THEMES).filter(([k])=>k!=='custom').map(([key, t]) => `
-          <div onclick="applyTheme('${key}');document.querySelectorAll('.tsw').forEach(s=>s.classList.remove('active'));this.querySelector('.tsw').classList.add('active');updateColorInputs()"
-            style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:2px solid ${currentKey===key?t['--ex-navy']:'var(--ex-gray2)'};border-radius:8px;cursor:pointer;transition:all .15s;background:${currentKey===key?'#EEF3FB':''}"
-            id="themeBtn-${key}"
-            onmouseover="this.style.borderColor='${t['--ex-navy']}'"
-            onmouseout="this.style.borderColor='${currentKey===key?t['--ex-navy']:'var(--ex-gray2)'}'">
-            <span class="tsw theme-swatch ${currentKey===key?'active':''}"
-              style="background:${t['--ex-navy']};width:24px;height:24px;border-radius:50%;flex-shrink:0"></span>
-            <span class="tsw theme-swatch" style="background:${t['--ex-gold']};width:16px;height:16px;border-radius:50%;flex-shrink:0;margin-left:-8px"></span>
-            <span style="font-size:11px;font-weight:600">${t.name}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div>
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ex-gray4);font-weight:600;margin-bottom:10px">✏️ Tuỳ chỉnh từng màu</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${[
-          ['--ex-navy',   'Màu chính (Header, tiêu đề)'],
-          ['--ex-navy2',  'Màu phụ (Thanh tháng)'],
-          ['--ex-gold',   'Màu nhấn (Gold / Accent)'],
-          ['--ex-orange', 'Màu OT & cảnh báo'],
-          ['--new-bg',    'Nền hạng mục Mới'],
-          ['--rev-bg',    'Nền hạng mục Sửa'],
-        ].map(([varName, label]) => `
-          <div class="color-picker-row" style="gap:8px;margin-bottom:8px">
-            <input type="color" id="cp-${varName.replace(/--/g,'').replace(/-/g,'_')}"
-              value="${cssToHex(getCss(varName))}"
-              oninput="applyCustomColor('${varName}',this.value)"
-              style="width:36px;height:32px;padding:2px;border:1px solid var(--ex-gray2);border-radius:4px;cursor:pointer">
-            <label style="font-size:11px;color:var(--ex-gray4);line-height:1.3">${label}</label>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div class="modal-ft">
-      <button class="btn btn-danger btn-sm" onclick="resetTheme()">↺ Đặt lại mặc định</button>
-      <button class="btn btn-gold" onclick="closeModal()">✓ Xong</button>
-    </div>
-  `);
-}
-
-function updateColorInputs() {
-  // Update color pickers to reflect new theme
-  const root = document.documentElement;
-  const vars = ['--ex-navy','--ex-navy2','--ex-gold','--ex-orange','--new-bg','--rev-bg'];
-  vars.forEach(v => {
-    const id = 'cp-'+v.replace(/--/g,'').replace(/-/g,'_');
-    const el = document.getElementById(id);
-    if (el) el.value = cssToHex(getComputedStyle(root).getPropertyValue(v).trim());
-  });
-}
-
-function cssToHex(color) {
-  if (!color) return '#1F3864';
-  color = color.trim();
-  if (color.startsWith('#') && color.length===7) return color;
-  if (color.startsWith('#') && color.length===4) {
-    return '#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
-  }
-  // rgb(r,g,b) → hex
-  const m = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
-  if (m) return '#'+[m[1],m[2],m[3]].map(n=>parseInt(n).toString(16).padStart(2,'0')).join('');
-  return '#1F3864';
-}
-
-function resetTheme() {
-  localStorage.removeItem('app_theme');
-  localStorage.removeItem('app_custom_theme');
-  localStorage.removeItem('app_theme_data');
-  applyTheme('navy-gold');
-  closeModal();
-  toast('↺ Đã đặt lại màu mặc định');
-}
-
-
-function openExportMenu() {
-  const [y,m] = D.activeMonth.split('-');
-  const ml = monthLabel(D.activeMonth);
-  showModal(`
-    <h3>📤 Xuất báo cáo — ${ml}</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
-      <div style="border:1px solid var(--ex-gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
-        onclick="closeModal();exportProjectReport()"
-        onmouseover="this.style.borderColor='#1F3864';this.style.background='#EEF3FB'"
-        onmouseout="this.style.borderColor='var(--ex-gray2)';this.style.background=''"
-      >
-        <div style="font-size:32px;margin-bottom:10px">📋</div>
-        <div style="font-weight:700;font-size:14px;color:#1F3864;margin-bottom:6px">Báo cáo Dự án</div>
-        <div style="font-size:11px;color:var(--ex-gray4);line-height:1.6">
-          Tổng kết tất cả dự án trong tháng<br>
-          Số phối cảnh <strong>mới</strong> và <strong>sửa</strong><br>
-          Chi tiết theo từng hạng mục
-        </div>
-        <div style="margin-top:12px;background:#1F3864;color:#FFC000;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">
-          Xuất & In PDF
-        </div>
-      </div>
-      <div style="border:1px solid var(--ex-gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
-        onclick="closeModal();exportOTReport()"
-        onmouseover="this.style.borderColor='#ED7D31';this.style.background='#FFF5EE'"
-        onmouseout="this.style.borderColor='var(--ex-gray2)';this.style.background=''"
-      >
-        <div style="font-size:32px;margin-bottom:10px">⏱</div>
-        <div style="font-weight:700;font-size:14px;color:#C55A11;margin-bottom:6px">Báo cáo OT</div>
-        <div style="font-size:11px;color:var(--ex-gray4);line-height:1.6">
-          Chỉ nhân sự <strong>có phát sinh OT</strong><br>
-          Chi tiết ngày giờ theo dự án<br>
-          Tổng OT tháng từng người
-        </div>
-        <div style="margin-top:12px;background:#ED7D31;color:#fff;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">
-          Xuất & In PDF
-        </div>
-      </div>
-    </div>
-    <div style="margin-top:16px;padding:10px 14px;background:var(--ex-gray1);border-radius:6px;font-size:11px;color:var(--ex-gray4)">
-      💡 Sau khi xem trước, bấm <strong>Ctrl+P</strong> (hoặc nút In) → chọn <em>"Save as PDF"</em> để lưu file.
-    </div>
-    <div class="modal-ft">
-      <button class="btn" onclick="closeModal()">Đóng</button>
-    </div>
-  `);
-}
-
-/* ══════════════════════════════════════════════════════
-   REPORT 1: DỰ ÁN THÁNG
-══════════════════════════════════════════════════════ */
-function exportProjectReport() {
-  const pjs = curProjects();
-  const m = curMonth();
-  const ml = monthLabel(D.activeMonth);
-  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
-  const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
-  const sumAll = sumNew+sumRev;
-  const sumOT = pjs.reduce((s,p)=>s+(p.otLog||[]).reduce((x,e)=>x+(e.hours||0),0),0);
-  const tgtNew = m.targetNew||0, tgtRev = m.targetRev||0;
-  const pctNew = tgtNew>0?Math.round(sumNew/tgtNew*100):0;
-  const pctRev = tgtRev>0?Math.round(sumRev/tgtRev*100):0;
-
-  // Build per-project blocks
-  const pjBlocks = pjs.map((p,i) => {
-    const recs = p.records||[];
-    const tn=totalNew(p), tr2=totalRev(p);
-    if(tn+tr2===0) return '';
-    const rows = recs.filter(r=>r.qty>0).map(r=>`
-      <tr>
-        <td>${x(r.type||'—')}</td>
-        <td class="${r.status==='new'?'c-new':'c-rev'}">${r.status==='new'?'作成 Mới':'修正 Sửa'}</td>
-        <td style="text-align:center;font-weight:600">${x(r.staff||'—')}</td>
-        <td class="c-tot">${r.qty}</td>
-        <td style="font-size:10px;color:#595959">${x(r.note||'')}</td>
-      </tr>`).join('');
-    return `<div class="pj-block">
-      <div class="pj-block-hd">
-        <div>
-          <div class="pj-name">${i+1}. ${x(p.nameVN||p.nameJP||'—')}</div>
-          ${p.nameJP&&p.nameVN?`<div style="font-size:10px;color:#595959;margin-top:1px">${x(p.nameJP)}</div>`:''}
-        </div>
-        <div class="pj-chips">
-          <span class="${officeBadgeClass(p.office)}">${p.office||'—'}</span>
-          <span style="font-size:10px;color:#595959">${x(p.contact||'')}</span>
-          <span class="chip-new">新 ${tn}</span>
-          <span class="chip-rev">修 ${tr2}</span>
-          <span class="chip-tot">計 ${tn+tr2}</span>
-        </div>
-      </div>
-      ${rows?`<table>
-        <thead><tr>
-          <th>Hạng mục</th><th>Trạng thái</th><th style="text-align:center">Nhân sự</th>
-          <th style="text-align:center">Số (mai)</th><th>Ghi chú</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot><tr>
-          <td colspan="3" style="text-align:right">Tổng dự án:</td>
-          <td class="c-tot">${tn+tr2}</td><td style="font-size:10px">(Mới: ${tn} / Sửa: ${tr2})</td>
-        </tr></tfoot>
-      </table>`:'<div style="padding:10px 14px;font-size:11px;color:#BFBFBF">Chưa có hạng mục</div>'}
-    </div>`;
-  }).join('');
-
-  const html = `<div class="report-doc">
-    <div class="doc-header">
-      <div class="doc-logo">
-        <div class="doc-logo-mark" style="padding:4px;background:#fff">
-  <img src="data:image/png;base64,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" style="width:34px;height:34px;object-fit:contain;border-radius:4px">
-</div>
-        <div>
-          <div class="doc-title-main">BẢNG THỐNG KÊ PHỐI CẢNH THÁNG</div>
-          <div class="doc-title-sub">作成数報告書 — ${ml} / Phối Cảnh Pro System</div>
-        </div>
-      </div>
-      <div class="doc-meta">
-        <div><strong>Tháng báo cáo:</strong> ${ml}</div>
-        <div><strong>Ngày xuất:</strong> ${now}</div>
-        <div><strong>Số dự án:</strong> ${pjs.filter(p=>totalNew(p)+totalRev(p)>0).length}</div>
-      </div>
-    </div>
-
-    <div class="kpi-row">
-      <div class="kpi-box green">
-        <div class="kpi-num">${sumNew}</div>
-        <div class="kpi-lbl">作成 Làm mới</div>
-        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtNew} — ${pctNew}%</div>
-      </div>
-      <div class="kpi-box gold">
-        <div class="kpi-num">${sumRev}</div>
-        <div class="kpi-lbl">修正 Sửa lại</div>
-        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtRev} — ${pctRev}%</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-num">${sumAll}</div>
-        <div class="kpi-lbl">Tổng phối cảnh</div>
-        <div style="font-size:10px;color:#595959;margin-top:4px">Mục tiêu: ${tgtNew+tgtRev}</div>
-      </div>
-      <div class="kpi-box orange">
-        <div class="kpi-num">${sumOT>0?sumOT.toFixed(1):'0'}<span style="font-size:16px">h</span></div>
-        <div class="kpi-lbl">OT tháng</div>
-        <div style="font-size:10px;color:#595959;margin-top:4px">Toàn nhân sự</div>
-      </div>
-    </div>
-
-    <div class="section-title">I. TỔNG HỢP THEO DỰ ÁN</div>
-    <table>
-      <thead><tr>
-        <th>#</th><th>Tên dự án</th><th>VP</th><th>Người liên hệ JP</th>
-        <th style="text-align:center">作成 Mới</th>
-        <th style="text-align:center">修正 Sửa</th>
-        <th style="text-align:center">Tổng</th>
-      </tr></thead>
-      <tbody>
-        ${pjs.map((p,i)=>`<tr>
-          <td style="color:#595959">${i+1}</td>
-          <td><strong>${x(p.nameVN||p.nameJP||'—')}</strong>
-            ${p.nameJP&&p.nameVN?`<br><span style="font-size:10px;color:#595959">${x(p.nameJP)}</span>`:''}
-          </td>
-          <td><span class="${officeBadgeClass(p.office)}">${p.office||'—'}</span></td>
-          <td>${x(p.contact||'—')}</td>
-          <td class="c-new">${totalNew(p)}</td>
-          <td class="c-rev">${totalRev(p)}</td>
-          <td class="c-tot">${totalNew(p)+totalRev(p)}</td>
-        </tr>`).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td colspan="4" style="font-weight:700">TỔNG CỘNG</td>
-        <td class="c-new">${sumNew}</td><td class="c-rev">${sumRev}</td><td class="c-tot">${sumAll}</td>
-      </tr></tfoot>
-    </table>
-
-    <div class="section-title">II. CHI TIẾT TỪNG DỰ ÁN</div>
-    ${pjBlocks||'<p style="color:#BFBFBF;font-size:11px">Không có dữ liệu</p>'}
-
-    <div class="sign-section">
-      <div class="sign-box">Người lập báo cáo<br><br><br></div>
-      <div class="sign-box">Trưởng nhóm xác nhận<br><br><br></div>
-    </div>
-    <div class="doc-footer">
-      <span>GENDAI SOUGO architects inc. — 作成数管理システム</span>
-      <span>Xuất lúc ${new Date().toLocaleString('vi-VN')} | ${ml}</span>
-    </div>
-  </div>`;
-
-  showReportOverlay('📋 Báo cáo Dự án — ' + ml, html);
-}
-
-/* ══════════════════════════════════════════════════════
-   REPORT 2: OT NHÂN SỰ
-══════════════════════════════════════════════════════ */
-function exportOTReport() {
-  const pjs = curProjects();
-  const ml = monthLabel(D.activeMonth);
-  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
-
-  // Collect OT per staff
-  const staffOT = {};
-  D.settings.staffList.forEach(s=>staffOT[s]={total:0,entries:[]});
-  pjs.forEach(p=>{
-    (p.otLog||[]).forEach(e=>{
-      if(e.staff&&staffOT[e.staff]){
-        staffOT[e.staff].total+=(e.hours||0);
-        staffOT[e.staff].entries.push({...e, pjName:p.nameVN||p.nameJP||'?', pjOffice:p.office||''});
-      }
-    });
-  });
-
-  const activeStaff = D.settings.staffList.filter(s=>staffOT[s].total>0);
-
-  if(!activeStaff.length) {
-    toast('Tháng này chưa có nhân sự nào phát sinh OT');
-    return;
-  }
-
-  const totalOT = activeStaff.reduce((s,k)=>s+staffOT[k].total,0);
-
-  const staffBlocks = activeStaff.map(s=>{
-    const v = staffOT[s];
-    const entries = v.entries.slice().sort((a,b)=>a.date>b.date?1:-1);
-    return `<div class="ot-staff-block">
-      <div class="ot-staff-hd">
-        <span class="sname">${s}</span>
-        <span class="stotal">Tổng: ${v.total.toFixed(1)} giờ</span>
-      </div>
-      <table style="margin-bottom:0;border-radius:0 0 6px 6px;overflow:hidden">
-        <thead><tr>
-          <th style="background:#2E4A7A">Ngày</th>
-          <th style="background:#2E4A7A">Dự án</th>
-          <th style="background:#2E4A7A">Văn phòng</th>
-          <th style="background:#2E4A7A;text-align:center">Số giờ OT</th>
-          <th style="background:#2E4A7A">Ghi chú</th>
-        </tr></thead>
-        <tbody>
-          ${entries.map(e=>`<tr>
-            <td>${e.date}</td>
-            <td>${x(e.pjName)}</td>
-            <td><span class="${officeBadgeClass(e.pjOffice)}">${e.pjOffice||'—'}</span></td>
-            <td class="c-ot">${e.hours}h</td>
-            <td style="font-size:10px;color:#595959">${x(e.note||'')}</td>
-          </tr>`).join('')}
-        </tbody>
-        <tfoot><tr>
-          <td colspan="3" style="text-align:right">Tổng OT ${s}:</td>
-          <td class="c-ot" style="font-size:13px">${v.total.toFixed(1)}h</td>
-          <td></td>
-        </tr></tfoot>
-      </table>
-    </div>`;
-  }).join('');
-
-  const html = `<div class="report-doc">
-    <div class="doc-header">
-      <div class="doc-logo">
-        <div class="doc-logo-mark" style="padding:4px;background:#fff">
-  <img src="data:image/png;base64,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" style="width:34px;height:34px;object-fit:contain;border-radius:4px">
-</div>
-        <div>
-          <div class="doc-title-main">BÁO CÁO OT NHÂN SỰ</div>
-          <div class="doc-title-sub">残業時間報告書 — ${ml} / Phối Cảnh Pro System</div>
-        </div>
-      </div>
-      <div class="doc-meta">
-        <div><strong>Tháng báo cáo:</strong> ${ml}</div>
-        <div><strong>Ngày xuất:</strong> ${now}</div>
-        <div><strong>Nhân sự có OT:</strong> ${activeStaff.length} người</div>
-      </div>
-    </div>
-
-    <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
-      <div class="kpi-box orange">
-        <div class="kpi-num">${totalOT.toFixed(1)}<span style="font-size:16px">h</span></div>
-        <div class="kpi-lbl">Tổng OT tháng</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-num">${activeStaff.length}</div>
-        <div class="kpi-lbl">Nhân sự có OT</div>
-      </div>
-      <div class="kpi-box gold">
-        <div class="kpi-num">${activeStaff.length>0?(totalOT/activeStaff.length).toFixed(1):0}<span style="font-size:16px">h</span></div>
-        <div class="kpi-lbl">Trung bình/người</div>
-      </div>
-    </div>
-
-    <div class="section-title">I. TỔNG HỢP OT THEO NHÂN SỰ</div>
-    <table>
-      <thead><tr>
-        <th>#</th><th>Nhân sự</th>
-        <th style="text-align:center">Số ngày OT</th>
-        <th style="text-align:center">Tổng giờ OT</th>
-        <th>Dự án liên quan</th>
-      </tr></thead>
-      <tbody>
-        ${activeStaff.map((s,i)=>{
-          const v=staffOT[s];
-          const pjNames=[...new Set(v.entries.map(e=>e.pjName))];
-          return `<tr>
-            <td style="color:#595959">${i+1}</td>
-            <td style="font-weight:700">${s}</td>
-            <td class="c-tot">${v.entries.length}</td>
-            <td class="c-ot" style="font-size:14px">${v.total.toFixed(1)}h</td>
-            <td style="font-size:10px;color:#595959">${pjNames.map(n=>x(n)).join(', ')}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td colspan="2" style="font-weight:700">TỔNG CỘNG</td>
-        <td class="c-tot">${activeStaff.reduce((s,k)=>s+staffOT[k].entries.length,0)}</td>
-        <td class="c-ot" style="font-size:14px">${totalOT.toFixed(1)}h</td>
-        <td></td>
-      </tr></tfoot>
-    </table>
-
-    <div class="section-title">II. CHI TIẾT OT TỪNG NHÂN SỰ</div>
-    ${staffBlocks}
-
-    <div class="sign-section">
-      <div class="sign-box">Người lập báo cáo<br><br><br></div>
-      <div class="sign-box">Trưởng nhóm xác nhận<br><br><br></div>
-    </div>
-    <div class="doc-footer">
-      <span>GENDAI SOUGO architects inc. — 作成数管理システム</span>
-      <span>Xuất lúc ${new Date().toLocaleString('vi-VN')} | ${ml}</span>
-    </div>
-  </div>`;
-
-  showReportOverlay('⏱ Báo cáo OT Nhân sự — ' + ml, html);
-}
-
-/* ── REPORT OVERLAY RENDERER ── */
-function showReportOverlay(title, bodyHtml) {
-  const overlay = document.createElement('div');
-  overlay.className = 'rpt-overlay';
-  overlay.id = 'rptOverlay';
-  overlay.innerHTML = `
-    <div class="rpt-container">
-      <div class="rpt-header">
-        <h2>${title}</h2>
-        <div class="rpt-actions">
-          <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.3)" onclick="printReport()">🖨 In / Lưu PDF</button>
-          <button class="btn btn-sm btn-gold" onclick="closeReport()">✕ Đóng</button>
-        </div>
-      </div>
-      <div class="rpt-body" id="rptBody">${bodyHtml}</div>
-    </div>
-  `;
-  overlay.onclick = e => { if(e.target===overlay) closeReport(); };
-  document.body.appendChild(overlay);
-}
-
-function printReport() {
-  const body = document.getElementById('rptBody');
-  if (!body) return;
-  const w = window.open('','_blank','width=900,height=700');
-  w.document.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <title>Báo cáo Phối Cảnh Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-      *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:12px;color:#1a1a1a;background:#fff}
-      @page{size:A4;margin:0}
-      @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-      ${[...document.styleSheets].flatMap(s=>{try{return[...s.cssRules].filter(r=>r.selectorText?.includes('.report-doc')||r.selectorText?.includes('.doc-')||r.selectorText?.includes('.kpi-')||r.selectorText?.includes('.pj-block')||r.selectorText?.includes('.ot-staff')||r.selectorText?.includes('.sign-')||r.selectorText?.includes('.c-new')||r.selectorText?.includes('.c-rev')||r.selectorText?.includes('.c-tot')||r.selectorText?.includes('.c-ot')||r.selectorText?.includes('.b-osaka')||r.selectorText?.includes('.b-tokyo')||r.selectorText?.includes('.chip-')||r.selectorText?.includes('.section-title')).map(r=>r.cssText)}catch(e){return[];}}).join('\n')}
-    </style>
-  </head><body>${body.innerHTML}</body></html>`);
-  w.document.close();
-  setTimeout(()=>{ w.focus(); w.print(); },600);
-}
-
-function closeReport() { document.getElementById('rptOverlay')?.remove(); }
-
-
-
-/* RENDER ALL */
-function renderAll() {
-  renderMonthStrip();
-  renderSidebar();
-  renderStorageMeter();
-  if(activePage==='main') renderContent();
-  else if(activePage==='dashboard') renderDashboard();
-  else if(activePage==='staff') renderStaffPage();
-  else if(activePage==='settings') renderSettings();
-}
-
-function renderStorageMeter() {
-  const bar = document.getElementById('storageBar');
-  if (!bar) return;
-  try {
-    const data = localStorage.getItem(SK) || '';
-    const kb = Math.round(data.length * 0.75 / 1024);
-    const maxKB = 5120; // 5MB safe limit
-    const pct = Math.min(100, Math.round(kb / maxKB * 100));
-    const color = pct > 80 ? '#e74c3c' : pct > 55 ? '#E67E22' : '#27AE60';
-    // Count photos
-    let photoCount = 0;
-    Object.values(D.months).forEach(m => { [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { photoCount += (p.photos||[]).filter(Boolean).length; }); });
-    bar.innerHTML = `
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray4);margin-bottom:3px">
-        <span>💾 ${(kb/1024).toFixed(1)}MB / 5MB</span>
-        <span style="color:${color};font-weight:600">${pct}%</span>
-      </div>
-      <div style="height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
-        <div style="height:100%;background:${color};width:${pct}%;border-radius:2px;transition:width .4s"></div>
-      </div>
-      ${photoCount > 0 ? `<div style="font-size:10px;color:var(--gray4);margin-top:3px">📷 ${photoCount} ảnh đang lưu</div>` : ''}
-      ${pct > 70 ? `<button class="btn btn-xs btn-danger" style="margin-top:5px;width:100%" onclick="openClearPhotosModal()">🗑 Dọn ảnh cũ</button>` : ''}
-    `;
-  } catch(e) {}
-}
-
-function openClearPhotosModal() {
-  let totalPhotos = 0, months = [];
-  Object.entries(D.months).forEach(([mid, m]) => {
-    let cnt = 0;
-    [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { cnt += (p.photos||[]).filter(Boolean).length; });
-    if (cnt > 0) { months.push({mid, label: monthLabel(mid), cnt}); totalPhotos += cnt; }
-  });
-  showModal(`
-    <h3>🗑 Dọn dẹp ảnh — giải phóng dung lượng</h3>
-    <div style="margin-bottom:14px;font-size:12px;color:var(--gray4)">
-      Tổng <strong>${totalPhotos} ảnh</strong> đang lưu. Chọn tháng muốn xóa ảnh:
-    </div>
-    ${months.map(({mid, label, cnt}) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--gray2);border-radius:var(--r);margin-bottom:6px">
-        <span style="font-weight:600">${label} — ${cnt} ảnh</span>
-        <button class="btn btn-sm btn-danger" onclick="clearMonthPhotos('${mid}')">Xóa ảnh</button>
-      </div>`).join('')}
-    <div class="modal-ft">
-      <button class="btn" onclick="closeModal()">Đóng</button>
-      <button class="btn btn-danger" onclick="clearAllPhotos()">Xóa tất cả ảnh</button>
-    </div>
-  `);
-}
-
-function clearMonthPhotos(mid) {
-  [...(D.months[mid]?.projects||[]),...(D.months[mid]?.projectsVN||[])].forEach(p => { p.photos = []; });
-  save(); closeModal(); renderStorageMeter();
-  toast('✓ Đã xóa ảnh tháng ' + monthLabel(mid));
-}
-
-function clearAllPhotos() {
-  if (!confirm('Xóa toàn bộ ảnh tất cả các tháng?')) return;
-  Object.values(D.months).forEach(m => { [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { p.photos = []; }); });
-  save(); closeModal(); renderStorageMeter();
-  toast('✓ Đã xóa tất cả ảnh');
-}
-/* INIT */
-
-
-// ── Inject leave data from 休暇管理表 2026 (12 nhân sự) ──
-(function injectLeaves() {
-  if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
-  const leaveDB = {
-  "トゥアン": [
-    {
-      "id": "lv_tuan_1",
-      "from": "2026-03-30",
-      "to": "2026-04-01",
-      "reason": "お父さんの葬式 (Tang lễ bố)"
-    }
-  ],
-  "SGN ヒエン": [
-    {
-      "id": "lv_hien_1",
-      "from": "2026-04-06",
-      "to": "2026-04-07",
-      "reason": "私用 (Việc cá nhân)"
-    }
-  ],
-  "SGN L.フォン": [
-    {
-      "id": "lv_lfon_1",
-      "from": "2026-02-12",
-      "to": "2026-02-13",
-      "reason": "健康診断 (Khám sức khỏe)"
-    },
-    {
-      "id": "lv_lfon_2",
-      "from": "2026-03-17",
-      "to": "2026-03-17",
-      "reason": "弟の婚約式 (Lễ đính hôn em trai)"
-    }
-  ],
-  "HAN ハー": [
-    {
-      "id": "lv_haa_1",
-      "from": "2026-02-27",
-      "to": "2026-02-27",
-      "reason": "病気 (Bệnh)"
-    },
-    {
-      "id": "lv_haa_2",
-      "from": "2026-03-26",
-      "to": "2026-03-26",
-      "reason": "病気・午前半休 (Bệnh, nửa ngày sáng)"
-    }
-  ],
-  "SGN ズエン": [],
-  "HAN T.タイン": [
-    {
-      "id": "lv_ntain_1",
-      "from": "2026-01-30",
-      "to": "2026-01-30",
-      "reason": "病気 (Bệnh)"
-    }
-  ],
-  "HAN M.フオン": [
-    {
-      "id": "lv_mfon_1",
-      "from": "2026-02-27",
-      "to": "2026-02-27",
-      "reason": "私用 (Việc cá nhân)"
-    },
-    {
-      "id": "lv_mfon_2",
-      "from": "2026-03-17",
-      "to": "2026-03-17",
-      "reason": "病気 (Bệnh)"
-    },
-    {
-      "id": "lv_mfon_3",
-      "from": "2026-03-18",
-      "to": "2026-03-18",
-      "reason": "子供病気・午前半休 (Con bệnh, nửa ngày)"
-    },
-    {
-      "id": "lv_mfon_4",
-      "from": "2026-03-26",
-      "to": "2026-03-26",
-      "reason": "私用・午後半休 (Việc cá nhân, nửa ngày chiều)"
-    }
-  ],
-  "HAN D.チュン": [
-    {
-      "id": "lv_dchun_1",
-      "from": "2026-03-02",
-      "to": "2026-03-03",
-      "reason": "奥さんの入院 (Vợ nhập viện)"
-    }
-  ],
-  "SGN ロック": [
-    {
-      "id": "lv_rok_1",
-      "from": "2026-01-09",
-      "to": "2026-01-09",
-      "reason": "子供病気・午前半休 (Con bệnh, nửa ngày sáng)"
-    },
-    {
-      "id": "lv_rok_2",
-      "from": "2026-01-27",
-      "to": "2026-01-27",
-      "reason": "病気 (Bệnh)"
-    },
-    {
-      "id": "lv_rok_3",
-      "from": "2026-02-05",
-      "to": "2026-02-05",
-      "reason": "私用・午後半休 (Việc cá nhân, nửa ngày chiều)"
-    },
-    {
-      "id": "lv_rok_4",
-      "from": "2026-03-02",
-      "to": "2026-03-02",
-      "reason": "私用 (Việc cá nhân)"
-    },
-    {
-      "id": "lv_rok_5",
-      "from": "2026-03-16",
-      "to": "2026-03-16",
-      "reason": "子供病気 (Con bệnh)"
-    },
-    {
-      "id": "lv_rok_6",
-      "from": "2026-03-17",
-      "to": "2026-03-17",
-      "reason": "子供病気 (Con bệnh)"
-    },
-    {
-      "id": "lv_rok_7",
-      "from": "2026-03-27",
-      "to": "2026-03-27",
-      "reason": "祖母の葬式 (Tang lễ bà nội)"
-    }
-  ],
-  "SGN D.ティン": [],
-  "HAN H.タイン": [
-    {
-      "id": "lv_htain_1",
-      "from": "2026-02-02",
-      "to": "2026-02-02",
-      "reason": "病気 (Bệnh)"
-    },
-    {
-      "id": "lv_htain_2",
-      "from": "2026-03-26",
-      "to": "2026-03-26",
-      "reason": "病気 (Bệnh)"
-    },
-    {
-      "id": "lv_htain_3",
-      "from": "2026-03-27",
-      "to": "2026-03-27",
-      "reason": "私用 (Việc cá nhân)"
-    },
-    {
-      "id": "lv_htain_4",
-      "from": "2026-05-20",
-      "to": "2026-05-20",
-      "reason": "結婚式 (Đám cưới)"
-    },
-    {
-      "id": "lv_htain_5",
-      "from": "2026-05-26",
-      "to": "2026-05-26",
-      "reason": "結婚式 (Đám cưới)"
-    },
-    {
-      "id": "lv_htain_6",
-      "from": "2026-05-27",
-      "to": "2026-05-27",
-      "reason": "結婚式 (Đám cưới)"
-    }
-  ],
-  "HAN ニュー": [
-    {
-      "id": "lv_nuu_1",
-      "from": "2026-02-11",
-      "to": "2026-02-11",
-      "reason": "私用 (Việc cá nhân)"
-    },
-    {
-      "id": "lv_nuu_2",
-      "from": "2026-03-19",
-      "to": "2026-03-19",
-      "reason": "私用 (Việc cá nhân)"
-    },
-    {
-      "id": "lv_nuu_3",
-      "from": "2026-03-20",
-      "to": "2026-03-20",
-      "reason": "私用 (Việc cá nhân)"
-    }
-  ]
-};
-  Object.entries(leaveDB).forEach(([name, leaves]) => {
-    if (!D.settings.staffProfiles[name])
-      D.settings.staffProfiles[name] = {role:"",salaryGross:0,salaryNet:0,leaves:[],order:99,contractEnd:""};
-    const prof = D.settings.staffProfiles[name];
-    // Ensure contractEnd field exists (preserve existing value)
-    if (prof.contractEnd === undefined) prof.contractEnd = "";
-    if (!prof.leaves) prof.leaves = [];
-    leaves.forEach(lv => {
-      if (!prof.leaves.find(e => e.id === lv.id)) prof.leaves.push(lv);
-    });
-  });
-  // Also update staffList to match the 12 correct names
-  const newList = ["トゥアン", "SGN ヒエン", "SGN L.フォン", "HAN ハー", "SGN ズエン", "HAN T.タイン", "HAN M.フオン", "HAN D.チュン", "SGN ロック", "SGN D.ティン", "HAN H.タイン", "HAN ニュー"];
-  // Only update if current list is still the old default (7 or fewer = never been customized)
-  if (D.settings.staffList.length <= 7) {
-    D.settings.staffList = newList;
-  }
-  // Only persist if this is truly a first-run initialization
-  // NEVER call save() here unconditionally — it can overwrite data users just entered
-  // Instead write directly to avoid any save() chain issues
-  localStorage.setItem(SK, JSON.stringify(D));
-})();
-
-loadSavedTheme();
-showPage('main');
-renderAll();
-setTimeout(()=>{
-  const role=SYNC.role;
-  if(role==='admin'&&SYNC.binId) setSyncStatus('synced',SYNC.autoOn?'⚡ Auto':'✓ Admin');
-  else if(role==='edit') setSyncStatus('synced','✓ Edit');
-  else if(role==='view'){ setSyncStatus('synced','👁 View'); enableViewOnlyMode(true); }
 },150);
 
 </script>
