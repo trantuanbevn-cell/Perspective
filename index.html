@@ -670,14 +670,14 @@ let D = (() => {
 })();
 
 // ── Auto-inject sync passwords (same as splash screen) ──
-// Admin: 204290 | Edit: 280510 | View: 123456
+// Admin: 204290 | Edit: 123456 | View: 280510
 (function injectSyncPasswords() {
   if (!D.settings) D.settings = {};
   if (!D.settings.sync) D.settings.sync = {};
   const s = D.settings.sync;
   s.adminHash = 'c9ac2173f7a9dfb94f1b4827f35d74f1b73a6f2299d61cb41645842ea24b9d1a';
-  s.editHash  = '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7';
-  s.viewHash  = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
+  s.editHash  = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
+  s.viewHash  = '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7';
   try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
   try { sessionStorage.setItem(SK+'_backup', JSON.stringify(D)); } catch(e) {}
 })();
@@ -769,6 +769,10 @@ function totalOT(p) {
 
 /* PAGE NAV */
 function showPage(pg) {
+  // Block restricted pages for non-admin roles
+  const sessionRole = sessionStorage.getItem('splash_role') || 'admin';
+  if (sessionRole === 'edit' && (pg === 'dashboard' || pg === 'staff' || pg === 'settings')) return;
+
   activePage=pg;
   ['main','dashboard','staff','settings'].forEach(p=>{
     const el=document.getElementById('page'+p.charAt(0).toUpperCase()+p.slice(1));
@@ -3864,16 +3868,16 @@ renderAll();
    To change passwords: update SPLASH_HASHES below
    Default passwords (change after first login):
      Admin : 204290
-     Edit  : 280510
-     View  : 123456
+     Edit  : 123456
+     View  : 280510
 ══════════════════════════════════════════════════════ */
 (async function initSplash() {
   // Pre-computed SHA-256 hashes of default passwords
   // To reset: type new password → SHA-256 hash it → paste here
   const SPLASH_HASHES = {
     admin: 'c9ac2173f7a9dfb94f1b4827f35d74f1b73a6f2299d61cb41645842ea24b9d1a', // 204290
-    edit:  '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7', // 280510
-    view:  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+    edit:  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
+    view:  '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7', // 280510
   };
 
   async function sha256(str) {
@@ -3886,6 +3890,8 @@ renderAll();
   if (sessionRole) {
     _applySplashRole(sessionRole);
     document.getElementById('splashScreen').style.display = 'none';
+    // Apply UI restrictions after render
+    setTimeout(() => applyRoleUI(sessionRole), 200);
     return;
   }
 
@@ -3937,18 +3943,19 @@ renderAll();
       splash.style.display = 'none';
       document.querySelector('.header').style.visibility = '';
       document.getElementById('pageMain').style.visibility = '';
+      applyRoleUI(role);
     }, 650);
   };
 
   function _applySplashRole(role) {
-    // Sync the role with the SYNC system
+    SYNC.role = role;
     if (role === 'view') {
-      SYNC.role = 'view';
       enableViewOnlyMode(true);
+      applyRoleUI('view');
     } else if (role === 'edit') {
-      SYNC.role = 'edit';
+      applyRoleUI('edit');
     } else {
-      SYNC.role = 'admin';
+      applyRoleUI('admin');
     }
   }
 })();
