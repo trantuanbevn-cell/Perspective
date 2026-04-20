@@ -662,28 +662,47 @@ function renderSidebar() {
     list.innerHTML = '<div style="padding:20px 10px;text-align:center;color:var(--gray4);font-size:11px;line-height:1.7">Chưa có dự án<br><span style="font-size:10px">Nhấn + Thêm dự án</span></div>';
     return;
   }
+  const today = localDateStr(new Date());
   list.innerHTML = pjs.map((p, i) => {
-    const thumb = (p.photos || []).find(Boolean); // first non-null photo
+    const thumb = (p.photos || []).find(Boolean);
     const tn = totalNew(p), tr = totalRev(p), ot = totalOT(p);
-    const thumbHtml = thumb
-      ? `<img src="${thumb}" alt="">`
-      : `<div class="pj-thumb-ph">🏗</div>`;
-    return `<div class="pj-card ${p.id === activePjId ? 'active' : ''}" onclick="selectPj('${p.id}')">
+    const thumbHtml = thumb ? `<img src="${thumb}" alt="">` : `<div class="pj-thumb-ph">🏗</div>`;
+
+    // Find active staff working on this project TODAY
+    const activeRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>{
+      if (!r.staff) return false;
+      const from = r.dateFrom||r.dateTo, to = r.dateTo||r.dateFrom;
+      return from && to && from <= today && to >= today;
+    });
+    const activeStaff = [...new Set(activeRows.map(r=>r.staff))];
+    const isActive = activeStaff.length > 0;
+
+    // Staff avatar initials row
+    const staffAvatars = activeStaff.slice(0,4).map(s=>{
+      const initials = s.replace(/[A-Z]{2,3}\s/,'').charAt(0).toUpperCase();
+      const color = ['#70AD47','#4472C4','#ED7D31','#9B59B6'][activeStaff.indexOf(s)%4];
+      return `<span title="${s}" style="width:18px;height:18px;border-radius:50%;background:${color};color:#fff;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</span>`;
+    }).join('');
+
+    return `<div class="pj-card ${p.id === activePjId ? 'active' : ''}" onclick="selectPj('${p.id}')"
+      style="${isActive ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.25)' : ''}">
       <div class="pj-thumb">
         ${thumbHtml}
         <div class="pj-thumb-num">${i + 1}</div>
+        ${isActive ? `<div style="position:absolute;top:5px;right:5px;background:#27ae60;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#fff">● Đang làm</div>` : ''}
       </div>
       <div class="pj-card-body">
         <div class="pj-card-name">${x(p.nameVN || p.nameJP || '—')}</div>
         ${p.nameJP && p.nameVN ? `<div class="pj-card-name-jp">${x(p.nameJP)}</div>` : ''}
         <div class="pj-card-sub">
-          <span class="badge ${p.office === '大阪' ? 'b-osaka' : 'b-tokyo'}" style="font-size:9px">${p.office || '—'}</span>
+          <span class="badge ${officeBadgeClass(p.office)}" style="font-size:9px">${p.office || '—'}</span>
           <div style="display:flex;gap:3px">
-            <span class="chip chip-new" style="font-size:9px;padding:1px 5px">新${tn}</span>
-            <span class="chip chip-gold" style="font-size:9px;padding:1px 5px">修${tr}</span>
+            <span class="chip chip-new" style="font-size:9px;padding:1px 5px">作成 ${tn}</span>
+            <span class="chip chip-gold" style="font-size:9px;padding:1px 5px">修正 ${tr}</span>
             ${ot > 0 ? `<span class="chip" style="font-size:9px;padding:1px 5px;background:#fde8d8;color:#7f3500">⏱${ot.toFixed(0)}h</span>` : ''}
           </div>
         </div>
+        ${isActive ? `<div style="display:flex;gap:2px;margin-top:4px;align-items:center;flex-wrap:wrap">${staffAvatars}<span style="font-size:9px;color:var(--gray4);margin-left:2px">${activeStaff.length > 4 ? '+' + (activeStaff.length-4) + ' người' : ''}</span></div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -944,25 +963,35 @@ function renderMonthOverview(ci) {
 /* ══════════════════════════════════════════════════════
    MONTH GANTT — all projects, all staff, 3 weeks
 ══════════════════════════════════════════════════════ */
+
+/* ── Local date string (avoid UTC offset shift) ── */
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+
 function renderMonthGantt(pjs) {
   const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const days = [];
   for(let i=0;i<21;i++){
     const d=new Date(today); d.setDate(today.getDate()+i); days.push(d);
   }
-  const endStr = days[20].toISOString().split('T')[0];
-  function dk(d){ return d.toISOString().split('T')[0]; }
+  const endStr = localDateStr(days[20]);
+  function dk(d){ return localDateStr(d); }
 
-  // Collect ALL tasks across ALL projects in this month
-  const allTasks = pjs.flatMap(p =>
+  // Collect ALL tasks across ALL projects in this month (with project index)
+  const allTasks = pjs.flatMap((p, pIdx) =>
     (p.groups||[]).flatMap(g =>
       (g.rows||[])
         .filter(r => r.staff && (r.dateFrom||r.dateTo))
         .map(r => ({
           ...r,
           pjName:    p.nameVN||p.nameJP||'—',
-          groupName: g.type||'—'
+          groupName: g.type||'—',
+          pjNum:     pIdx + 1   // 1-based project number
         }))
     )
   );
@@ -1018,8 +1047,8 @@ function renderMonthGantt(pjs) {
     const taskParts = tasks.map(r=>{
       const overdue=r.dateTo&&r.dateTo<todayStr;
       return '<div style="font-size:9px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">'
-        +'<span style="width:5px;height:5px;border-radius:50%;flex-shrink:0;display:inline-block;background:'+(r.status==='new'?'#70AD47':'var(--gold)')+'"></span>'
-        +'<span style="overflow:hidden;text-overflow:ellipsis;color:'+(overdue?'#e74c3c':'inherit')+'">'+(r.groupName.length>12?r.groupName.substring(0,12)+'…':r.groupName)+'</span>'
+        +'<span style="font-size:8px;font-weight:800;color:'+(r.status==='new'?'#70AD47':'var(--gold)')+';flex-shrink:0;min-width:14px">[' + (r.pjNum||'?') + ']</span>'
+        +'<span style="overflow:hidden;text-overflow:ellipsis;color:'+(overdue?'#e74c3c':'inherit')+'">'+(r.groupName.length>10?r.groupName.substring(0,10)+'…':r.groupName)+'</span>'
         +'</div>';
     }).join('');
 
@@ -1046,9 +1075,10 @@ function renderMonthGantt(pjs) {
       const blocks = activeTasks.map(r=>{
         const isNew=r.status==='new', isFirst=r.dateFrom===dkStr, isLast=r.dateTo===dkStr;
         const bc=isNew?'#70AD47':'var(--gold)';
-        return `<div title="${x(r.groupName)} (${x(r.pjName)})\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
-          style="background:${bc};height:10px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};opacity:.85;overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 2px;line-height:10px">
-          ${isFirst?x(r.groupName.substring(0,6)):''}
+        const label = isFirst ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
+        return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
+          style="background:${bc};height:11px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};opacity:.88;overflow:hidden;font-size:7.5px;color:#fff;white-space:nowrap;padding:0 3px;line-height:11px;font-weight:600">
+          ${label}
         </div>`;
       }).join('');
       return `<td style="background:${bg};border-left:${borderL};padding:1px;vertical-align:top">${blocks}</td>`;
@@ -1458,7 +1488,7 @@ function renderGroups(p) {
   if (!groups.length) return `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr(new Date());
 
   return groups.map((g, gi) => {
     const rows = g.rows||[];
@@ -1473,7 +1503,7 @@ function renderGroups(p) {
       const statusColor = r.status==='new' ? '#f0faf0' : '#fffdf0';
       const borderColor = r.status==='new' ? '#70AD47' : 'var(--gold)';
       const deadlinePast = r.dateTo && r.dateTo < today && !r.done;
-      const deadlineSoon = r.dateTo && r.dateTo >= today && r.dateTo <= new Date(Date.now()+3*86400000).toISOString().split('T')[0];
+      const deadlineSoon = r.dateTo && r.dateTo >= today && r.dateTo <= localDateStr(new Date(Date.now()+3*86400000));
       return `<tr data-gid="${g.id}" data-rid="${r.id}" style="background:${statusColor}">
         ${isFirst ? `<td rowspan="${rows.length}" style="
           background:#fff;
@@ -1575,8 +1605,8 @@ function renderStaffSchedule(p) {
     d.setDate(today.getDate()+i);
     days.push(d);
   }
-  const todayStr = today.toISOString().split('T')[0];
-  const endStr   = days[20].toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
+  const endStr   = localDateStr(days[20]);
 
   // Week separator indices
   const dow = today.getDay(); // 0=Sun
@@ -1611,7 +1641,7 @@ function renderStaffSchedule(p) {
 
   // Date formatting helpers
   function toD(str){ return str?new Date(str+'T00:00:00'):null; }
-  function dateKey(d){ return d.toISOString().split('T')[0]; }
+  function dateKey(d){ return localDateStr(d); }
 
   // Build day header HTML
   const dayColW = 'calc((100% - 90px) / 21)';
@@ -2038,7 +2068,7 @@ function contractNextAnnual(dateStr, todayStr) {
   let next = new Date(base);
   next.setFullYear(now.getFullYear());
   if (next <= now) next.setFullYear(now.getFullYear() + 1);
-  return next.toISOString().split('T')[0];
+  return localDateStr(next);
 }
 function contractDaysUntil(dateStr, todayStr) {
   if (!dateStr) return null;
@@ -2193,11 +2223,21 @@ function delLeave(staffName, leaveId) {
   save(); renderStaffPage();
 }
 
+
+function toggleStaffDetail(id) {
+  const el = document.getElementById(id);
+  const btn = document.getElementById('sd-btn-' + id.replace('sd-',''));
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.innerHTML = isOpen ? '▼ Chi tiết (Lương, HĐ, Nghỉ phép)' : '▲ Thu gọn';
+}
+
 function renderStaffPage() {
   const mid = document.getElementById('staffMonth')?.value || D.activeMonth;
   const sc = document.getElementById('staffContent'); if(!sc) return;
   const _sm=(D.months[mid]||{projects:[],projectsVN:[]}); const pjs=[...(_sm.projects||[]),...(_sm.projectsVN||[])];
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr(new Date());
 
   // Current month stats
   const sd = {};
@@ -2252,7 +2292,7 @@ function renderStaffPage() {
       if (level) {
         const colors = {past:'#e74c3c',week:'#e74c3c',twoweek:'#e67e22',month:'#f39c12'};
         const labels = {past:'ĐÃ QUA ⚠',week:'CÒN 1 TUẦN ⚠',twoweek:'CÒN 2 TUẦN',month:'CÒN 1 THÁNG'};
-        reminderBanners.push({name:s, type, days, level, color:colors[level], label:labels[level], next:next.toISOString().split('T')[0]});
+        reminderBanners.push({name:s, type, days, level, color:colors[level], label:labels[level], next:localDateStr(next)});
       }
     }
     checkDate(prof2.contractEnd, 'Hết hạn HĐ');
@@ -2388,6 +2428,18 @@ function renderStaffPage() {
             })()}
           </div>
 
+          <!-- Toggle button to expand details -->
+          <div style="text-align:center;margin:6px 0 2px">
+            <button onclick="toggleStaffDetail('sd-${s.replace(/[^a-zA-Z0-9]/g,'_')}')"
+              id="sd-btn-${s.replace(/[^a-zA-Z0-9]/g,'_')}"
+              style="background:none;border:none;cursor:pointer;font-size:10px;color:var(--gray4);padding:2px 10px;border-radius:99px;border:1px solid var(--gray2)">
+              ▼ Chi tiết (Lương, HĐ, Nghỉ phép)
+            </button>
+          </div>
+
+          <!-- Collapsible detail section -->
+          <div id="sd-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
+
           <!-- OT this month -->
           ${v.ot>0?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:5px 8px;background:#fff8f2;border-radius:var(--r);border-left:3px solid var(--orange)">
             <span style="font-size:11px;color:var(--gray4)">OT tháng này:</span>
@@ -2442,6 +2494,8 @@ function renderStaffPage() {
                 }).join('')
             }
           </div>
+
+          </div><!-- end collapsible -->
 
           <!-- Order control -->
           <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray1);display:flex;align-items:center;gap:8px">
@@ -2725,7 +2779,7 @@ function exportBackup() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'phoicanh_backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.download = 'phoicanh_backup_' + localDateStr(new Date()) + '.json';
   a.click();
   URL.revokeObjectURL(url);
   toast('✓ Đã tải backup về máy');
