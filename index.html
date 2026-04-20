@@ -1778,8 +1778,10 @@ function calcKPI(rows, section, totalOTHours, totalQty, onTimeRate) {
     
     let kpi = (A * 0.40) + (B * 0.30) + (C * 0.30);
     
-    // OT bonus: > 10h → ×1.05
-    if (totalOTHours > 10) kpi *= 1.05;
+    // OT bonus: tiered by hours
+    if (totalOTHours > 30) kpi *= 1.20;
+    else if (totalOTHours > 20) kpi *= 1.10;
+    else if (totalOTHours > 10) kpi *= 1.05;
     // Error penalty: rate7 (Tỷ lệ lỗi) low → penalty
     const errorScore = fieldCounts['rate7'] > 0 ? fieldSums['rate7']/fieldCounts['rate7'] : 10;
     if (errorScore < 3) kpi *= 0.85; // high error rate
@@ -1803,8 +1805,10 @@ function calcKPI(rows, section, totalOTHours, totalQty, onTimeRate) {
     
     let kpi = (A * 0.45) + (B * 0.30) + (C * 0.25);
     
-    // OT bonus
-    if (totalOTHours > 10) kpi *= 1.05;
+    // OT bonus: tiered by hours
+    if (totalOTHours > 30) kpi *= 1.20;
+    else if (totalOTHours > 20) kpi *= 1.10;
+    else if (totalOTHours > 10) kpi *= 1.05;
     // Revision penalty: rate10 (Tỷ lệ lỗi) low
     const errorScore = fieldCounts['rate10'] > 0 ? fieldSums['rate10']/fieldCounts['rate10'] : 10;
     if (errorScore < 3) kpi *= 0.90;
@@ -3261,7 +3265,7 @@ function renderSettings() {
           </div>
           <div style="margin-top:8px;padding:6px 10px;background:#f8f9fa;border-radius:4px;font-size:11px;color:#555">
             <strong>Công thức:</strong> KPI = (A×40%) + (B×30%) + (C×30%)<br>
-            OT &gt; 10h/tháng: ×1.05 | Tỷ lệ lỗi &lt; 3/10: ×0.85
+            OT &gt; 10h: ×1.05 | OT &gt; 20h: ×1.10 | OT &gt; 30h: ×1.20 | Lỗi &lt; 3/10: ×0.85
           </div>
         </div>
 
@@ -3299,7 +3303,7 @@ function renderSettings() {
           </div>
           <div style="margin-top:8px;padding:6px 10px;background:#f8f9fa;border-radius:4px;font-size:11px;color:#555">
             <strong>Công thức:</strong> KPI = (A×45%) + (B×30%) + (C×25%)<br>
-            OT &gt; 10h/tháng: ×1.05 | Revision &lt; 3/10: ×0.90
+            OT &gt; 10h: ×1.05 | OT &gt; 20h: ×1.10 | OT &gt; 30h: ×1.20 | Revision &lt; 3/10: ×0.90
           </div>
         </div>
       </div>
