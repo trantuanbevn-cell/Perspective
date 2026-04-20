@@ -1295,7 +1295,8 @@ function renderMonthGantt(pjs) {
     const summary = leaveParts+taskParts || '<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>';
     const nameBg  = isBusy ? 'var(--gray1)' : '#e8fdf0';
 
-    // Day cells
+    // Day cells — track which tasks have shown label (first visible cell)
+    const shownLabels_done = new Set();
     const dayCells = days.map((d,i)=>{
       const dkStr=dk(d), isToday=dkStr===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
       const isWeekBorder=d.getDay()===1&&i>0;
@@ -1314,9 +1315,12 @@ function renderMonthGantt(pjs) {
       }
       const blocks = activeTasks.map(r=>{
         const isNew=r.status==='new', isFirst=r.dateFrom===dkStr, isLast=r.dateTo===dkStr;
-        const bc=isNew?'#5a9a35':'#d4900a'; // solid dark green / dark gold (no opacity needed)
-        const tc='#fff'; // always white text
-        const label = isFirst ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
+        const bc=isNew?'#5a9a35':'#d4900a';
+        const tc='#fff';
+        // Show label on the FIRST cell this task appears in the window
+        const isFirstAppearance = !shownLabels_done.has(r.id);
+        if (isFirstAppearance) shownLabels_done.add(r.id);
+        const label = isFirstAppearance ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,6) : '';
         return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
           style="background:${bc};height:12px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};overflow:hidden;font-size:8px;color:${tc};white-space:nowrap;padding:0 3px;line-height:12px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3)">
           ${label}
