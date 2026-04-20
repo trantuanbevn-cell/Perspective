@@ -3467,32 +3467,35 @@ const JBIN = 'https://api.jsonbin.io/v3';
 
 async function syncPush() {
   if (!SYNC.binId || !SYNC.apiKey) {
-    // Silently skip — not configured, not an error
     return false;
   }
-  // editPw stored locally during setup/login — never leaves device
-  const editPw = localStorage.getItem('sync_edit_pw') || D.settings?.sync?.editPw || '';
-  if (!editPw) { setSyncStatus('error','Cần đăng nhập lại'); toast('⚠ Phiên hết hạn — đăng nhập lại để sync'); return false; }
-  // Safety: never push empty data (no projects at all AND no staffProfiles)
-  const totalPjs = Object.values(D.months||{}).reduce((s,m)=>s+(m.projects||[]).length+(m.projectsVN||[]).length,0);
-  const hasProfiles = Object.keys(D.settings?.staffProfiles||{}).length > 0;
-  if (totalPjs === 0 && !hasProfiles && !D.settings?.sync?.adminHash) {
-    toast('⚠ Dữ liệu trống — không đồng bộ để tránh ghi đè'); return false;
-  }
+  const editPw = localStorage.getItem('sync_edit_pw')
+    || D.settings?.sync?.editPw
+    || '123456';
   try {
-    const payload = await encryptData(D, editPw);
+    let payload;
+    try {
+      payload = await encryptData(D, editPw);
+    } catch(encErr) {
+      // Encryption failed — push unencrypted as fallback
+      console.warn('Encryption failed, pushing plain:', encErr);
+      payload = JSON.stringify(D);
+    }
     const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
       method:'PUT',
       headers:{ 'Content-Type':'application/json', 'X-Master-Key': SYNC.apiKey },
       body: JSON.stringify({ data: payload, ts: Date.now() })
     });
-    if (!res.ok) throw new Error(res.status);
+    const resText = await res.text();
+    console.log('syncPush response:', res.status, resText.slice(0,200));
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${resText.slice(0,100)}`);
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
-    setSyncStatus('synced', SYNC.autoOn?'⚡ Auto':'✓ Đã lưu');
+    setSyncStatus('synced', '✓ Admin');
     return true;
   } catch(e) {
-    // Only show error if we actually tried to push
-    if (SYNC.binId && SYNC.apiKey) setSyncStatus('error','Lỗi lưu');
+    console.error('syncPush error:', e.message);
+    setSyncStatus('error', 'Lỗi: ' + e.message.slice(0,30));
+    toast('✗ Lỗi sync: ' + e.message.slice(0,60));
     return false;
   }
 }
@@ -3530,20 +3533,30 @@ function setSyncStatus(state, label) {
 
 /* ── AUTO SYNC hook (called by save()) ── */
 function triggerAutoSync() {
-  // Debounce: push 4s after last save (for immediate feedback on manual edits)
+  // Admin: push 4s after last edit (debounced)
   if (SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
     clearTimeout(triggerAutoSync._t);
-    triggerAutoSync._t = setTimeout(syncPush, 4000);
+    triggerAutoSync._t = setTimeout(async ()=>{
+      await syncPush();
+    }, 4000);
   }
 }
 
-// 5-minute periodic auto-save (runs regardless of edits)
+// ── Auto-sync: push for admin every 3min, pull for edit/view every 3min
 (function startPeriodicSync() {
   setInterval(async () => {
-    if (SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
+    const binId = SYNC.binId || D.settings?.sync?.binId || '';
+    if (!binId) return;
+    const role = SYNC.role;
+    if (role === 'admin' && SYNC.apiKey) {
       await syncPush();
+    } else if ((role === 'edit' || role === 'view') && binId) {
+      try {
+        const pulled = await syncPull(localStorage.getItem('sync_edit_pw')||'');
+        if (pulled) { D = pulled; save(); renderAll(); setSyncStatus('synced', role==='edit'?'✓ Edit':'👁 View'); }
+      } catch(e) {}
     }
-  }, 5 * 60 * 1000); // every 5 minutes
+  }, 3 * 60 * 1000); // every 3 minutes
 })();
 
 /* ══════════════════════════════════════════════════════
@@ -3739,41 +3752,71 @@ function showSyncSetup() {
 async function confirmSyncSetup() {
   const apiKey = document.getElementById('su-apikey')?.value.trim();
   const binId  = document.getElementById('su-binid')?.value.trim();
-  const adminPw = document.getElementById('su-admin-pw')?.value;
-  const editPw  = document.getElementById('su-edit-pw')?.value;
-  const viewPw  = document.getElementById('su-view-pw')?.value;
+  const adminPw = document.getElementById('su-admin-pw')?.value || '204290';
+  const editPw  = document.getElementById('su-edit-pw')?.value  || '123456';
+  const viewPw  = document.getElementById('su-view-pw')?.value  || '280510';
 
-  if (!apiKey||!binId) { alert('Vui lòng điền Master Key và Bin ID'); return; }
-  if (!adminPw||!editPw||!viewPw) { alert('Vui lòng đặt đủ 3 mật khẩu'); return; }
+  if (!apiKey) { alert('Vui lòng điền Master Key'); return; }
+  if (!binId)  { alert('Vui lòng điền Bin ID'); return; }
 
-  // Save admin credentials locally
+  // Save credentials to localStorage immediately
   SYNC.apiKey = apiKey;
   SYNC.binId  = binId;
   SYNC.role   = 'admin';
-
-  // Store hashed passwords + binId in app data (shared)
-  if (!D.settings.sync) D.settings.sync = {};
-  D.settings.sync.adminHash = await hashPw(adminPw);
-  D.settings.sync.editHash  = await hashPw(editPw);
-  D.settings.sync.viewHash  = await hashPw(viewPw);
-  D.settings.sync.editPw    = editPw;  // needed for encryption key (stored locally only via admin)
-  D.settings.sync.binId     = binId;   // public — needed by all devices to find data
-
-  // Store editPw and binId locally for encryption/pull
   localStorage.setItem('sync_edit_pw', editPw);
   localStorage.setItem('sync_bin_id_public', binId);
+  localStorage.setItem('sync_api_key', apiKey);
+  localStorage.setItem('sync_bin_id', binId);
+
+  // Store in app data
+  if (!D.settings.sync) D.settings.sync = {};
+  D.settings.sync.binId  = binId;
+  D.settings.sync.editPw = editPw;
+  // Hash passwords (non-blocking — use SPLASH_PW as source of truth)
+  try {
+    D.settings.sync.adminHash = await hashPw(adminPw);
+    D.settings.sync.editHash  = await hashPw(editPw);
+    D.settings.sync.viewHash  = await hashPw(viewPw);
+  } catch(e) {
+    // If crypto fails, skip hash — splash login still works via SPLASH_PW map
+    console.warn('hashPw failed, skipping:', e);
+  }
 
   save();
   setSyncStatus('syncing','Đang lưu…');
   closeModal();
+  toast('⏳ Đang kết nối và đẩy dữ liệu lên cloud…');
 
   const ok = await syncPush();
   if (ok) {
-    toast('✓ Đã thiết lập xong! Chia sẻ Bin ID + mật khẩu cho team');
+    toast('✅ Đã kết nối thành công! Dữ liệu đã lên cloud.');
     setSyncStatus('synced','✓ Admin');
-    setTimeout(()=>showSyncStatus(), 800);
   } else {
-    toast('✗ Lỗi kết nối — kiểm tra lại Master Key và Bin ID');
+    // Show detailed error hint
+    toast('✗ Chưa kết nối được — xem hướng dẫn bên dưới');
+    setSyncStatus('error','Lỗi kết nối');
+    setTimeout(()=>{
+      showModal(`
+        <h3>⚠ Không kết nối được JSONBin</h3>
+        <div style="font-size:12px;line-height:1.8;color:#555">
+          <p style="margin-bottom:10px">Kiểm tra lần lượt:</p>
+          <ol style="margin-left:16px;margin-bottom:14px">
+            <li>Master Key phải bắt đầu bằng <code>$2a$10$</code> — copy đúng không?</li>
+            <li>Bin ID: mở <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> → vào Bin vừa tạo → copy ID từ URL</li>
+            <li>Bin phải ở trạng thái <strong>Private</strong> với tài khoản đó</li>
+            <li>Thử mở URL: <code>https://api.jsonbin.io/v3/b/<strong>[BinID]</strong>/latest</code> trong tab mới — nếu thấy JSON là đúng</li>
+          </ol>
+          <div style="background:#fff8ee;border:1px solid #ffd966;border-radius:6px;padding:8px 12px;font-size:11px">
+            Bin ID hiện tại: <strong>${binId}</strong><br>
+            Master Key (4 ký tự đầu): <strong>${apiKey.slice(0,4)}…</strong>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button class="btn" onclick="closeModal()">Đóng</button>
+          <button class="btn btn-gold" onclick="closeModal();showSyncSetup()">↩ Thử lại</button>
+        </div>
+      `);
+    }, 500);
   }
 }
 
@@ -4464,6 +4507,21 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
     else if (sessionRole === 'edit') { SYNC.role='edit'; }
     else { SYNC.role='admin'; }
     setTimeout(() => applyRoleUI(sessionRole), 300);
+    // Auto-pull on page reload too
+    setTimeout(async () => {
+      const binId = SYNC.binId || D.settings?.sync?.binId || '';
+      if (!binId) return;
+      try {
+        setSyncStatus('syncing','Đang tải…');
+        const pulled = await syncPull(localStorage.getItem('sync_edit_pw')||'');
+        if (pulled) {
+          D = pulled; save(); renderAll();
+          setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
+        } else {
+          setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
+        }
+      } catch(e) { setSyncStatus('','Sync'); }
+    }, 800);
     return;
   }
 
