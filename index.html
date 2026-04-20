@@ -3880,9 +3880,14 @@ renderAll();
     view:  '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7', // 280510
   };
 
+  // Direct password map (simpler, works on file:// without crypto.subtle)
+  const SPLASH_PW = { '204290':'admin', '123456':'edit', '280510':'view' };
+
   async function sha256(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    try {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    } catch(e) { return null; }
   }
 
   // Check session — if already logged in this session, skip splash
@@ -3900,24 +3905,28 @@ renderAll();
   document.getElementById('pageMain') && (document.getElementById('pageMain').style.visibility = 'hidden');
 
   window.splashLogin = async function() {
-    const pw = document.getElementById('splashPwInput').value;
+    const pw = document.getElementById('splashPwInput').value.trim();
     const errEl = document.getElementById('splashError');
     if (!pw) { errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
     errEl.textContent = '';
 
-    const hash = await sha256(pw);
+    // Primary: direct match (works everywhere including file://)
+    let role = SPLASH_PW[pw] || null;
 
-    // Check against built-in hashes (single source of truth)
-    let role = null;
-    if      (hash === SPLASH_HASHES.admin) role = 'admin';
-    else if (hash === SPLASH_HASHES.edit)  role = 'edit';
-    else if (hash === SPLASH_HASHES.view)  role = 'view';
+    // Fallback: SHA-256 hash match (for crypto.subtle environments)
+    if (!role) {
+      const hash = await sha256(pw);
+      if (hash) {
+        if      (hash === SPLASH_HASHES.admin) role = 'admin';
+        else if (hash === SPLASH_HASHES.edit)  role = 'edit';
+        else if (hash === SPLASH_HASHES.view)  role = 'view';
+      }
+    }
 
     if (!role) {
       errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
       document.getElementById('splashPwInput').value = '';
       document.getElementById('splashPwInput').focus();
-      // Re-trigger shake animation
       errEl.classList.remove('shake');
       requestAnimationFrame(()=>{ errEl.classList.add('shake'); });
       return;
