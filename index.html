@@ -3486,6 +3486,378 @@ setTimeout(()=>{
 
 
 /* ══════════════════════════════════════════════════════
+   RENDER ALL
+══════════════════════════════════════════════════════ */
+function renderAll() {
+  renderMonthStrip();
+  renderSidebar();
+  renderStorageMeter();
+  if(activePage==='main') renderContent();
+  else if(activePage==='dashboard') renderDashboard();
+  else if(activePage==='staff') renderStaffPage();
+  else if(activePage==='settings') renderSettings();
+}
+
+function renderStorageMeter() {
+  const bar = document.getElementById('storageBar');
+  if (!bar) return;
+  try {
+    const data = localStorage.getItem(SK) || '';
+    const kb = Math.round(data.length * 0.75 / 1024);
+    const maxKB = 5120;
+    const pct = Math.min(100, Math.round(kb / maxKB * 100));
+    const color = pct > 80 ? '#e74c3c' : pct > 55 ? '#E67E22' : '#27AE60';
+    let photoCount = 0;
+    Object.values(D.months).forEach(m => { [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { photoCount += (p.photos||[]).filter(Boolean).length; }); });
+    bar.innerHTML = `
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray4);margin-bottom:3px">
+        <span>💾 ${(kb/1024).toFixed(1)}MB / 5MB</span>
+        <span style="color:${color};font-weight:600">${pct}%</span>
+      </div>
+      <div style="height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
+        <div style="height:100%;background:${color};width:${pct}%;border-radius:2px;transition:width .4s"></div>
+      </div>
+      ${photoCount > 0 ? `<div style="font-size:10px;color:var(--gray4);margin-top:3px">📷 ${photoCount} ảnh đang lưu</div>` : ''}
+      ${pct > 70 ? `<button class="btn btn-xs btn-danger" style="margin-top:5px;width:100%" onclick="openClearPhotosModal()">🗑 Dọn ảnh cũ</button>` : ''}
+    `;
+  } catch(e) {}
+}
+
+function openClearPhotosModal() {
+  let totalPhotos = 0, months = [];
+  Object.entries(D.months).forEach(([mid, m]) => {
+    let cnt = 0;
+    [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { cnt += (p.photos||[]).filter(Boolean).length; });
+    if (cnt > 0) { months.push({mid, label: monthLabel(mid), cnt}); totalPhotos += cnt; }
+  });
+  showModal(`
+    <h3>🗑 Dọn dẹp ảnh — giải phóng dung lượng</h3>
+    <div style="margin-bottom:14px;font-size:12px;color:var(--gray4)">Tổng <strong>${totalPhotos} ảnh</strong> đang lưu. Chọn tháng muốn xóa ảnh:</div>
+    ${months.map(({mid, label, cnt}) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--gray2);border-radius:var(--r);margin-bottom:6px">
+        <span style="font-weight:600">${label} — ${cnt} ảnh</span>
+        <button class="btn btn-sm btn-danger" onclick="clearMonthPhotos('${mid}')">Xóa ảnh</button>
+      </div>`).join('')}
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Đóng</button>
+      <button class="btn btn-danger" onclick="clearAllPhotos()">Xóa tất cả ảnh</button>
+    </div>
+  `);
+}
+
+function clearMonthPhotos(mid) {
+  [...(D.months[mid]?.projects||[]),...(D.months[mid]?.projectsVN||[])].forEach(p => { p.photos = []; });
+  save(); closeModal(); renderStorageMeter();
+  toast('✓ Đã xóa ảnh tháng ' + monthLabel(mid));
+}
+
+function clearAllPhotos() {
+  if (!confirm('Xóa toàn bộ ảnh tất cả các tháng?')) return;
+  Object.values(D.months).forEach(m => { [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { p.photos = []; }); });
+  save(); closeModal(); renderStorageMeter();
+  toast('✓ Đã xóa tất cả ảnh');
+}
+
+/* ══════════════════════════════════════════════════════
+   THEME SYSTEM
+══════════════════════════════════════════════════════ */
+const THEMES = {
+  'navy-gold': { name:'Navy & Gold', emoji:'🔷', '--ex-navy':'#1F3864','--ex-navy2':'#2E4A7A','--ex-navy3':'#4472C4','--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31','--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000' },
+  'charcoal-gold': { name:'Charcoal & Gold', emoji:'⬛', '--ex-navy':'#2C2C2C','--ex-navy2':'#3D3D3D','--ex-navy3':'#666666','--ex-gold':'#FFC000','--ex-gold2':'#FFD966','--ex-orange':'#ED7D31','--new-bg':'#E2EFDA','--new-text':'#375623','--rev-bg':'#FFF2CC','--rev-text':'#7F6000' },
+  'forest-amber': { name:'Forest & Amber', emoji:'🌲', '--ex-navy':'#1B4332','--ex-navy2':'#2D6A4F','--ex-navy3':'#52B788','--ex-gold':'#F4A261','--ex-gold2':'#FBBF69','--ex-orange':'#E76F51','--new-bg':'#D8F3DC','--new-text':'#1B4332','--rev-bg':'#FFF3E0','--rev-text':'#7B3F00' },
+  'navy-red': { name:'Navy & Red', emoji:'🔴', '--ex-navy':'#1A1A2E','--ex-navy2':'#16213E','--ex-navy3':'#0F3460','--ex-gold':'#E94560','--ex-gold2':'#FF6B6B','--ex-orange':'#C23152','--new-bg':'#E8F4FD','--new-text':'#0F3460','--rev-bg':'#FDEAEA','--rev-text':'#7B1A1A' },
+  'slate-teal': { name:'Slate & Teal', emoji:'🩵', '--ex-navy':'#2D4156','--ex-navy2':'#3D5A73','--ex-navy3':'#5B8FB9','--ex-gold':'#00B4D8','--ex-gold2':'#48CAE4','--ex-orange':'#0096C7','--new-bg':'#E0F7FA','--new-text':'#006064','--rev-bg':'#E3F2FD','--rev-text':'#0D47A1' },
+  'midnight-purple': { name:'Midnight Purple', emoji:'🟣', '--ex-navy':'#240046','--ex-navy2':'#3C096C','--ex-navy3':'#7B2FBE','--ex-gold':'#C77DFF','--ex-gold2':'#E0AAFF','--ex-orange':'#9D4EDD','--new-bg':'#F3E8FF','--new-text':'#5B21B6','--rev-bg':'#FFF0FB','--rev-text':'#86198F' },
+  'custom': { name:'Tùy chỉnh', emoji:'✏️' }
+};
+
+function applyTheme(themeKey) {
+  const theme = THEMES[themeKey]; if (!theme) return;
+  const root = document.documentElement;
+  Object.entries(theme).forEach(([k,v]) => { if (k.startsWith('--')) root.style.setProperty(k, v); });
+  document.querySelector('.header').style.background = theme['--ex-navy']||'';
+  document.querySelector('.month-strip').style.background = theme['--ex-navy2']||'';
+  localStorage.setItem('app_theme', themeKey);
+  if (themeKey !== 'custom') localStorage.setItem('app_theme_data', JSON.stringify(theme));
+}
+
+function applyCustomColor(varName, val) {
+  document.documentElement.style.setProperty(varName, val);
+  const saved = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
+  saved[varName] = val; localStorage.setItem('app_custom_theme', JSON.stringify(saved));
+  localStorage.setItem('app_theme', 'custom');
+}
+
+function loadSavedTheme() {
+  const key = localStorage.getItem('app_theme'); if (!key) return;
+  if (key === 'custom') {
+    const custom = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
+    if (Object.keys(custom).length) { const root = document.documentElement; Object.entries(custom).forEach(([k,v]) => root.style.setProperty(k, v)); }
+  } else if (THEMES[key]) { applyTheme(key); }
+}
+
+function cssToHex(color) {
+  if (!color) return '#1F3864'; color = color.trim();
+  if (color.startsWith('#') && color.length===7) return color;
+  if (color.startsWith('#') && color.length===4) return '#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
+  const m = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (m) return '#'+[m[1],m[2],m[3]].map(n=>parseInt(n).toString(16).padStart(2,'0')).join('');
+  return '#1F3864';
+}
+
+function resetTheme() {
+  localStorage.removeItem('app_theme'); localStorage.removeItem('app_custom_theme'); localStorage.removeItem('app_theme_data');
+  applyTheme('navy-gold'); closeModal(); toast('↺ Đã đặt lại màu mặc định');
+}
+
+function openThemePicker() {
+  const currentKey = localStorage.getItem('app_theme')||'navy-gold';
+  const root = document.documentElement;
+  const getCss = v => getComputedStyle(root).getPropertyValue(v).trim();
+  showModal(`
+    <h3>🎨 Tuỳ chỉnh màu sắc giao diện</h3>
+    <div style="margin-bottom:18px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gray4);font-weight:600;margin-bottom:10px">Chủ đề có sẵn</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        ${Object.entries(THEMES).filter(([k])=>k!=='custom').map(([key, t]) => `
+          <div onclick="applyTheme('${key}');updateColorInputs()"
+            style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:2px solid ${currentKey===key?t['--ex-navy']:'var(--gray2)'};border-radius:8px;cursor:pointer;transition:all .15s;background:${currentKey===key?'#EEF3FB':''}">
+            <span style="background:${t['--ex-navy']};width:20px;height:20px;border-radius:50%;flex-shrink:0;display:inline-block"></span>
+            <span style="background:${t['--ex-gold']};width:14px;height:14px;border-radius:50%;flex-shrink:0;display:inline-block;margin-left:-8px"></span>
+            <span style="font-size:11px;font-weight:600">${t.name}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gray4);font-weight:600;margin-bottom:10px">✏️ Tuỳ chỉnh từng màu</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="colorPickerGrid">
+        ${[['--ex-navy','Màu chính (Header)'],['--ex-navy2','Màu phụ (Thanh tháng)'],['--ex-gold','Màu nhấn (Gold)'],['--ex-orange','Màu OT & cảnh báo'],['--new-bg','Nền hạng mục Mới'],['--rev-bg','Nền hạng mục Sửa']].map(([v,l]) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <input type="color" id="cp-${v.replace(/--/g,'').replace(/-/g,'_')}" value="${cssToHex(getCss(v))}"
+              oninput="applyCustomColor('${v}',this.value)"
+              style="width:36px;height:32px;padding:2px;border:1px solid var(--gray2);border-radius:4px;cursor:pointer">
+            <label style="font-size:11px;color:var(--gray4)">${l}</label>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-danger btn-sm" onclick="resetTheme()">↺ Mặc định</button>
+      <button class="btn btn-gold" onclick="closeModal()">✓ Xong</button>
+    </div>
+  `);
+}
+
+function updateColorInputs() {
+  const root = document.documentElement;
+  [['--ex-navy','navy'],['--ex-navy2','navy2'],['--ex-gold','gold'],['--ex-orange','orange'],['--new-bg','new_bg'],['--rev-bg','rev_bg']].forEach(([v,id]) => {
+    const el = document.getElementById('cp-'+v.replace(/--/g,'').replace(/-/g,'_'));
+    if (el) el.value = cssToHex(getComputedStyle(root).getPropertyValue(v).trim());
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   EXPORT / REPORT — simplified: name + items + counts only
+══════════════════════════════════════════════════════ */
+function openExportMenu() {
+  const ml = monthLabel(D.activeMonth);
+  showModal(`
+    <h3>📤 Xuất báo cáo — ${ml}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+      <div style="border:1px solid var(--gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
+        onclick="closeModal();exportProjectReport()"
+        onmouseover="this.style.borderColor='#1F3864';this.style.background='#EEF3FB'"
+        onmouseout="this.style.borderColor='var(--gray2)';this.style.background=''">
+        <div style="font-size:32px;margin-bottom:10px">📋</div>
+        <div style="font-weight:700;font-size:14px;color:#1F3864;margin-bottom:6px">Báo cáo Dự án</div>
+        <div style="font-size:11px;color:var(--gray4);line-height:1.6">Tên dự án · Hạng mục<br>Số lượng Mới / Sửa<br>Tổng từng dự án</div>
+        <div style="margin-top:12px;background:#1F3864;color:#FFC000;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">Xuất & In PDF</div>
+      </div>
+      <div style="border:1px solid var(--gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
+        onclick="closeModal();exportOTReport()"
+        onmouseover="this.style.borderColor='#ED7D31';this.style.background='#FFF5EE'"
+        onmouseout="this.style.borderColor='var(--gray2)';this.style.background=''">
+        <div style="font-size:32px;margin-bottom:10px">⏱</div>
+        <div style="font-weight:700;font-size:14px;color:#C55A11;margin-bottom:6px">Báo cáo OT</div>
+        <div style="font-size:11px;color:var(--gray4);line-height:1.6">Nhân sự có phát sinh OT<br>Chi tiết ngày giờ<br>Tổng OT tháng</div>
+        <div style="margin-top:12px;background:#ED7D31;color:#fff;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">Xuất & In PDF</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:11px;color:var(--gray4)">
+      💡 Sau khi xem trước, bấm <strong>Ctrl+P</strong> → chọn <em>"Save as PDF"</em>
+    </div>
+    <div class="modal-ft"><button class="btn" onclick="closeModal()">Đóng</button></div>
+  `);
+}
+
+function exportProjectReport() {
+  const pjs = curProjects();
+  const m = curMonth();
+  const ml = monthLabel(D.activeMonth);
+  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
+  const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
+
+  const pjBlocks = pjs.map((p,i) => {
+    const groups = p.groups||[];
+    if (!groups.length && totalNew(p)+totalRev(p)===0) return '';
+    const tn = totalNew(p), tr = totalRev(p);
+
+    // Group rows: only type name + new count + rev count
+    const groupRows = groups.filter(g=>{
+      const gNew = (g.rows||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0);
+      const gRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
+      return gNew+gRev > 0;
+    }).map(g => {
+      const gNew = (g.rows||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0);
+      const gRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
+      return `<tr>
+        <td style="padding:5px 10px;border-bottom:1px solid #f0f0f0">${x(g.type||'—')}</td>
+        <td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;color:#375623;font-weight:600">${gNew||'—'}</td>
+        <td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;color:#7F6000;font-weight:600">${gRev||'—'}</td>
+        <td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;font-weight:700">${gNew+gRev}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div style="margin-bottom:18px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
+      <div style="background:#1F3864;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-weight:700;font-size:13px">${i+1}. ${x(p.nameVN||p.nameJP||'—')}</span>
+          ${p.nameJP&&p.nameVN?`<span style="font-size:10px;color:rgba(255,255,255,.6);margin-left:8px">${x(p.nameJP)}</span>`:''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="background:#E2EFDA;color:#375623;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">新 ${tn}</span>
+          <span style="background:#FFF2CC;color:#7F6000;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">修 ${tr}</span>
+          <span style="background:#FFC000;color:#1F3864;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">計 ${tn+tr}</span>
+        </div>
+      </div>
+      ${groupRows ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f5f5f5">
+          <th style="padding:6px 10px;text-align:left;font-weight:600;color:#555">Hạng mục</th>
+          <th style="padding:6px 10px;text-align:center;font-weight:600;color:#375623">作成 Mới</th>
+          <th style="padding:6px 10px;text-align:center;font-weight:600;color:#7F6000">修正 Sửa</th>
+          <th style="padding:6px 10px;text-align:center;font-weight:600">Tổng</th>
+        </tr></thead>
+        <tbody>${groupRows}</tbody>
+      </table>` : '<div style="padding:10px;font-size:11px;color:#bbb;text-align:center">Chưa có hạng mục</div>'}
+    </div>`;
+  }).join('');
+
+  const html = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;color:#1a1a1a;max-width:800px;margin:0 auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #1F3864">
+      <div>
+        <div style="font-size:11px;color:#888;letter-spacing:.12em;text-transform:uppercase">GENDAI SOUGO architects inc.</div>
+        <div style="font-size:22px;font-weight:700;color:#1F3864;margin-top:4px">Báo cáo Phối Cảnh — ${ml}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Ngày xuất: ${now}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:#555">Tổng dự án: <strong>${pjs.filter(p=>totalNew(p)+totalRev(p)>0).length}</strong></div>
+        <div style="font-size:12px;color:#375623;margin-top:4px">作成 Làm mới: <strong>${sumNew}</strong></div>
+        <div style="font-size:12px;color:#7F6000">修正 Sửa lại: <strong>${sumRev}</strong></div>
+        <div style="font-size:14px;font-weight:800;color:#1F3864;margin-top:2px">Tổng: ${sumNew+sumRev} phối cảnh</div>
+      </div>
+    </div>
+    ${pjBlocks||'<p style="color:#bbb">Không có dữ liệu</p>'}
+    <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e0e0e0;display:flex;justify-content:space-between;font-size:10px;color:#aaa">
+      <span>GENDAI SOUGO architects inc. — 作成数管理システム</span>
+      <span>${ml} | ${now}</span>
+    </div>
+  </div>`;
+
+  showReportOverlay('📋 Báo cáo Dự án — ' + ml, html);
+}
+
+function exportOTReport() {
+  const pjs = curProjects();
+  const ml = monthLabel(D.activeMonth);
+  const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const staffOT = {};
+  D.settings.staffList.forEach(s=>staffOT[s]={total:0,entries:[]});
+  pjs.forEach(p=>{
+    (p.otLog||[]).forEach(e=>{
+      if(e.staff&&staffOT[e.staff]){
+        staffOT[e.staff].total+=(e.hours||0);
+        staffOT[e.staff].entries.push({...e,pjName:p.nameVN||p.nameJP||'?',pjOffice:p.office||''});
+      }
+    });
+  });
+  const activeStaff = D.settings.staffList.filter(s=>staffOT[s].total>0);
+  if(!activeStaff.length){ toast('Tháng này chưa có nhân sự nào phát sinh OT'); return; }
+  const totalOT = activeStaff.reduce((s,k)=>s+staffOT[k].total,0);
+
+  const staffBlocks = activeStaff.map(s=>{
+    const v = staffOT[s];
+    return `<div style="margin-bottom:14px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
+      <div style="background:#ED7D31;color:#fff;padding:8px 12px;display:flex;justify-content:space-between">
+        <span style="font-weight:700">${s}</span>
+        <span style="font-weight:800">Tổng: ${v.total.toFixed(1)}h</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f5f5f5">
+          <th style="padding:5px 10px;text-align:left">Ngày</th>
+          <th style="padding:5px 10px;text-align:left">Dự án</th>
+          <th style="padding:5px 10px;text-align:center">Giờ OT</th>
+        </tr></thead>
+        <tbody>${v.entries.map(e=>`<tr><td style="padding:5px 10px;border-bottom:1px solid #f0f0f0">${e.date||'?'}</td><td style="padding:5px 10px;border-bottom:1px solid #f0f0f0">${x(e.pjName)}</td><td style="padding:5px 10px;text-align:center;border-bottom:1px solid #f0f0f0;font-weight:700;color:#ED7D31">${e.hours}h</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const html = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;color:#1a1a1a;max-width:800px;margin:0 auto;padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #ED7D31">
+      <div>
+        <div style="font-size:11px;color:#888;letter-spacing:.12em;text-transform:uppercase">GENDAI SOUGO architects inc.</div>
+        <div style="font-size:22px;font-weight:700;color:#ED7D31;margin-top:4px">Báo cáo OT — ${ml}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Ngày xuất: ${now}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:#555">Nhân sự có OT: <strong>${activeStaff.length}</strong></div>
+        <div style="font-size:14px;font-weight:800;color:#ED7D31;margin-top:4px">Tổng: ${totalOT.toFixed(1)}h</div>
+      </div>
+    </div>
+    ${staffBlocks}
+  </div>`;
+
+  showReportOverlay('⏱ Báo cáo OT — ' + ml, html);
+}
+
+function showReportOverlay(title, bodyHtml) {
+  const overlay = document.createElement('div');
+  overlay.id = 'rptOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.55);display:flex;flex-direction:column';
+  overlay.innerHTML = `
+    <div style="background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <h2 style="font-size:15px;font-weight:700">${title}</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)" onclick="printReport()">🖨 In / Lưu PDF</button>
+        <button class="btn btn-sm btn-gold" onclick="closeReport()">✕ Đóng</button>
+      </div>
+    </div>
+    <div id="rptBody" style="flex:1;overflow-y:auto;background:#fff">${bodyHtml}</div>`;
+  overlay.onclick = e => { if(e.target===overlay) closeReport(); };
+  document.body.appendChild(overlay);
+}
+
+function printReport() {
+  const body = document.getElementById('rptBody'); if (!body) return;
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Báo cáo Phối Cảnh Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Be Vietnam Pro',sans-serif;font-size:12px;color:#1a1a1a;background:#fff}@page{size:A4;margin:15mm}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+  </head><body>${body.innerHTML}</body></html>`);
+  w.document.close(); setTimeout(()=>{ w.focus(); w.print(); }, 600);
+}
+
+function closeReport() { document.getElementById('rptOverlay')?.remove(); }
+
+
+/* ══════════════════════════════════════════════════════
+   APP INIT
+══════════════════════════════════════════════════════ */
+loadSavedTheme();
+showPage('main');
+renderAll();
+
+/* ══════════════════════════════════════════════════════
    SPLASH SCREEN — password gate
    3 password levels: admin / edit / view
    Passwords are hashed via Web Crypto (SHA-256)
