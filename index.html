@@ -3205,7 +3205,29 @@ function toggleSalary(salId) {
 /* SETTINGS */
 function renderSettings() {
   const sc=document.getElementById('settingsContent'); if(!sc) return;
+  const syncConfigured = !!(SYNC.binId || D.settings?.sync?.binId);
   sc.innerHTML=`
+  ${!syncConfigured ? `
+  <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);border:1px solid #ffc107;border-radius:8px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:28px">📱</span>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:13px;color:#7d5a00;margin-bottom:3px">Chưa kết nối đồng bộ — Điện thoại không có dữ liệu</div>
+      <div style="font-size:11px;color:#856404;line-height:1.6">
+        Để xem dữ liệu trên điện thoại và các thiết bị khác, cần thiết lập đồng bộ cloud (miễn phí, 5 phút).
+      </div>
+    </div>
+    <button class="btn btn-gold" onclick="closeModal&&closeModal();showSyncSetup()" style="white-space:nowrap;flex-shrink:0">
+      ☁ Thiết lập ngay
+    </button>
+  </div>` : `
+  <div style="background:#f0fff4;border:1px solid #a9dfbf;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">✅</span>
+    <div style="flex:1;font-size:11px;color:#1e8449">
+      <strong>Đã kết nối cloud sync</strong> — Bin ID: <code style="background:#d5f5e3;padding:1px 5px;border-radius:3px">${(SYNC.binId||D.settings?.sync?.binId||'').slice(0,12)}…</code><br>
+      Điện thoại: mở cùng link → nhập mật khẩu → bấm Sync để tải dữ liệu
+    </div>
+    <button class="btn btn-sm" onclick="showSyncSetup()">⚙ Sửa cấu hình</button>
+  </div>`}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <div class="card"><div class="card-hd"><span class="card-hd-title">👤 Nhân sự</span></div>
       <div class="card-body"><div class="tag-cloud" id="staffTags">
@@ -3632,48 +3654,84 @@ function openSyncPanel() {
 }
 
 function showSyncSetup() {
+  const existingBinId = SYNC.binId || D.settings?.sync?.binId || '';
+  const existingKey   = SYNC.apiKey || '';
   showModal(`
-    <h3>☁ Thiết lập đồng bộ đám mây</h3>
-    <div style="background:#EEF3FB;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#1F3864;line-height:1.75">
-      <strong>Bước 1 — Tạo kho lưu trữ miễn phí:</strong><br>
-      1. Vào <a href="https://jsonbin.io" target="_blank" style="color:#4472C4;font-weight:600">jsonbin.io</a> → đăng ký miễn phí (chỉ cần email)<br>
-      2. Vào Dashboard → <strong>API Keys</strong> → copy <strong>Master Key</strong><br>
-      3. Bấm <strong>+ New Bin</strong> → đặt tên "phoicanh" → tạo → copy <strong>Bin ID</strong> (dạng <code>64abc...</code>)<br>
-      4. Điền 2 thông tin đó vào ô dưới (chỉ cần làm 1 lần)
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div class="field"><label>Master Key (bí mật)</label>
-        <input type="password" id="su-apikey" placeholder="$2a$10$..." style="font-family:monospace;font-size:11px">
-        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Chỉ bạn biết, không chia sẻ</div>
+    <h3 style="color:var(--navy)">☁ Thiết lập đồng bộ đám mây</h3>
+    <p style="font-size:12px;color:var(--gray4);margin-bottom:12px">
+      Dữ liệu sẽ lưu trên <strong>JSONBin.io</strong> (miễn phí) — sau khi cấu hình, mọi thiết bị đều xem/chỉnh sửa được cùng 1 dữ liệu.
+    </p>
+
+    <!-- Step 1 -->
+    <div style="border:1px solid #d0e4f8;border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#f0f8ff">
+      <div style="font-weight:700;font-size:12px;color:#1a5276;margin-bottom:6px">
+        📌 Bước 1 — Lấy API Key & Bin ID từ JSONBin.io
       </div>
-      <div class="field"><label>Bin ID</label>
-        <input id="su-binid" placeholder="64abc123def456..." style="font-family:monospace;font-size:11px">
-        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Dùng để kết nối mọi thiết bị</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div class="field">
-        <label>🔐 Mật khẩu ADMIN (toàn quyền)</label>
-        <input type="password" id="su-admin-pw" placeholder="Mật khẩu mạnh…">
-        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Dùng để đồng bộ & chỉnh sửa</div>
-      </div>
-      <div class="field">
-        <label>✏️ Mật khẩu EDIT (chỉnh sửa)</label>
-        <input type="password" id="su-edit-pw" placeholder="Chia sẻ với nhân sự…">
-        <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Nhân sự nhập liệu hàng ngày</div>
+      <div style="font-size:11px;color:#555;line-height:1.85">
+        1. Mở <a href="https://jsonbin.io" target="_blank" style="color:#2980B9;font-weight:700">jsonbin.io</a>
+           → Đăng ký miễn phí (chỉ cần email, xong ngay)<br>
+        2. Vào <strong>API Keys</strong> (menu trái) → Bấm <strong>Create Key</strong> 
+           → Copy toàn bộ chuỗi bắt đầu bằng <code style="background:#eee;padding:1px 4px;border-radius:3px">$2a$...</code><br>
+        3. Vào <strong>Bins</strong> → Bấm <strong>+ Create Bin</strong> → Tên: <code style="background:#eee;padding:1px 4px;border-radius:3px">phoicanh</code>
+           → Content: <code style="background:#eee;padding:1px 4px;border-radius:3px">{}</code> → Save<br>
+        4. Copy <strong>Bin ID</strong> (chuỗi số dài ở trên URL hoặc info panel)
       </div>
     </div>
-    <div class="field" style="margin-bottom:14px">
-      <label>👁 Mật khẩu VIEW (chỉ xem)</label>
-      <input type="password" id="su-view-pw" placeholder="Chia sẻ với sếp / khách…">
-      <div style="font-size:10px;color:var(--ex-gray4);margin-top:3px">Xem được tất cả nhưng không sửa được</div>
+
+    <!-- Step 2: credentials -->
+    <div style="border:1px solid #ddd;border-radius:8px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px">
+        🔑 Bước 2 — Điền thông tin kết nối (chỉ làm 1 lần)
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field">
+          <label style="font-size:11px">Master Key (bí mật — chỉ Admin biết)</label>
+          <input type="password" id="su-apikey" value="${existingKey}" placeholder="$2a$10$..."
+            style="font-family:monospace;font-size:11px">
+        </div>
+        <div class="field">
+          <label style="font-size:11px">Bin ID (chia sẻ với team để connect)</label>
+          <input id="su-binid" value="${existingBinId}" placeholder="64a1b2c3d4e5f6..."
+            style="font-family:monospace;font-size:11px">
+        </div>
+      </div>
     </div>
-    <div style="background:#fff8ee;border:1px solid #ffd966;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#7F6000">
-      💡 Sau khi lưu, mọi người chỉ cần nhập <strong>Bin ID + mật khẩu</strong> để truy cập — không cần tài khoản
+
+    <!-- Step 3: passwords (pre-filled with current) -->
+    <div style="border:1px solid #ddd;border-radius:8px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px">
+        🔐 Bước 3 — Mật khẩu truy cập
+        <span style="font-size:10px;font-weight:400;color:var(--gray4)"> (đã điền sẵn theo cấu hình hiện tại)</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="field">
+          <label style="font-size:11px">👑 Admin — toàn quyền</label>
+          <input type="password" id="su-admin-pw" placeholder="204290" value="204290">
+          <div style="font-size:9px;color:#888;margin-top:2px">Sync + chỉnh sửa tất cả</div>
+        </div>
+        <div class="field">
+          <label style="font-size:11px">✏️ Edit — nhập liệu</label>
+          <input type="password" id="su-edit-pw" placeholder="123456" value="123456">
+          <div style="font-size:9px;color:#888;margin-top:2px">Chỉ Dự án JP/VN</div>
+        </div>
+        <div class="field">
+          <label style="font-size:11px">👁 View — chỉ xem</label>
+          <input type="password" id="su-view-pw" placeholder="280510" value="280510">
+          <div style="font-size:9px;color:#888;margin-top:2px">Xem tất cả, không sửa</div>
+        </div>
+      </div>
     </div>
+
+    <!-- What happens after -->
+    <div style="background:#f0fff4;border:1px solid #a9dfbf;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#1e8449;line-height:1.7">
+      ✅ Sau khi lưu: Dữ liệu máy tính được đẩy lên cloud ngay.<br>
+      📱 Trên điện thoại: mở cùng link GitHub Pages → nhập mật khẩu → bấm nút Sync → dữ liệu tải về.<br>
+      🔄 Auto-sync: mỗi lần lưu dữ liệu sẽ tự đồng bộ lên cloud (nếu bật Auto).
+    </div>
+
     <div class="modal-ft">
       <button class="btn" onclick="closeModal()">Hủy</button>
-      <button class="btn btn-gold" onclick="confirmSyncSetup()">✓ Lưu cấu hình & Đẩy lên cloud</button>
+      <button class="btn btn-gold" onclick="confirmSyncSetup()">☁ Lưu & Đẩy lên cloud ngay</button>
     </div>
   `);
 }
@@ -4441,11 +4499,35 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
     // Fade out splash
     const splash = document.getElementById('splashScreen');
     splash.classList.add('fade-out');
-    setTimeout(() => {
+    setTimeout(async () => {
       splash.style.display = 'none';
       if (hdr) hdr.style.visibility = '';
       if (pgm) pgm.style.visibility = '';
       applyRoleUI(role);
+
+      // Auto-pull cloud data on login if Bin ID configured
+      const binId = SYNC.binId || D.settings?.sync?.binId || '';
+      if (binId) {
+        setSyncStatus('syncing', 'Đang tải…');
+        try {
+          const pulled = await syncPull(localStorage.getItem('sync_edit_pw') || '');
+          if (pulled) {
+            D = pulled; save(); renderAll();
+            setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
+            toast('✓ Đã tải dữ liệu mới nhất từ cloud');
+          } else {
+            setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
+          }
+        } catch(e) {
+          setSyncStatus('', 'Sync');
+          // Silent fail — local data still usable
+        }
+      } else if (role === 'admin') {
+        // Show setup hint for admin without cloud configured
+        setTimeout(()=>{
+          toast('💡 Chưa cấu hình cloud sync — bấm nút Sync để thiết lập và đồng bộ điện thoại');
+        }, 1200);
+      }
     }, 650);
   };
 })();
