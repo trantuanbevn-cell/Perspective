@@ -1542,11 +1542,24 @@ function ratingColor(v) {
   return '#27ae60';
 }
 
-/* GROUPS — redesigned: flat table, all cols equal width, dropdown selects */
+/* GROUPS — per-group gray shading for easy visual separation */
 function renderGroups(p) {
   const groups = p.groups||[];
   if (!groups.length) return `<tr><td colspan="${9+getRatingFields().length}" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
+
+  // 8-step white→gray palette — each group gets its own shade, cycles if >8 groups
+  // Row bg uses the group shade; hạng mục header cell is the same shade but darker border
+  const GRP = [
+    {bg:'#ffffff', hdr:'#f7f7f7', border:'#d0d0d0', stripe:'#f5f5f5'}, // 1 white
+    {bg:'#f3f3f3', hdr:'#ebebeb', border:'#b8b8b8', stripe:'#eaeaea'}, // 2 light gray
+    {bg:'#e9e9e9', hdr:'#e0e0e0', border:'#a5a5a5', stripe:'#e0e0e0'}, // 3 gray
+    {bg:'#dfe0e3', hdr:'#d5d6da', border:'#9a9ba0', stripe:'#d6d7db'}, // 4 cool gray
+    {bg:'#f5f5f0', hdr:'#ececе6', border:'#aaaa9a', stripe:'#ececе6'}, // 5 warm white
+    {bg:'#ededf5', hdr:'#e4e4ee', border:'#9a9ab8', stripe:'#e4e4ee'}, // 6 blue-tint
+    {bg:'#f0ede8', hdr:'#e8e4de', border:'#b0a898', stripe:'#e8e4de'}, // 7 warm gray
+    {bg:'#e5e8e5', hdr:'#dce0dc', border:'#96a096', stripe:'#dce0dc'}, // 8 green-gray
+  ];
 
   const today = localDateStr(new Date());
 
@@ -1556,19 +1569,20 @@ function renderGroups(p) {
     const gRev = rows.filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
     const gOT  = rows.reduce((s,r)=>s+(r.ot||0),0);
     const gTot = gNew+gRev;
+    const gc   = GRP[gi % GRP.length]; // group color scheme
 
     // First row of group spans the hạng mục cell with rowspan
     const rowsHtml = rows.map((r, ri) => {
       const isFirst = ri === 0;
-      const statusColor = r.status==='new' ? '#f0faf0' : '#fffdf0';
-      const borderColor = r.status==='new' ? '#70AD47' : 'var(--gold)';
+      // Row bg = group shade; odd rows get stripe for breathing room
+      const rowBg = ri % 2 === 0 ? gc.bg : gc.stripe;
       const deadlinePast = r.dateTo && r.dateTo < today && !r.done;
       const deadlineSoon = r.dateTo && r.dateTo >= today && r.dateTo <= localDateStr(new Date(Date.now()+3*86400000));
-      return `<tr data-gid="${g.id}" data-rid="${r.id}" style="background:${statusColor}">
+      return `<tr data-gid="${g.id}" data-rid="${r.id}" style="background:${rowBg}">
         ${isFirst ? `<td rowspan="${rows.length}" style="
-          background:#fff;
-          border-left:4px solid var(--navy2);
-          border-right:1px solid var(--gray2);
+          background:${gc.hdr};
+          border-left:4px solid ${gc.border};
+          border-right:1px solid ${gc.border};
           vertical-align:top;padding:0;
           min-width:0">
           <div style="padding:6px 8px">
@@ -1595,7 +1609,7 @@ function renderGroups(p) {
             </div>
           </div>
         </td>` : ''}
-        <td style="border-left:2px solid ${borderColor}">
+        <td style="border-left:2px solid ${gc.border}">
           <select class="sel-sm" style="width:100%;font-size:11px" onchange="updRow('${p.id}','${g.id}','${r.id}','staff',this.value)">
             <option value="">— Người TH —</option>
             ${D.settings.staffList.map(s=>`<option value="${s}" ${r.staff===s?'selected':''}>${s}</option>`).join('')}
@@ -2004,8 +2018,8 @@ function renderDashboard() {
   const months=Object.keys(D.months).filter(m=>m.startsWith(year)).sort();
   const dc=document.getElementById('dashContent'); if(!dc) return;
   const mData=months.map(mid=>{
-    const m=D.months[mid]||{projects:[]};
-    const pjs=m.projects||[];
+    const m=D.months[mid]||{projects:[],projectsVN:[]};
+    const pjs=[...(m.projects||[]),...(m.projectsVN||[])];
     return {mid,label:monthLabel(mid),n:pjs.reduce((s,p)=>s+totalNew(p),0),
       r:pjs.reduce((s,p)=>s+totalRev(p),0),ot:pjs.reduce((s,p)=>s+totalOT(p),0),
       pjCount:pjs.length,tN:m.targetNew||0,tR:m.targetRev||0};
@@ -2057,10 +2071,8 @@ function renderDashboard() {
     <div style="overflow-x:auto"><table class="perf-tbl">
       <thead><tr><th>Nhân sự</th><th style="text-align:center">作成</th><th style="text-align:center">修正</th>
         <th style="text-align:center">Tổng</th><th style="text-align:center">OT(h)</th>
-        <th style="min-width:120px">Năng suất</th>
-        <th style="text-align:center;color:var(--gold)">★ Chất lượng</th>
-        <th style="text-align:center;color:#4fc3f7">★ Tốc độ</th>
-        <th style="text-align:center;color:#81c784">★ Tập trung</th>
+        <th style="min-width:100px">Năng suất</th>
+        ${RATING_JP.map(rf=>`<th style="text-align:center;font-size:9px;min-width:44px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
         <th>Đánh giá</th></tr></thead>
       <tbody>
         ${(()=>{
@@ -2068,6 +2080,13 @@ function renderDashboard() {
           return activeS.map(s=>{
             const t=staffAnn[s].n+staffAnn[s].r, pct=Math.round(t/mx*100);
             const grade=t>=mx*.8?'🟢 Xuất sắc':t>=mx*.6?'🟡 Tốt':t>=mx*.4?'🟠 Khá':'🔴 Cần cải thiện';
+            const rc=staffAnn[s].rCount;
+            const ratingCells = RATING_JP.map(rf=>{
+              const v = rc ? Number((staffAnn[s][rf.field+'Sum']/rc).toFixed(1)) : 0;
+              return rc
+                ? `<td style="text-align:center"><span style="font-size:13px;font-weight:700;color:${ratingColor(v)}">${v}</span><span style="font-size:9px;color:var(--gray4)">/10</span></td>`
+                : `<td style="text-align:center;color:var(--gray3)">—</td>`;
+            }).join('');
             return `<tr><td style="font-weight:600">${s}</td>
               <td class="num-c" style="color:var(--new-tx)">${staffAnn[s].n}</td>
               <td class="num-c" style="color:var(--rev-tx)">${staffAnn[s].r}</td>
@@ -2077,14 +2096,7 @@ function renderDashboard() {
                 <div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;overflow:hidden">
                   <div style="height:100%;background:var(--gold);width:${pct}%"></div></div>
                 <span style="font-size:10px;color:var(--gray4)">${pct}%</span></div></td>
-              ${(()=>{
-                const rc=staffAnn[s].rCount;
-                const rq=rc?Number((staffAnn[s].rqSum/rc).toFixed(1)):0;
-                const rs=rc?Number((staffAnn[s].rsSum/rc).toFixed(1)):0;
-                const rf=rc?Number((staffAnn[s].rfSum/rc).toFixed(1)):0;
-                const cell=(v,col)=>rc?'<td style="text-align:center"><span style="font-size:13px;font-weight:700;color:'+ratingColor(v)+'">'+v+'</span><span style="font-size:9px;color:var(--gray4)">/10</span></td>':'<td style="text-align:center;color:var(--gray3)">—</td>';
-                return cell(rq,'gold')+cell(rs,'#4fc3f7')+cell(rf,'#81c784');
-              })()}
+              ${ratingCells}
               <td style="font-size:12px">${grade}</td>
             </tr>`;
           }).join('');
