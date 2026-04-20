@@ -2268,32 +2268,139 @@ function renderDashboard() {
       r:pjs.reduce((s,p)=>s+totalRev(p),0),ot:pjs.reduce((s,p)=>s+totalOT(p),0),
       pjCount:pjs.length,tN:m.targetNew||0,tR:m.targetRev||0};
   });
-  const staffAnn={};
-  D.settings.staffList.forEach(s=>{
-    staffAnn[s]={n:0,r:0,ot:0,rCount:0};
-    for(let i=0;i<9;i++) staffAnn[s]['rate'+i+'Sum']=0;
-  });
+  // ── Aggregate separately: JP, VN, Combined ──
+  const staffAnn={}, staffAnnJP={}, staffAnnVN={};
+  function initAnn(obj) {
+    D.settings.staffList.forEach(s=>{
+      obj[s]={n:0,r:0,ot:0,rCount:0};
+      for(let i=0;i<9;i++) obj[s]['rate'+i+'Sum']=0;
+    });
+  }
+  initAnn(staffAnn); initAnn(staffAnnJP); initAnn(staffAnnVN);
+
+  function accum(obj, rows, otLog, records) {
+    (rows||[]).forEach(r=>{
+      if(r.staff&&obj[r.staff]){
+        if(r.status==='new') obj[r.staff].n+=(r.qty||0); else obj[r.staff].r+=(r.qty||0);
+        obj[r.staff].ot+=(r.ot||0);
+        let hasRating=false;
+        for(let i=0;i<9;i++){if(r['rate'+i]){hasRating=true;obj[r.staff]['rate'+i+'Sum']+=(r['rate'+i]||0);}}
+        if(hasRating) obj[r.staff].rCount++;
+      }
+    });
+    (otLog||[]).forEach(e=>{if(e.staff&&obj[e.staff])obj[e.staff].ot+=(e.hours||0);});
+    (records||[]).forEach(r=>{if(r.staff&&obj[r.staff]){if(r.status==='new')obj[r.staff].n+=(r.qty||0);else obj[r.staff].r+=(r.qty||0);}});
+  }
+
   months.forEach(mid=>{
-    const _m=(D.months[mid]||{projects:[],projectsVN:[]}); const pjs=[..._m.projects||[],...(_m.projectsVN||[])];
-    pjs.forEach(p=>{
-      (p.groups||[]).flatMap(g=>g.rows||[]).forEach(r=>{
-        if(r.staff&&staffAnn[r.staff]){
-          if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0);
-          staffAnn[r.staff].ot+=(r.ot||0);
-          let hasRating=false;
-          for(let i=0;i<9;i++){if(r['rate'+i]){hasRating=true;staffAnn[r.staff]['rate'+i+'Sum']+=(r['rate'+i]||0);}}
-          if(hasRating) staffAnn[r.staff].rCount++;
-        }
-      });
-      (p.records||[]).forEach(r=>{  // legacy records support
-        if(r.staff&&staffAnn[r.staff]){ if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0); }
-      });
-      (p.otLog||[]).forEach(e=>{if(e.staff&&staffAnn[e.staff])staffAnn[e.staff].ot+=(e.hours||0);});
+    const _m=(D.months[mid]||{projects:[],projectsVN:[]});
+    // JP projects
+    (_m.projects||[]).forEach(p=>{
+      const rows=(p.groups||[]).flatMap(g=>g.rows||[]);
+      accum(staffAnnJP, rows, p.otLog, p.records);
+      accum(staffAnn,   rows, p.otLog, p.records);
+    });
+    // VN projects
+    (_m.projectsVN||[]).forEach(p=>{
+      const rows=(p.groups||[]).flatMap(g=>g.rows||[]);
+      accum(staffAnnVN, rows, p.otLog, p.records);
+      accum(staffAnn,   rows, p.otLog, p.records);
     });
   });
-  const activeS=D.settings.staffList.filter(s=>staffAnn[s].n+staffAnn[s].r+staffAnn[s].ot>0);
+
+  // Staff who appear in each section
+  const activeSJP  = D.settings.staffList.filter(s=>staffAnnJP[s].n+staffAnnJP[s].r+staffAnnJP[s].ot>0);
+  const activeSVN  = D.settings.staffList.filter(s=>staffAnnVN[s].n+staffAnnVN[s].r+staffAnnVN[s].ot>0);
+  const activeS    = D.settings.staffList.filter(s=>staffAnn[s].n+staffAnn[s].r+staffAnn[s].ot>0);
   const totN=mData.reduce((s,m)=>s+m.n,0), totR=mData.reduce((s,m)=>s+m.r,0), totOT=mData.reduce((s,m)=>s+m.ot,0);
   const labels=mData.map(m=>m.label);
+
+  // Helper to build a staff performance table
+  function buildPerfTable(staffList, annData, ratingFields, title, flagEmoji) {
+    if (!staffList.length) return `<div class="card" style="margin-bottom:12px"><div class="card-hd"><span class="card-hd-title">${flagEmoji} ${title}</span></div><div style="padding:16px;text-align:center;color:var(--gray4);font-size:12px">Chưa có dữ liệu</div></div>`;
+    const mx = Math.max(1,...staffList.map(s=>annData[s].n+annData[s].r));
+    const rows = staffList.map(s=>{
+      const t=annData[s].n+annData[s].r, pct=Math.round(t/mx*100);
+      const grade=t>=mx*.8?'🟢 Xuất sắc':t>=mx*.6?'🟡 Tốt':t>=mx*.4?'🟠 Khá':'🔴 Cần cải thiện';
+      const rc=annData[s].rCount;
+      const ratingCells = ratingFields.map(rf=>{
+        const v = rc ? Number((annData[s][rf.field+'Sum']/rc).toFixed(1)) : 0;
+        return rc
+          ? `<td style="text-align:center"><span style="font-size:13px;font-weight:700;color:${ratingColor(v)}">${v}</span><span style="font-size:9px;color:var(--gray4)">/10</span></td>`
+          : `<td style="text-align:center;color:var(--gray3)">—</td>`;
+      }).join('');
+      return `<tr><td style="font-weight:600">${s}</td>
+        <td class="num-c" style="color:var(--new-tx)">${annData[s].n}</td>
+        <td class="num-c" style="color:var(--rev-tx)">${annData[s].r}</td>
+        <td class="num-c" style="font-weight:700">${t}</td>
+        <td class="num-c" style="color:var(--orange)">${annData[s].ot>0?annData[s].ot.toFixed(1):'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;background:var(--gold);width:${pct}%"></div></div>
+          <span style="font-size:10px;color:var(--gray4)">${pct}%</span></div></td>
+        ${ratingCells}
+        <td style="font-size:12px">${grade}</td>
+      </tr>`;
+    }).join('');
+    const ratingHeaders = ratingFields.map(rf=>`<th style="text-align:center;font-size:9px;min-width:40px;color:${rf.color}">★ ${rf.label}</th>`).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-hd"><span class="card-hd-title">${flagEmoji} ${title}</span></div>
+      <div style="overflow-x:auto"><table class="perf-tbl">
+        <thead><tr>
+          <th>Nhân sự</th><th style="text-align:center">作成</th><th style="text-align:center">修正</th>
+          <th style="text-align:center">Tổng</th><th style="text-align:center">OT(h)</th>
+          <th style="min-width:90px">Năng suất</th>
+          ${ratingHeaders}<th>Đánh giá</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // Combined table: use max total across all projects for grade, show both JP+VN totals
+  function buildCombinedTable(staffList, annCombined) {
+    if (!staffList.length) return '';
+    const mx = Math.max(1,...staffList.map(s=>annCombined[s].n+annCombined[s].r));
+    const rows = staffList.map(s=>{
+      const tJP = (staffAnnJP[s]?.n||0)+(staffAnnJP[s]?.r||0);
+      const tVN = (staffAnnVN[s]?.n||0)+(staffAnnVN[s]?.r||0);
+      const t   = annCombined[s].n+annCombined[s].r;
+      const pct = Math.round(t/mx*100);
+      const grade = t>=mx*.8?'🟢 Xuất sắc':t>=mx*.6?'🟡 Tốt':t>=mx*.4?'🟠 Khá':'🔴 Cần cải thiện';
+      const both = tJP>0 && tVN>0;
+      return `<tr ${both?'style="background:linear-gradient(90deg,#f0f8ff 0%,#fffdf0 100%)"':''}>
+        <td style="font-weight:600">${s}${both?'<span style="font-size:9px;margin-left:4px;background:var(--gold);color:var(--navy);border-radius:99px;padding:1px 5px">🇯🇵+🇻🇳</span>':''}</td>
+        <td class="num-c" style="color:var(--new-tx)">${annCombined[s].n}</td>
+        <td class="num-c" style="color:var(--rev-tx)">${annCombined[s].r}</td>
+        <td class="num-c" style="font-weight:700">${t}</td>
+        <td style="font-size:10px;text-align:center">
+          ${tJP>0?`<span style="color:var(--navy)">🇯🇵${tJP}</span>`:''} 
+          ${tVN>0?`<span style="color:#27ae60">🇻🇳${tVN}</span>`:''}
+        </td>
+        <td class="num-c" style="color:var(--orange)">${annCombined[s].ot>0?annCombined[s].ot.toFixed(1):'—'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;background:${both?'linear-gradient(90deg,var(--navy),var(--gold))':'var(--gold)'};width:${pct}%"></div></div>
+          <span style="font-size:10px;color:var(--gray4);font-weight:${both?700:400}">${pct}%</span></div></td>
+        <td style="font-size:12px">${grade}${both?'<span style="font-size:10px;margin-left:4px;color:var(--orange)">⚡ Đa dự án</span>':''}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="card-hd"><span class="card-hd-title">📊 Tổng hợp năng lực — ${year}</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.6)">Nhân sự làm cả 2 loại dự án được đánh dấu ⭐</span>
+      </div>
+      <div style="overflow-x:auto"><table class="perf-tbl">
+        <thead><tr>
+          <th>Nhân sự</th><th style="text-align:center">作成</th><th style="text-align:center">修正</th>
+          <th style="text-align:center">Tổng</th><th style="text-align:center">JP / VN</th>
+          <th style="text-align:center">OT(h)</th><th style="min-width:90px">Năng suất tổng</th>
+          <th>Đánh giá</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  }
+
   dc.innerHTML=`
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
     <div class="hero-box green" style="padding:12px"><div class="hero-num" style="font-size:28px">${totN}</div><div class="hero-lbl">Tổng 作成 (Làm mới)</div></div>
@@ -2310,44 +2417,10 @@ function renderDashboard() {
     <div class="chart-box"><h4>OT nhân sự</h4><canvas id="cOT" height="150"></canvas></div>
     <div class="chart-box"><h4>Thực tế vs Mục tiêu</h4><canvas id="cTarget" height="150"></canvas></div>
   </div>
-  <div class="card">
-    <div class="card-hd"><span class="card-hd-title">📊 Hiệu suất chi tiết nhân sự — ${year}</span></div>
-    <div style="overflow-x:auto"><table class="perf-tbl">
-      <thead><tr><th>Nhân sự</th><th style="text-align:center">作成</th><th style="text-align:center">修正</th>
-        <th style="text-align:center">Tổng</th><th style="text-align:center">OT(h)</th>
-        <th style="min-width:100px">Năng suất</th>
-        ${RATING_JP.map(rf=>`<th style="text-align:center;font-size:9px;min-width:44px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
-        <th>Đánh giá</th></tr></thead>
-      <tbody>
-        ${(()=>{
-          const mx=Math.max(1,...activeS.map(s=>staffAnn[s].n+staffAnn[s].r));
-          return activeS.map(s=>{
-            const t=staffAnn[s].n+staffAnn[s].r, pct=Math.round(t/mx*100);
-            const grade=t>=mx*.8?'🟢 Xuất sắc':t>=mx*.6?'🟡 Tốt':t>=mx*.4?'🟠 Khá':'🔴 Cần cải thiện';
-            const rc=staffAnn[s].rCount;
-            const ratingCells = RATING_JP.map(rf=>{
-              const v = rc ? Number((staffAnn[s][rf.field+'Sum']/rc).toFixed(1)) : 0;
-              return rc
-                ? `<td style="text-align:center"><span style="font-size:13px;font-weight:700;color:${ratingColor(v)}">${v}</span><span style="font-size:9px;color:var(--gray4)">/10</span></td>`
-                : `<td style="text-align:center;color:var(--gray3)">—</td>`;
-            }).join('');
-            return `<tr><td style="font-weight:600">${s}</td>
-              <td class="num-c" style="color:var(--new-tx)">${staffAnn[s].n}</td>
-              <td class="num-c" style="color:var(--rev-tx)">${staffAnn[s].r}</td>
-              <td class="num-c" style="font-weight:700">${t}</td>
-              <td class="num-c" style="color:var(--orange)">${staffAnn[s].ot>0?staffAnn[s].ot.toFixed(1):'—'}</td>
-              <td><div style="display:flex;align-items:center;gap:6px">
-                <div style="flex:1;height:5px;background:var(--gray2);border-radius:3px;overflow:hidden">
-                  <div style="height:100%;background:var(--gold);width:${pct}%"></div></div>
-                <span style="font-size:10px;color:var(--gray4)">${pct}%</span></div></td>
-              ${ratingCells}
-              <td style="font-size:12px">${grade}</td>
-            </tr>`;
-          }).join('');
-        })()}
-      </tbody>
-    </table></div>
-  </div>`;
+  ${buildPerfTable(activeSJP, staffAnnJP, RATING_JP, 'Hiệu suất Dự án Nhật — ' + year, '🇯🇵')}
+  ${buildPerfTable(activeSVN, staffAnnVN, RATING_VN, 'Hiệu suất Dự án Việt Nam — ' + year, '🇻🇳')}
+  ${buildCombinedTable(activeS, staffAnn)}
+  `;
   setTimeout(()=>{
     new Chart(document.getElementById('cMonthly'),{type:'bar',data:{labels,datasets:[
       {label:'作成 Mới',data:mData.map(m=>m.n),backgroundColor:'#70AD47',borderRadius:3},
@@ -3048,15 +3121,31 @@ function triggerAutoSync() {
 
 /* ── Quick Sync: 1-click push/pull without password ── */
 async function quickSync() {
-  // If not configured or not logged in → open panel
-  if (!SYNC.binId || SYNC.role === 'none') {
-    openSyncPanel();
+  const role = SYNC.role;
+
+  // Not configured at all → open panel (admin only)
+  if (!SYNC.binId) {
+    if (role === 'admin') openSyncPanel();
+    else {
+      // Edit/View without cloud: just save locally, show OK
+      persistD();
+      setSyncStatus('synced', role === 'edit' ? '✓ Edit' : '👁 View');
+      toast('✓ Đã lưu dữ liệu cục bộ');
+    }
     return;
   }
-  if (SYNC.role === 'admin' || SYNC.role === 'edit') {
-    if (!SYNC.apiKey && SYNC.role === 'admin') {
+
+  if (role === 'admin' || role === 'edit') {
+    if (!SYNC.apiKey && role === 'admin') {
       toast('⚠ Chưa có Master Key — mở cài đặt Sync');
       openSyncPanel();
+      return;
+    }
+    // Edit without apiKey: save locally only
+    if (!SYNC.apiKey) {
+      persistD();
+      setSyncStatus('synced', '✓ Edit');
+      toast('✓ Đã lưu dữ liệu cục bộ');
       return;
     }
     setSyncStatus('syncing', 'Đang lưu…');
@@ -3064,11 +3153,12 @@ async function quickSync() {
     if (ok) {
       toast('✓ Đã đồng bộ lên cloud');
     } else {
-      setSyncStatus('synced', SYNC.role === 'admin' ? '✓ Admin' : '✓ Edit');
+      setSyncStatus('synced', role === 'admin' ? '✓ Admin' : '✓ Edit');
       toast('⚠ Không sync được — dữ liệu đã lưu local');
     }
-  } else if (SYNC.role === 'view') {
-    await syncPullWithRole();
+  } else if (role === 'view') {
+    if (SYNC.binId && SYNC.apiKey) await syncPullWithRole();
+    else { setSyncStatus('synced', '👁 View'); toast('ℹ Chế độ xem — không thể đồng bộ'); }
   } else {
     openSyncPanel();
   }
