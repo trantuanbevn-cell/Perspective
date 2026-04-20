@@ -3907,20 +3907,11 @@ renderAll();
 
     const hash = await sha256(pw);
 
-    // Check against stored sync hashes first (if configured)
-    const syncCfg = D?.settings?.sync || {};
+    // Check against built-in hashes (single source of truth)
     let role = null;
-
-    if (syncCfg.adminHash && hash === syncCfg.adminHash) role = 'admin';
-    else if (syncCfg.editHash && hash === syncCfg.editHash) role = 'edit';
-    else if (syncCfg.viewHash && hash === syncCfg.viewHash) role = 'view';
-
-    // Fallback: check built-in splash hashes
-    if (!role) {
-      if (hash === SPLASH_HASHES.admin) role = 'admin';
-      else if (hash === SPLASH_HASHES.edit) role = 'edit';
-      else if (hash === SPLASH_HASHES.view) role = 'view';
-    }
+    if      (hash === SPLASH_HASHES.admin) role = 'admin';
+    else if (hash === SPLASH_HASHES.edit)  role = 'edit';
+    else if (hash === SPLASH_HASHES.view)  role = 'view';
 
     if (!role) {
       errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
