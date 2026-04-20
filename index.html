@@ -3211,7 +3211,7 @@ function toggleSalary(salId) {
 /* SETTINGS */
 function renderSettings() {
   const sc=document.getElementById('settingsContent'); if(!sc) return;
-  const syncConfigured = !!(SYNC.binId || D.settings?.sync?.binId);
+  const syncConfigured = !!(SYNC.gistId || D.settings?.sync?.gistId || SYNC.binId);
   sc.innerHTML=`
   ${!syncConfigured ? `
   <div style="background:linear-gradient(135deg,#fff3cd,#ffe69c);border:1px solid #ffc107;border-radius:8px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
@@ -3229,7 +3229,7 @@ function renderSettings() {
   <div style="background:#f0fff4;border:1px solid #a9dfbf;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
     <span style="font-size:20px">✅</span>
     <div style="flex:1;font-size:11px;color:#1e8449">
-      <strong>Đã kết nối cloud sync</strong> — Bin ID: <code style="background:#d5f5e3;padding:1px 5px;border-radius:3px">${(SYNC.binId||D.settings?.sync?.binId||'').slice(0,12)}…</code><br>
+      <strong>Đã kết nối cloud sync</strong> — Gist ID: <code style="background:#d5f5e3;padding:1px 5px;border-radius:3px">${(SYNC.gistId||D.settings?.sync?.gistId||'').slice(0,12)}…</code><br>
       Điện thoại: mở cùng link → nhập mật khẩu → bấm Sync để tải dữ liệu
     </div>
     <button class="btn btn-sm" onclick="showSyncSetup()">⚙ Sửa cấu hình</button>
@@ -3417,15 +3417,18 @@ function triggerAutoSync() {}
 ══════════════════════════════════════════════════════ */
 
 const SYNC = {
-  // Credentials chỉ admin biết (lưu localStorage, không chia sẻ)
+  get gistId()  { return localStorage.getItem('sync_gist_id') || D.settings?.sync?.gistId || ''; },
+  get ghToken() { return localStorage.getItem('sync_gh_token') || ''; },
+  set gistId(v)  { localStorage.setItem('sync_gist_id', v); },
+  set ghToken(v) { localStorage.setItem('sync_gh_token', v); },
+  // Keep binId/apiKey for backward compat
   get binId()  { return localStorage.getItem('sync_bin_id')||''; },
   get apiKey() { return localStorage.getItem('sync_api_key')||''; },
   set binId(v)  { localStorage.setItem('sync_bin_id', v); },
   set apiKey(v) { localStorage.setItem('sync_api_key', v); },
   get lastSync() { return localStorage.getItem('sync_last')||''; },
   set lastSync(v){ localStorage.setItem('sync_last', v); },
-  // Session: quyền hiện tại sau khi đăng nhập
-  get role() { return sessionStorage.getItem('sync_role')||'none'; }, // 'admin'|'edit'|'view'|'none'
+  get role() { return sessionStorage.getItem('sync_role')||'none'; },
   set role(v) { sessionStorage.setItem('sync_role', v); },
   get autoOn() { return localStorage.getItem('sync_auto')==='1'; },
   set autoOn(v) { localStorage.setItem('sync_auto', v?'1':'0'); }
@@ -3470,42 +3473,35 @@ async function hashPw(pw) {
 
 /* ── JSONBin API ── */
 const JBIN = 'https://api.jsonbin.io/v3';
+const GIST_API = 'https://api.github.com/gists';
 
 async function syncPush() {
-  if (!SYNC.binId || !SYNC.apiKey) {
-    return false;
-  }
-  const editPw = localStorage.getItem('sync_edit_pw')
-    || D.settings?.sync?.editPw
-    || '123456';
+  const gistId  = localStorage.getItem('sync_gist_id')  || D.settings?.sync?.gistId  || '';
+  const ghToken = localStorage.getItem('sync_gh_token') || D.settings?.sync?.ghToken || '';
+  if (!gistId || !ghToken) return false;
   try {
-    let payload;
-    try {
-      payload = await encryptData(D, editPw);
-    } catch(encErr) {
-      // Encryption failed — push unencrypted as fallback
-      console.warn('Encryption failed, pushing plain:', encErr);
-      payload = JSON.stringify(D);
-    }
-    const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
-      method:'PUT',
-      headers:{
-        'Content-Type':'application/json',
-        'X-Master-Key': SYNC.apiKey,
-        'X-Bin-Versioning': 'false'
+    const body = JSON.stringify(D);
+    const res = await fetch(`${GIST_API}/${gistId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `token ${ghToken}`,
+        'Accept': 'application/vnd.github.v3+json'
       },
-      body: JSON.stringify({ data: payload, ts: Date.now() })
+      body: JSON.stringify({ files: { 'phoicanh.json': { content: body } } })
     });
-    const resText = await res.text();
-    console.log('syncPush response:', res.status, resText.slice(0,200));
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${resText.slice(0,100)}`);
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`HTTP ${res.status}: ${t.slice(0,80)}`);
+    }
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     setSyncStatus('synced', '✓ Admin');
+    toast('✅ Đã đồng bộ lên cloud');
     return true;
   } catch(e) {
     console.error('syncPush error:', e.message);
-    setSyncStatus('error', 'Lỗi: ' + e.message.slice(0,30));
-    toast('✗ Lỗi sync: ' + e.message.slice(0,60));
+    setSyncStatus('error', 'Lỗi sync');
+    toast('✗ Lỗi: ' + e.message.slice(0,50));
     return false;
   }
 }
@@ -3544,7 +3540,7 @@ function setSyncStatus(state, label) {
 /* ── AUTO SYNC hook (called by save()) ── */
 function triggerAutoSync() {
   // Admin: push 4s after last edit (debounced)
-  if (SYNC.binId && SYNC.apiKey && SYNC.role==='admin') {
+  if ((SYNC.gistId && SYNC.ghToken) && SYNC.role==='admin') {
     clearTimeout(triggerAutoSync._t);
     triggerAutoSync._t = setTimeout(async ()=>{
       await syncPush();
@@ -3562,7 +3558,7 @@ function triggerAutoSync() {
       await syncPush();
     } else if ((role === 'edit' || role === 'view') && binId) {
       try {
-        const pulled = await syncPull(localStorage.getItem('sync_edit_pw')||'');
+        const pulled = await syncPull('');
         if (pulled) { D = pulled; save(); renderAll(); setSyncStatus('synced', role==='edit'?'✓ Edit':'👁 View'); }
       } catch(e) {}
     }
@@ -3691,13 +3687,17 @@ function showSyncSetup() {
         📌 Bước 1 — Lấy API Key & Bin ID từ JSONBin.io
       </div>
       <div style="font-size:11px;color:#555;line-height:1.85">
-        1. Mở <a href="https://jsonbin.io" target="_blank" style="color:#2980B9;font-weight:700">jsonbin.io</a>
-           → Đăng ký miễn phí (chỉ cần email, xong ngay)<br>
-        2. Vào <strong>API Keys</strong> (menu trái) → Bấm <strong>Create Key</strong> 
-           → Copy toàn bộ chuỗi bắt đầu bằng <code style="background:#eee;padding:1px 4px;border-radius:3px">$2a$...</code><br>
-        3. Vào <strong>Bins</strong> → Bấm <strong>+ Create Bin</strong> → Tên: <code style="background:#eee;padding:1px 4px;border-radius:3px">phoicanh</code>
-           → Content: <code style="background:#eee;padding:1px 4px;border-radius:3px">{}</code> → Save<br>
-        4. Copy <strong>Bin ID</strong> (chuỗi số dài ở trên URL hoặc info panel)
+        <strong>A. Tạo GitHub Token:</strong><br>
+        1. Vào <a href="https://github.com/settings/tokens" target="_blank" style="color:#2980B9;font-weight:700">github.com/settings/tokens</a>
+           → <strong>Generate new token (classic)</strong><br>
+        2. Đặt tên: <code style="background:#eee;padding:1px 4px;border-radius:3px">phoicanh</code>
+           → tick ô <strong>gist</strong> → bấm <strong>Generate token</strong><br>
+        3. Copy token bắt đầu bằng <code style="background:#eee;padding:1px 4px;border-radius:3px">ghp_...</code> (chỉ hiện 1 lần!)<br><br>
+        <strong>B. Tạo Gist:</strong><br>
+        4. Vào <a href="https://gist.github.com" target="_blank" style="color:#2980B9;font-weight:700">gist.github.com</a>
+           → Filename: <code style="background:#eee;padding:1px 4px;border-radius:3px">phoicanh.json</code>
+           → Content: <code style="background:#eee;padding:1px 4px;border-radius:3px">{}</code><br>
+        5. Bấm <strong>Create secret gist</strong> → copy ID từ URL (chuỗi cuối URL dài ~32 ký tự)
       </div>
     </div>
 
@@ -3746,10 +3746,13 @@ function showSyncSetup() {
     </div>
 
     <!-- What happens after -->
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11px;color:#856404;line-height:1.7">
+      ⚠️ <strong>Quan trọng:</strong> Vào jsonbin.io → chọn Bin "phoicanh" → bấm <strong>···</strong> → <strong>Make Public</strong><br>
+      (Cần Public để browser có thể đồng bộ — dữ liệu vẫn được bảo vệ bằng mật khẩu đăng nhập)
+    </div>
     <div style="background:#f0fff4;border:1px solid #a9dfbf;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#1e8449;line-height:1.7">
       ✅ Sau khi lưu: Dữ liệu máy tính được đẩy lên cloud ngay.<br>
-      📱 Trên điện thoại: mở cùng link GitHub Pages → nhập mật khẩu → bấm nút Sync → dữ liệu tải về.<br>
-      🔄 Auto-sync: mỗi lần lưu dữ liệu sẽ tự đồng bộ lên cloud (nếu bật Auto).
+      📱 Trên điện thoại: mở cùng link GitHub Pages → nhập mật khẩu → tự động tải dữ liệu.
     </div>
 
     <div class="modal-ft">
@@ -3761,9 +3764,9 @@ function showSyncSetup() {
 
 async function testJsonBinConnection(apiKey, binId) {
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      headers: { 'X-Master-Key': apiKey }
-    });
+    const headers = {'Accept':'application/vnd.github.v3+json'};
+    if (apiKey && apiKey.startsWith('ghp_')) headers['Authorization'] = `token ${apiKey}`;
+    const res = await fetch(`https://api.github.com/gists/${binId}`, { headers });
     const txt = await res.text();
     console.log('testConnection:', res.status, txt.slice(0,200));
     return { ok: res.ok, status: res.status, body: txt.slice(0,200) };
@@ -3783,19 +3786,23 @@ async function confirmSyncSetup() {
   if (!apiKey) { alert('Vui lòng điền Master Key'); return; }
   if (!binId)  { alert('Vui lòng điền Bin ID'); return; }
 
-  // Save credentials to localStorage immediately
-  SYNC.apiKey = apiKey;
-  SYNC.binId  = binId;
-  SYNC.role   = 'admin';
-  localStorage.setItem('sync_edit_pw', editPw);
-  localStorage.setItem('sync_bin_id_public', binId);
-  localStorage.setItem('sync_api_key', apiKey);
-  localStorage.setItem('sync_bin_id', binId);
+  // Save as GitHub Gist credentials
+  SYNC.ghToken = apiKey; // apiKey field = GitHub token
+  SYNC.gistId  = binId;  // binId field  = Gist ID
+  SYNC.apiKey  = apiKey;
+  SYNC.binId   = binId;
+  SYNC.role    = 'admin';
+  localStorage.setItem('sync_gh_token',   apiKey);
+  localStorage.setItem('sync_gist_id',    binId);
+  localStorage.setItem('sync_edit_pw',    editPw);
+  localStorage.setItem('sync_api_key',    apiKey);
+  localStorage.setItem('sync_bin_id',     binId);
 
-  // Store in app data
   if (!D.settings.sync) D.settings.sync = {};
-  D.settings.sync.binId  = binId;
-  D.settings.sync.editPw = editPw;
+  D.settings.sync.gistId  = binId;
+  D.settings.sync.ghToken = apiKey;
+  D.settings.sync.binId   = binId;
+  D.settings.sync.editPw  = editPw;
   // Hash passwords (non-blocking — use SPLASH_PW as source of truth)
   try {
     D.settings.sync.adminHash = await hashPw(adminPw);
@@ -3822,12 +3829,12 @@ async function confirmSyncSetup() {
   }
   if (testResult.status === 401) {
     setSyncStatus('error','Master Key sai');
-    toast('✗ Master Key không đúng — copy lại từ JSONBin > API Keys > X-MASTER-KEY');
+    toast('✗ GitHub Token không đúng — kiểm tra lại token ghp_...');
     return;
   }
   if (testResult.status === 404) {
     setSyncStatus('error','Bin ID sai');
-    toast('✗ Bin ID không tìm thấy — kiểm tra lại ID từ URL jsonbin.io/b/...');
+    toast('✗ Gist ID không tìm thấy — kiểm tra lại ID từ URL gist.github.com');
     return;
   }
 
@@ -4558,7 +4565,7 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
       if (!binId) return;
       try {
         setSyncStatus('syncing','Đang tải…');
-        const pulled = await syncPull(localStorage.getItem('sync_edit_pw')||'');
+        const pulled = await syncPull('');
         if (pulled) {
           D = pulled; save(); renderAll();
           setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
