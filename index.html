@@ -149,22 +149,24 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 /* HERO STATS */
 .hero-row{display:grid;gap:10px;margin-bottom:12px}
 .hero-box{background:#fff;border:1px solid var(--gray2);border-radius:var(--r2);padding:13px 15px;border-top:4px solid var(--gray3)}
-.hero-box.green{border-top-color:#70AD47}
-.hero-box.gold{border-top-color:var(--gold)}
+.hero-box.green{border-top-color:#70AD47;background:#70AD47;border-color:#5a9a35;color:#fff}
+.hero-box.gold{border-top-color:var(--gold);background:var(--gold);border-color:#d4a000;color:#fff}
 .hero-box.navy{border-top-color:var(--navy);background:var(--navy);color:#fff}
 .hero-box.orange{border-top-color:var(--orange)}
 .hero-num{font-size:36px;font-weight:700;line-height:1}
-.hero-box.green .hero-num{color:var(--new-tx)}
-.hero-box.gold .hero-num{color:var(--rev-tx)}
+.hero-box.green .hero-num{color:#fff}
+.hero-box.gold .hero-num{color:#fff}
 .hero-box.navy .hero-num{color:var(--gold)}
-.hero-lbl{font-size:11px;color:var(--gray4);margin-top:3px;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+.hero-lbl{font-size:11px;margin-top:3px;text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+.hero-box.green .hero-lbl{color:rgba(255,255,255,.85)}
+.hero-box.gold .hero-lbl{color:rgba(255,255,255,.85)}
 .hero-box.navy .hero-lbl{color:rgba(255,255,255,.6)}
 .hero-jp{font-size:10px;color:var(--gray3);margin-top:1px}
 .progress-track{height:5px;background:var(--gray2);border-radius:3px;overflow:hidden;margin-top:8px}
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
-.progress-fill.green{background:#70AD47}
-.progress-fill.gold{background:var(--gold)}
-.progress-label{font-size:10px;color:var(--gray4);margin-top:3px;display:flex;justify-content:space-between}
+.progress-fill.green{background:rgba(255,255,255,.7)}
+.progress-fill.gold{background:rgba(255,255,255,.7)}
+.progress-label{font-size:10px;color:rgba(255,255,255,.8);margin-top:3px;display:flex;justify-content:space-between}
 /* Target box */
 .target-box{background:var(--navy);color:#fff;border-radius:var(--r2);padding:13px 15px;display:flex;flex-direction:column;gap:6px;min-width:200px}
 .target-box .tgt-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold2);font-weight:600}
@@ -1340,9 +1342,7 @@ function renderProjectDetail(ci, p) {
         <th style="width:16%">Ghi chú</th>
         <th style="width:7%;text-align:center">OT(h)</th>
         <th style="width:9%;text-align:center">OT lý do</th>
-        <th style="width:5%;text-align:center;color:var(--gold)">★ Chất lượng</th>
-        <th style="width:5%;text-align:center;color:#4fc3f7">★ Tốc độ</th>
-        <th style="width:5%;text-align:center;color:#81c784">★ Tập trung</th>
+        ${getRatingFields().map(rf=>`<th style="min-width:46px;text-align:center;font-size:9px;padding:4px 2px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
         <th style="width:26px"></th>
       </tr></thead>
       <tbody id="rbody-${p.id}">${renderGroups(p)}</tbody>
@@ -1438,6 +1438,38 @@ function delPhoto(pjId,slot) {
 }
 
 
+
+/* ── Rating field definitions per section ── */
+const RATING_JP = [
+  {field:'rate0', label:'Dựng hình',   color:'#E74C3C'},
+  {field:'rate1', label:'Ánh sáng',    color:'#E67E22'},
+  {field:'rate2', label:'Cảnh quan',   color:'#F1C40F'},
+  {field:'rate3', label:'Bố cục',      color:'#70AD47'},
+  {field:'rate4', label:'Render',      color:'#1ABC9C'},
+  {field:'rate5', label:'Tốc độ',      color:'#4fc3f7'},
+  {field:'rate6', label:'Lỗi sai',     color:'#E74C3C'},
+  {field:'rate7', label:'Tập trung',   color:'#81c784'},
+  {field:'rate8', label:'Trách nhiệm', color:'#9B59B6'},
+];
+const RATING_VN = [
+  {field:'rate0', label:'Moodboard',   color:'#E74C3C'},
+  {field:'rate1', label:'Concept KT',  color:'#E67E22'},
+  {field:'rate2', label:'Concept NT',  color:'#F1C40F'},
+  {field:'rate3', label:'Layout',      color:'#70AD47'},
+  {field:'rate4', label:'Bản vẽ CS',   color:'#1ABC9C'},
+  {field:'rate5', label:'Bản vẽ CT',   color:'#4fc3f7'},
+  {field:'rate6', label:'Tập trung',   color:'#81c784'},
+  {field:'rate7', label:'Trách nhiệm', color:'#9B59B6'},
+];
+function getRatingFields() {
+  return activeSection === 'vn' ? RATING_VN : RATING_JP;
+}
+function getAllRatingFields() {
+  // All unique field names across both sections (for stats)
+  const all = new Set([...RATING_JP, ...RATING_VN].map(r=>r.field));
+  return [...all];
+}
+
 /* ── Rating cell: save on oninput so navigation doesn’t lose data ── */
 function renderRatingCell(pjId, gId, rId, field, val, color) {
   const v = val || 0;
@@ -1513,7 +1545,7 @@ function ratingColor(v) {
 /* GROUPS — redesigned: flat table, all cols equal width, dropdown selects */
 function renderGroups(p) {
   const groups = p.groups||[];
-  if (!groups.length) return `<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--gray4)">
+  if (!groups.length) return `<tr><td colspan="${9+getRatingFields().length}" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
 
   const today = localDateStr(new Date());
@@ -1604,15 +1636,9 @@ function renderGroups(p) {
           <input class="tbl-input" value="${x(r.otNote||'')}" style="font-size:10px"
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
         </td>
-        <td style="text-align:center;padding:4px 3px">
-          ${renderRatingCell(p.id, g.id, r.id, 'rateQuality', r.rateQuality||0, 'var(--gold)')}
-        </td>
-        <td style="text-align:center;padding:4px 3px">
-          ${renderRatingCell(p.id, g.id, r.id, 'rateSpeed', r.rateSpeed||0, '#4fc3f7')}
-        </td>
-        <td style="text-align:center;padding:4px 3px">
-          ${renderRatingCell(p.id, g.id, r.id, 'rateFocus', r.rateFocus||0, '#81c784')}
-        </td>
+        ${getRatingFields().map(rf=>`<td style="text-align:center;padding:2px 1px">
+          ${renderRatingCell(p.id, g.id, r.id, rf.field, r[rf.field]||0, rf.color)}
+        </td>`).join('')}
         <td style="text-align:center">
           <button class="btn btn-xs btn-ghost btn-danger" onclick="delRow('${p.id}','${g.id}','${r.id}')">✕</button>
         </td>
@@ -1820,14 +1846,14 @@ function refreshStaffSched(pjId) {
 function addGroup(pjId) {
   const p=getPj(pjId); if(!p) return;
   if(!p.groups) p.groups=[];
-  p.groups.push({id:gid(),type:'',rows:[{id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rateQuality:0,rateSpeed:0,rateFocus:0}]});
+  p.groups.push({id:gid(),type:'',rows:[{id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rate0:0,rate1:0,rate2:0,rate3:0,rate4:0,rate5:0,rate6:0,rate7:0,rate8:0}]});
   save(); rebuildGroups(pjId); refreshPjTotals(pjId);
   setTimeout(()=>{ const inputs=document.querySelectorAll(`#rbody-${pjId} .grp-hd .tbl-input-dark`); if(inputs.length) inputs[inputs.length-1].focus(); },50);
 }
 function addRow(pjId,gid2) {
   const p=getPj(pjId); if(!p) return;
   const g=(p.groups||[]).find(g=>g.id===gid2); if(!g) return;
-  g.rows.push({id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rateQuality:0,rateSpeed:0,rateFocus:0});
+  g.rows.push({id:gid(),status:'new',staff:'',qty:0,note:'',ot:0,otNote:'',dateFrom:'',dateTo:'',rate0:0,rate1:0,rate2:0,rate3:0,rate4:0,rate5:0,rate6:0,rate7:0,rate8:0});
   save(); rebuildGroups(pjId); refreshPjTotals(pjId);
 }
 function delGroup(pjId,gid2) {
@@ -1985,7 +2011,10 @@ function renderDashboard() {
       pjCount:pjs.length,tN:m.targetNew||0,tR:m.targetRev||0};
   });
   const staffAnn={};
-  D.settings.staffList.forEach(s=>staffAnn[s]={n:0,r:0,ot:0,rqSum:0,rsSum:0,rfSum:0,rCount:0});
+  D.settings.staffList.forEach(s=>{
+    staffAnn[s]={n:0,r:0,ot:0,rCount:0};
+    for(let i=0;i<9;i++) staffAnn[s]['rate'+i+'Sum']=0;
+  });
   months.forEach(mid=>{
     const _m=(D.months[mid]||{projects:[],projectsVN:[]}); const pjs=[..._m.projects||[],...(_m.projectsVN||[])];
     pjs.forEach(p=>{
@@ -1993,12 +2022,9 @@ function renderDashboard() {
         if(r.staff&&staffAnn[r.staff]){
           if(r.status==='new') staffAnn[r.staff].n+=(r.qty||0); else staffAnn[r.staff].r+=(r.qty||0);
           staffAnn[r.staff].ot+=(r.ot||0);
-          if(r.rateQuality||r.rateSpeed||r.rateFocus){
-            staffAnn[r.staff].rqSum+=(r.rateQuality||0);
-            staffAnn[r.staff].rsSum+=(r.rateSpeed||0);
-            staffAnn[r.staff].rfSum+=(r.rateFocus||0);
-            staffAnn[r.staff].rCount++;
-          }
+          let hasRating=false;
+          for(let i=0;i<9;i++){if(r['rate'+i]){hasRating=true;staffAnn[r.staff]['rate'+i+'Sum']+=(r['rate'+i]||0);}}
+          if(hasRating) staffAnn[r.staff].rCount++;
         }
       });
       (p.records||[]).forEach(r=>{  // legacy records support
@@ -2180,15 +2206,16 @@ function getStaffStats(name) {
   const monthStats = [];
   Object.entries(D.months).sort((a,b)=>a[0]>b[0]?1:-1).forEach(([mid,m])=>{
     let mn=0,mr=0,mot=0;
-    let rqSum=0,rsSum=0,rfSum=0,rCount=0;
+    let rSums={},rCount=0;
+    for(let i=0;i<9;i++) rSums['rate'+i+'Sum']=0;
     [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>{
       (p.groups||[]).flatMap(g=>g.rows||[]).forEach(r=>{
         if(r.staff===name){
           if(r.status==='new') mn+=(r.qty||0); else mr+=(r.qty||0);
           mot+=(r.ot||0);
-          if(r.rateQuality||r.rateSpeed||r.rateFocus){
-            rqSum+=(r.rateQuality||0); rsSum+=(r.rateSpeed||0); rfSum+=(r.rateFocus||0); rCount++;
-          }
+          let hasRating=false;
+          for(let i=0;i<9;i++){if(r['rate'+i]){hasRating=true;rSums['rate'+i+'Sum']+=(r['rate'+i]||0);}}
+          if(hasRating) rCount++;
         }
       });
       (p.records||[]).forEach(r=>{
@@ -2196,13 +2223,13 @@ function getStaffStats(name) {
       });
       (p.otLog||[]).forEach(e=>{ if(e.staff===name) mot+=(e.hours||0); });
     });
-    if(mn+mr+mot>0) monthStats.push({
-      mid,n:mn,r:mr,ot:mot,
-      rq:rCount?+(rqSum/rCount).toFixed(1):0,
-      rs:rCount?+(rsSum/rCount).toFixed(1):0,
-      rf:rCount?+(rfSum/rCount).toFixed(1):0,
-      rCount
-    });
+    if(mn+mr+mot>0) {
+      const entry = {mid,n:mn,r:mr,ot:mot,rCount};
+      for(let i=0;i<9;i++) entry['rate'+i] = rCount ? +(rSums['rate'+i+'Sum']/rCount).toFixed(1) : 0;
+      // Legacy compat
+      entry.rq = entry.rate3||0; entry.rs = entry.rate5||0; entry.rf = entry.rate7||0;
+      monthStats.push(entry);
+    }
     totalNew+=mn; totalRev+=mr; totalOT+=mot;
   });
   // Count leave days
@@ -2435,24 +2462,28 @@ function renderStaffPage() {
               const rStats = allStats.monthStats.filter(m=>m.rCount>0).slice(-12);
               if(!rStats.length) return '<div style="font-size:10px;color:var(--gray3);margin-top:8px;font-style:italic;text-align:center">Chưa có đánh giá</div>';
               const maxW = 100;
+              // Use all JP rating fields for display (covers both sections)
+              const allRF = RATING_JP;
               return '<div style="margin-top:8px;border-top:1px solid var(--gray2);padding-top:7px">'
                 + '<div style="font-size:10px;font-weight:600;color:var(--gray4);margin-bottom:5px">⭐ Đánh giá theo tháng (12 tháng gần nhất)</div>'
-                + '<div style="display:flex;flex-direction:column;gap:4px">'
+                + '<div style="display:flex;flex-direction:column;gap:3px">'
                 + rStats.map(m=>{
                     const label = m.mid.replace(/^20/,'').replace('-','/');
-                    const qPct = m.rq*10, sPct = m.rs*10, fPct = m.rf*10;
-                    return '<div style="display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:3px;align-items:center">'
+                    const cols = '28px ' + allRF.map(()=>'1fr').join(' ');
+                    return '<div style="display:grid;grid-template-columns:' + cols + ';gap:2px;align-items:center">'
                       + '<span style="font-size:9px;color:var(--gray4)">' + label + '</span>'
-                      + '<div title="Chất lượng: ' + m.rq + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--gold);width:' + qPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rq + '</span></div>'
-                      + '<div title="Tốc độ: ' + m.rs + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:#4fc3f7;width:' + sPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rs + '</span></div>'
-                      + '<div title="Tập trung: ' + m.rf + '/10" style="display:flex;align-items:center;gap:2px"><div style="flex:1;height:5px;background:#fff;border-radius:2px;overflow:hidden"><div style="height:100%;background:#81c784;width:' + fPct + '%"></div></div><span style="font-size:8px;color:var(--gray4);width:18px;text-align:right">' + m.rf + '</span></div>'
+                      + allRF.map(rf=>{
+                          const v2 = m[rf.field]||0, pct=v2*10;
+                          return '<div title="' + rf.label + ': ' + v2 + '/10" style="display:flex;align-items:center;gap:1px">'
+                            + '<div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden"><div style="height:100%;background:' + rf.color + ';width:' + pct + '%"></div></div>'
+                            + '<span style="font-size:7px;color:var(--gray4);width:14px;text-align:right">' + (v2||'') + '</span>'
+                            + '</div>';
+                        }).join('')
                       + '</div>';
                   }).join('')
                 + '</div>'
-                + '<div style="display:flex;gap:10px;margin-top:4px;font-size:9px;color:var(--gray4)">'
-                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:var(--gold);border-radius:1px;display:inline-block"></span>Chất lượng</span>'
-                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:#4fc3f7;border-radius:1px;display:inline-block"></span>Tốc độ</span>'
-                + '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:4px;background:#81c784;border-radius:1px;display:inline-block"></span>Tập trung</span>'
+                + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;font-size:8px;color:var(--gray4)">'
+                + allRF.map(rf=>'<span style="display:flex;align-items:center;gap:2px"><span style="width:8px;height:3px;background:' + rf.color + ';border-radius:1px;display:inline-block"></span>' + rf.label + '</span>').join('')
                 + '</div>'
                 + '</div>';
             })()}
