@@ -2255,7 +2255,7 @@ function delLeave(staffName, leaveId) {
 
 function toggleStaffDetail(id) {
   const el = document.getElementById(id);
-  const btn = document.getElementById('sd-btn-' + id.replace('sd-',''));
+  const btn = document.getElementById('sd-btn-' + id.replace(/^sd-/,''));
   if (!el) return;
   const isOpen = el.style.display !== 'none';
   el.style.display = isOpen ? 'none' : 'block';
@@ -2349,6 +2349,7 @@ function renderStaffPage() {
   <!-- Staff grid -->
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px">
     ${sortedStaff.map((s,idx)=>{
+      const si = idx; // unique numeric ID for DOM elements (avoids Japanese char collisions)
       const v = sd[s]||{n:0,r:0,ot:0,pjs:[]};
       const t = v.n+v.r;
       const prof = getStaffProfile(s);
@@ -2459,15 +2460,15 @@ function renderStaffPage() {
 
           <!-- Toggle button to expand details -->
           <div style="text-align:center;margin:6px 0 2px">
-            <button onclick="toggleStaffDetail('sd-${s.replace(/[^a-zA-Z0-9]/g,'_')}')"
-              id="sd-btn-${s.replace(/[^a-zA-Z0-9]/g,'_')}"
+            <button onclick="toggleStaffDetail('sd-${si}')"
+              id="sd-btn-${si}"
               style="background:none;border:none;cursor:pointer;font-size:10px;color:var(--gray4);padding:2px 10px;border-radius:99px;border:1px solid var(--gray2)">
               ▼ Chi tiết (Lương, HĐ, Nghỉ phép)
             </button>
           </div>
 
           <!-- Collapsible detail section -->
-          <div id="sd-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
+          <div id="sd-${si}" style="display:none">
 
           <!-- OT this month -->
           ${v.ot>0?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:5px 8px;background:#fff8f2;border-radius:var(--r);border-left:3px solid var(--orange)">
@@ -2482,9 +2483,9 @@ function renderStaffPage() {
           <div style="margin-bottom:10px;padding:7px 9px;background:#f8f9ff;border-radius:var(--r);border:1px dashed var(--gray2)">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
               <span style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em">💰 Lương</span>
-              <button onclick="toggleSalary('sal-${s.replace(/[^a-zA-Z0-9]/g,'_')}')" style="background:none;border:none;cursor:pointer;font-size:14px" title="Hiện/ẩn lương">👁</button>
+              <button onclick="toggleSalary('sal-${si}')" style="background:none;border:none;cursor:pointer;font-size:14px" title="Hiện/ẩn lương">👁</button>
             </div>
-            <div id="sal-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none">
+            <div id="sal-${si}" style="display:none">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div class="field"><label>Gross</label>
                   <input type="number" value="${prof.salaryGross||''}" placeholder="0"
@@ -2500,7 +2501,7 @@ function renderStaffPage() {
                 </div>
               </div>
             </div>
-            <div id="sal-hidden-${s.replace(/[^a-zA-Z0-9]/g,'_')}" style="font-size:12px;color:var(--gray3);font-style:italic">●●●●● / ●●●●●</div>
+            <div id="sal-hidden-${si}" style="font-size:12px;color:var(--gray3);font-style:italic">●●●●● / ●●●●●</div>
           </div>
 
           <!-- Leave schedule -->
