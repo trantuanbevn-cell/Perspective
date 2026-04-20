@@ -3862,104 +3862,84 @@ showPage('main');
 renderAll();
 
 /* ══════════════════════════════════════════════════════
-   SPLASH SCREEN — password gate
-   3 password levels: admin / edit / view
-   Passwords are hashed via Web Crypto (SHA-256)
-   To change passwords: update SPLASH_HASHES below
-   Default passwords (change after first login):
-     Admin : 204290
-     Edit  : 123456
-     View  : 280510
+   ROLE UI + SPLASH SCREEN
 ══════════════════════════════════════════════════════ */
-(async function initSplash() {
-  // Pre-computed SHA-256 hashes of default passwords
-  // To reset: type new password → SHA-256 hash it → paste here
-  const SPLASH_HASHES = {
-    admin: 'c9ac2173f7a9dfb94f1b4827f35d74f1b73a6f2299d61cb41645842ea24b9d1a', // 204290
-    edit:  '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', // 123456
-    view:  '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7', // 280510
-  };
 
-  // Direct password map (simpler, works on file:// without crypto.subtle)
-  const SPLASH_PW = { '204290':'admin', '123456':'edit', '280510':'view' };
-
-  async function sha256(str) {
-    try {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    } catch(e) { return null; }
+// Global: apply UI restrictions based on role
+function applyRoleUI(role) {
+  if (role === 'admin') return;
+  if (role === 'edit') {
+    // Hide Dashboard, Nhân sự, Cài đặt tabs
+    ['navDash','navStaff','navSettings'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    // Hide report + theme buttons
+    document.querySelectorAll('.hdr-right .btn').forEach(btn => {
+      const oc = btn.getAttribute('onclick') || '';
+      if (oc.includes('openExportMenu') || oc.includes('openThemePicker'))
+        btn.style.display = 'none';
+    });
   }
+  if (role === 'view') {
+    enableViewOnlyMode(true);
+  }
+}
 
-  // Check session — if already logged in this session, skip splash
+// Passwords — plain text comparison (works on file:// and https://)
+const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
+
+(function initSplash() {
+  // Check session — already logged in
   const sessionRole = sessionStorage.getItem('splash_role');
   if (sessionRole) {
-    _applySplashRole(sessionRole);
     document.getElementById('splashScreen').style.display = 'none';
-    // Apply UI restrictions after render
-    setTimeout(() => applyRoleUI(sessionRole), 200);
+    if (sessionRole === 'view') { SYNC.role='view'; enableViewOnlyMode(true); }
+    else if (sessionRole === 'edit') { SYNC.role='edit'; }
+    else { SYNC.role='admin'; }
+    setTimeout(() => applyRoleUI(sessionRole), 300);
     return;
   }
 
-  // Hide main app until authenticated
-  document.querySelector('.header') && (document.querySelector('.header').style.visibility = 'hidden');
-  document.getElementById('pageMain') && (document.getElementById('pageMain').style.visibility = 'hidden');
+  // Hide app until login
+  const hdr = document.querySelector('.header');
+  const pgm = document.getElementById('pageMain');
+  if (hdr) hdr.style.visibility = 'hidden';
+  if (pgm) pgm.style.visibility = 'hidden';
 
-  window.splashLogin = async function() {
-    const pw = document.getElementById('splashPwInput').value.trim();
+  window.splashLogin = function() {
+    const pw = (document.getElementById('splashPwInput').value || '').trim();
     const errEl = document.getElementById('splashError');
     if (!pw) { errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
     errEl.textContent = '';
 
-    // Primary: direct match (works everywhere including file://)
-    let role = SPLASH_PW[pw] || null;
-
-    // Fallback: SHA-256 hash match (for crypto.subtle environments)
-    if (!role) {
-      const hash = await sha256(pw);
-      if (hash) {
-        if      (hash === SPLASH_HASHES.admin) role = 'admin';
-        else if (hash === SPLASH_HASHES.edit)  role = 'edit';
-        else if (hash === SPLASH_HASHES.view)  role = 'view';
-      }
-    }
+    const role = SPLASH_PW[pw] || null;
 
     if (!role) {
       errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
       document.getElementById('splashPwInput').value = '';
       document.getElementById('splashPwInput').focus();
       errEl.classList.remove('shake');
-      requestAnimationFrame(()=>{ errEl.classList.add('shake'); });
+      void errEl.offsetWidth; // reflow
+      errEl.classList.add('shake');
       return;
     }
 
-    // Store in session
+    // Save session & set role
     sessionStorage.setItem('splash_role', role);
-    _applySplashRole(role);
+    SYNC.role = role;
+    if (role === 'view') enableViewOnlyMode(true);
 
-    // Animate out
+    // Fade out splash
     const splash = document.getElementById('splashScreen');
     splash.classList.add('fade-out');
     setTimeout(() => {
       splash.style.display = 'none';
-      document.querySelector('.header').style.visibility = '';
-      document.getElementById('pageMain').style.visibility = '';
+      if (hdr) hdr.style.visibility = '';
+      if (pgm) pgm.style.visibility = '';
       applyRoleUI(role);
     }, 650);
   };
-
-  function _applySplashRole(role) {
-    SYNC.role = role;
-    if (role === 'view') {
-      enableViewOnlyMode(true);
-      applyRoleUI('view');
-    } else if (role === 'edit') {
-      applyRoleUI('edit');
-    } else {
-      applyRoleUI('admin');
-    }
-  }
 })();
 
 </script>
-</body>
-</html>
