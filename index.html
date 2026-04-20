@@ -672,8 +672,7 @@ let D = (() => {
   return freshData();
 })();
 
-// ── Auto-inject sync passwords (same as splash screen) ──
-// Admin: 204290 | Edit: 123456 | View: 280510
+// ── Auto-inject sync passwords + credentials ──
 (function injectSyncPasswords() {
   if (!D.settings) D.settings = {};
   if (!D.settings.sync) D.settings.sync = {};
@@ -681,6 +680,13 @@ let D = (() => {
   s.adminHash = 'c9ac2173f7a9dfb94f1b4827f35d74f1b73a6f2299d61cb41645842ea24b9d1a';
   s.editHash  = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
   s.viewHash  = '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7';
+  s.binId     = '69e60e17aaba8821971adc65';
+  s.editPw    = '123456';
+  // Pre-set credentials into localStorage so SYNC object picks them up
+  try { localStorage.setItem('sync_bin_id',         '69e60e17aaba8821971adc65'); } catch(e) {}
+  try { localStorage.setItem('sync_bin_id_public',  '69e60e17aaba8821971adc65'); } catch(e) {}
+  try { localStorage.setItem('sync_api_key',        '$2a$10$bL9ZH3yA/SxFFz0C3JiSBuUB8jWYxsR1PzJFLBp5/CWFYdq3imD2K'); } catch(e) {}
+  try { localStorage.setItem('sync_edit_pw',        '123456'); } catch(e) {}
   try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
   try { sessionStorage.setItem(SK+'_backup', JSON.stringify(D)); } catch(e) {}
 })();
@@ -3483,7 +3489,11 @@ async function syncPush() {
     }
     const res = await fetch(`${JBIN}/b/${SYNC.binId}`, {
       method:'PUT',
-      headers:{ 'Content-Type':'application/json', 'X-Master-Key': SYNC.apiKey },
+      headers:{
+        'Content-Type':'application/json',
+        'X-Master-Key': SYNC.apiKey,
+        'X-Bin-Versioning': 'false'
+      },
       body: JSON.stringify({ data: payload, ts: Date.now() })
     });
     const resText = await res.text();
@@ -3699,12 +3709,12 @@ function showSyncSetup() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="field">
           <label style="font-size:11px">Master Key (bí mật — chỉ Admin biết)</label>
-          <input type="password" id="su-apikey" value="${existingKey}" placeholder="$2a$10$..."
-            style="font-family:monospace;font-size:11px">
+          <input type="text" id="su-apikey" value="$2a$10$bL9ZH3yA/SxFFz0C3JiSBuUB8jWYxsR1PzJFLBp5/CWFYdq3imD2K" placeholder="$2a$10$..."
+            style="font-family:monospace;font-size:10px;letter-spacing:.02em">
         </div>
         <div class="field">
           <label style="font-size:11px">Bin ID (chia sẻ với team để connect)</label>
-          <input id="su-binid" value="${existingBinId}" placeholder="64a1b2c3d4e5f6..."
+          <input id="su-binid" value="69e60e17aaba8821971adc65" placeholder="64a1b2c3d4e5f6..."
             style="font-family:monospace;font-size:11px">
         </div>
       </div>
@@ -3749,6 +3759,20 @@ function showSyncSetup() {
   `);
 }
 
+async function testJsonBinConnection(apiKey, binId) {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers: { 'X-Master-Key': apiKey }
+    });
+    const txt = await res.text();
+    console.log('testConnection:', res.status, txt.slice(0,200));
+    return { ok: res.ok, status: res.status, body: txt.slice(0,200) };
+  } catch(e) {
+    console.error('testConnection error:', e.message);
+    return { ok: false, status: 0, body: e.message };
+  }
+}
+
 async function confirmSyncSetup() {
   const apiKey = document.getElementById('su-apikey')?.value.trim();
   const binId  = document.getElementById('su-binid')?.value.trim();
@@ -3783,10 +3807,31 @@ async function confirmSyncSetup() {
   }
 
   save();
-  setSyncStatus('syncing','Đang lưu…');
+  setSyncStatus('syncing','Đang kiểm tra kết nối…');
   closeModal();
-  toast('⏳ Đang kết nối và đẩy dữ liệu lên cloud…');
+  toast('⏳ Đang kiểm tra kết nối JSONBin…');
 
+  // Test connection first
+  const testResult = await testJsonBinConnection(apiKey, binId);
+  console.log('Test result:', testResult);
+
+  if (!testResult.ok && testResult.status === 0) {
+    setSyncStatus('error','Lỗi mạng');
+    toast('✗ Không thể kết nối — kiểm tra internet hoặc CORS');
+    return;
+  }
+  if (testResult.status === 401) {
+    setSyncStatus('error','Master Key sai');
+    toast('✗ Master Key không đúng — copy lại từ JSONBin > API Keys > X-MASTER-KEY');
+    return;
+  }
+  if (testResult.status === 404) {
+    setSyncStatus('error','Bin ID sai');
+    toast('✗ Bin ID không tìm thấy — kiểm tra lại ID từ URL jsonbin.io/b/...');
+    return;
+  }
+
+  toast('✓ Kết nối OK — đang đẩy dữ liệu lên cloud…');
   const ok = await syncPush();
   if (ok) {
     toast('✅ Đã kết nối thành công! Dữ liệu đã lên cloud.');
