@@ -1585,13 +1585,17 @@ function renderProjectDetail(ci, p) {
         <th style="width:16%">Ghi chú</th>
         <th style="width:7%;text-align:center">OT(h)</th>
         <th style="width:9%;text-align:center">OT lý do</th>
-        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : getRatingFields().map(rf=>`<th style="min-width:46px;text-align:center;font-size:9px;padding:4px 2px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
+        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : `
+          <th colspan="3" style="text-align:center;font-size:9px;padding:3px 4px;background:#f0f4ff;color:#1a5276;cursor:pointer;white-space:nowrap" onclick="toggleRatingExpand(this,'${activePjId}')">
+            📐 Kỹ thuật &nbsp;|&nbsp; ⚡ Năng lực &nbsp;|&nbsp; 💼 Thái độ &nbsp;<span style="font-size:8px;color:#888">(click mở rộng)</span>
+          </th>
+        `}
         <th style="width:26px"></th>
       </tr></thead>
       <tbody id="rbody-${p.id}">${renderGroups(p)}</tbody>
       <tfoot id="rfoot-${p.id}">
         <tr style="background:var(--rev-bg);border-top:2px solid var(--navy)">
-          <td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 9+getRatingFields().length}" style="padding:8px 12px">
+          <td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 12}" style="padding:8px 12px">
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <span style="font-size:11px;font-weight:700;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em">Tổng dự án:</span>
               <div style="display:flex;align-items:center;gap:6px">
@@ -1861,24 +1865,85 @@ function getStaffMonthlyKPIs(staffName, section) {
 }
 
 /* ── Rating cell: save on oninput so navigation doesn’t lose data ── */
+/* ── Rating Group rendering: 3 compact columns + popup detail ── */
+function renderRatingGroups(pjId, gId, row) {
+  const fields = getRatingFields();
+  const grpA = fields.filter(rf=>rf.group==='A');
+  const grpB = fields.filter(rf=>rf.group==='B');
+  const grpC = fields.filter(rf=>rf.group==='C');
+
+  function grpAvg(grpFields) {
+    const vals = grpFields.map(rf=>row[rf.field]||0).filter(v=>v>0);
+    return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+  }
+  function grpCell(grpFields, label, emoji, groupId) {
+    const avg = grpAvg(grpFields);
+    const dc = avg > 0 ? ratingColor(avg) : '#ccc';
+    const pct = avg * 10;
+    // Individual inputs hidden by default, shown on expand
+    const inputs = grpFields.map(rf => {
+      const v = row[rf.field] || 0;
+      const dc2 = ratingColor(v);
+      return `<div style="display:flex;align-items:center;gap:3px;padding:1px 0">
+        <span style="font-size:8px;color:${rf.color};min-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${rf.label}">${rf.label}</span>
+        <input type="number" min="0" max="10" step="1" value="${v}"
+          class="rating-slider"
+          data-pj="${x(pjId)}" data-g="${x(gId)}" data-r="${x(row.id)}" data-f="${rf.field}"
+          style="width:28px;font-size:9px;text-align:center;border:1px solid #ddd;border-radius:3px;padding:1px 2px;background:#fafafa;-moz-appearance:textfield"
+          oninput="ratingSliderInput(this);this.closest('td').querySelector('.rg-avg').textContent=calcGrpAvg(this.closest('.rg-detail'));this.closest('td').querySelector('.rg-bar-fill').style.width=(calcGrpAvg(this.closest('.rg-detail'))*10)+'%'">
+        <span style="font-size:10px;font-weight:700;color:${dc2}">${v||'-'}</span>
+      </div>`;
+    }).join('');
+
+    return `<td style="padding:2px 4px;min-width:70px;vertical-align:middle">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="display:flex;align-items:center;gap:3px">
+          <span style="font-size:8px;color:var(--gray4)">${emoji}</span>
+          <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden">
+            <div class="rg-bar-fill" style="height:100%;background:${dc};width:${pct}%;transition:width .2s"></div>
+          </div>
+          <span class="rg-avg" style="font-size:11px;font-weight:700;color:${dc};min-width:16px;text-align:right">${avg>0?avg.toFixed(1):'-'}</span>
+          <button onclick="this.closest('td').querySelector('.rg-detail').style.display=this.closest('td').querySelector('.rg-detail').style.display==='none'?'block':'none';this.textContent=this.textContent==='▼'?'▲':'▼'"
+            style="font-size:8px;border:none;background:none;cursor:pointer;color:#aaa;padding:0 2px;line-height:1">▼</button>
+        </div>
+        <div class="rg-detail" style="display:none;background:#f9f9f9;border:1px solid #eee;border-radius:3px;padding:3px 4px">${inputs}</div>
+      </div>
+    </td>`;
+  }
+  return grpCell(grpA, 'Kỹ thuật', '📐', 'A')
+       + grpCell(grpB, 'Năng lực', '⚡', 'B')
+       + grpCell(grpC, 'Thái độ',  '💼', 'C');
+}
+
+function calcGrpAvg(detailEl) {
+  const inputs = [...detailEl.querySelectorAll('input[type=number]')];
+  const vals = inputs.map(i=>+i.value||0).filter(v=>v>0);
+  return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '-';
+}
+
+function toggleRatingExpand(thEl, pjId) {
+  // Unused now — each group has its own expand button
+}
+
 function renderRatingCell(pjId, gId, rId, field, val, color) {
   const v = val || 0;
   const dc = ratingColor(v);
-  const display = v > 0 ? String(v) : '-';
-  // Use data-attributes to avoid quote injection in HTML attributes
-  return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
-    + '<div style="font-size:14px;font-weight:800;color:' + dc + ';line-height:1">' + display + '</div>'
-    + '<input type="range" min="0" max="10" step="1" value="' + v + '"'
+  // Compact: colored number badge + tiny input spinner, no slider
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px">'
+    + '<span style="font-size:13px;font-weight:800;color:' + dc + ';line-height:1.1">' + (v||'-') + '</span>'
+    + '<input type="number" min="0" max="10" step="1" value="' + v + '"'
     + ' class="rating-slider"'
     + ' data-pj="' + x(pjId) + '" data-g="' + x(gId) + '" data-r="' + x(rId) + '" data-f="' + x(field) + '"'
-    + ' style="width:44px;height:3px;accent-color:' + color + ';cursor:pointer"'
-    + ' title="' + display + '/10"'
+    + ' style="width:28px;font-size:9px;text-align:center;border:1px solid #ddd;border-radius:3px;padding:1px 2px;background:#fafafa;color:#555;-moz-appearance:textfield"'
+    + ' title="' + field + ': ' + v + '/10"'
     + ' oninput="ratingSliderInput(this)">'
     + '</div>';
 }
 
 function ratingSliderInput(el) {
-  const n = +el.value;
+  let n = +el.value;
+  if (n < 0) n = 0; if (n > 10) n = 10;
+  el.value = n;
   const prev = el.previousElementSibling;
   if (prev) { prev.textContent = n || '-'; prev.style.color = ratingColor(n); }
   updRowRating(el.dataset.pj, el.dataset.g, el.dataset.r, el.dataset.f, n);
@@ -1935,7 +2000,7 @@ function ratingColor(v) {
 /* GROUPS — per-group gray shading for easy visual separation */
 function renderGroups(p) {
   const groups = p.groups||[];
-  if (!groups.length) return `<tr><td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 9+getRatingFields().length}" style="text-align:center;padding:20px;color:var(--gray4)">
+  if (!groups.length) return `<tr><td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 12}" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
 
   // High-contrast alternating palette: strong difference between adjacent groups
@@ -2041,9 +2106,7 @@ function renderGroups(p) {
           <input class="tbl-input" value="${x(r.otNote||'')}" style="font-size:10px"
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
         </td>
-        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : getRatingFields().map(rf=>`<td style="text-align:center;padding:2px 1px">
-          ${renderRatingCell(p.id, g.id, r.id, rf.field, r[rf.field]||0, rf.color)}
-        </td>`).join('')}
+        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : renderRatingGroups(p.id, g.id, r)}
         <td style="text-align:center">
           <button class="btn btn-xs btn-ghost btn-danger" onclick="delRow('${p.id}','${g.id}','${r.id}')">✕</button>
         </td>
@@ -2474,37 +2537,51 @@ function renderDashboard() {
     const grpAw = section==='vn' ? 45 : 40;
     const grpBw = 30, grpCw = section==='vn' ? 25 : 30;
 
-    const groupHeaderRow = `<tr style="background:#f0f0f0">
+    const groupHeaderRow = `<tr>
       <th colspan="7" style="background:var(--navy);color:#fff"></th>
-      <th colspan="${grpAfields.length}" style="text-align:center;font-size:9px;background:#e8f4fd;color:#1a5276;border-left:2px solid #aed6f1">
-        📐 ${section==='vn'?'Quy trình thiết kế':'Kỹ thuật diễn họa'} (${grpAw}%)
+      <th style="text-align:center;font-size:9px;background:#e8f4fd;color:#1a5276;border-left:2px solid #aed6f1">
+        📐 ${section==='vn'?'Quy trình':'Kỹ thuật'} (${grpAw}%)
       </th>
-      <th colspan="${grpBfields.length}" style="text-align:center;font-size:9px;background:#eafaf1;color:#1e8449;border-left:2px solid #a9dfbf">
+      <th style="text-align:center;font-size:9px;background:#eafaf1;color:#1e8449;border-left:1px solid #a9dfbf">
         ⚡ Năng lực (${grpBw}%)
       </th>
-      <th colspan="${grpCfields.length}" style="text-align:center;font-size:9px;background:#fef9e7;color:#7d6608;border-left:2px solid #f9e79f">
+      <th style="text-align:center;font-size:9px;background:#fef9e7;color:#7d6608;border-left:1px solid #f9e79f">
         💼 Thái độ (${grpCw}%)
       </th>
-      <th colspan="3" style="background:var(--navy);color:#fff"></th>
+      <th colspan="2" style="background:var(--navy);color:#fff"></th>
     </tr>`;
 
-    const ratingHeaders = ratingFields.map((rf,i)=>{
-      const borderL = (i===grpAfields.length || i===grpAfields.length+grpBfields.length) ? 'border-left:2px solid #ddd;' : '';
-      return `<th style="text-align:center;font-size:9px;min-width:42px;color:${rf.color};${borderL}">★ ${rf.label}</th>`;
-    }).join('');
+    // Dashboard: show 3 group header columns only
+    const ratingHeaders = `
+      <th style="text-align:center;font-size:9px;min-width:55px;background:#e8f4fd;color:#1a5276;border-left:2px solid #aed6f1">
+        📐 ${section==='vn'?'Quy trình':'Kỹ thuật'}</th>
+      <th style="text-align:center;font-size:9px;min-width:55px;background:#eafaf1;color:#1e8449;border-left:1px solid #a9dfbf">
+        ⚡ Năng lực</th>
+      <th style="text-align:center;font-size:9px;min-width:55px;background:#fef9e7;color:#7d6608;border-left:1px solid #f9e79f">
+        💼 Thái độ</th>`;
 
     const rows = staffList.map(s=>{
       const t=annData[s].n+annData[s].r, pct=Math.round(t/mx*100);
       const rc=annData[s].rCount;
 
-      // Rating cells
-      const ratingCells = ratingFields.map((rf,i)=>{
-        const v = rc ? Number((annData[s][rf.field+'Sum']/rc).toFixed(1)) : 0;
-        const borderL = (i===grpAfields.length || i===grpAfields.length+grpBfields.length) ? 'border-left:2px solid #eee;' : '';
+      // Dashboard: 3 group avg cells
+      function dashGrpAvg(grpFields) {
+        const vals = grpFields.map(rf => rc ? annData[s][rf.field+'Sum']/rc : 0).filter(v=>v>0);
+        return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+      }
+      function dashGrpCell(grpFields, borderColor) {
+        const v = dashGrpAvg(grpFields);
+        const dc = v > 0 ? ratingColor(v) : '#ccc';
+        const pct = v * 10;
         return rc
-          ? `<td style="text-align:center;${borderL}"><span style="font-size:12px;font-weight:700;color:${ratingColor(v)}">${v}</span><span style="font-size:8px;color:var(--gray4)">/10</span></td>`
-          : `<td style="text-align:center;color:var(--gray3);${borderL}">—</td>`;
-      }).join('');
+          ? `<td style="text-align:center;border-left:1px solid #eee;padding:4px 6px">
+              <div style="font-size:14px;font-weight:800;color:${dc}">${v.toFixed(1)}</div>
+              <div style="height:3px;background:#eee;border-radius:2px;margin:2px 4px;overflow:hidden">
+                <div style="height:100%;background:${dc};width:${pct}%"></div></div>
+            </td>`
+          : `<td style="text-align:center;color:var(--gray3);border-left:1px solid #eee">—</td>`;
+      }
+      const ratingCells = dashGrpCell(grpAfields)+dashGrpCell(grpBfields)+dashGrpCell(grpCfields);
 
       // KPI calculation — use monthly KPI history
       const monthlyData = getStaffMonthlyKPIs(s, section);
