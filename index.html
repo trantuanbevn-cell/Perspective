@@ -1048,8 +1048,9 @@ function renderMonthGantt(pjs) {
 
     const taskParts = tasks.map(r=>{
       const overdue=r.dateTo&&r.dateTo<todayStr;
+      const numColor = r.status==='new' ? '#27ae60' : '#b8860b'; // dark gold for rev, readable on white
       return '<div style="font-size:9px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">'
-        +'<span style="font-size:8px;font-weight:800;color:'+(r.status==='new'?'#70AD47':'var(--gold)')+';flex-shrink:0;min-width:14px">[' + (r.pjNum||'?') + ']</span>'
+        +'<span style="font-size:8px;font-weight:800;color:'+numColor+';flex-shrink:0;min-width:14px">[' + (r.pjNum||'?') + ']</span>'
         +'<span style="overflow:hidden;text-overflow:ellipsis;color:'+(overdue?'#e74c3c':'inherit')+'">'+(r.groupName.length>10?r.groupName.substring(0,10)+'…':r.groupName)+'</span>'
         +'</div>';
     }).join('');
@@ -1077,9 +1078,10 @@ function renderMonthGantt(pjs) {
       const blocks = activeTasks.map(r=>{
         const isNew=r.status==='new', isFirst=r.dateFrom===dkStr, isLast=r.dateTo===dkStr;
         const bc=isNew?'#70AD47':'var(--gold)';
+        const tc=isNew?'#fff':'#1a2a1a'; // white on green, dark on gold
         const label = isFirst ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
         return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
-          style="background:${bc};height:11px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};opacity:.88;overflow:hidden;font-size:7.5px;color:#fff;white-space:nowrap;padding:0 3px;line-height:11px;font-weight:600">
+          style="background:${bc};height:11px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};opacity:.95;overflow:hidden;font-size:7.5px;color:${tc};white-space:nowrap;padding:0 3px;line-height:11px;font-weight:700">
           ${label}
         </div>`;
       }).join('');
@@ -1781,11 +1783,12 @@ function renderStaffSchedule(p) {
       const blocks = activeTasks.map(r=>{
         const isNew = r.status==='new';
         const bg2 = isNew?'#70AD47':'var(--gold)';
+        const tc2 = isNew?'#fff':'#1a2a1a'; // dark text on gold for contrast
         const isFirstDay = r.dateFrom===dk;
         const isLastDay  = r.dateTo===dk;
         return `<div title="${x(r.groupName)} (${r.pjName})\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
           style="background:${bg2};height:10px;margin:1px 0;border-radius:${isFirstDay?'3px 0 0 3px':isLastDay?'0 3px 3px 0':'0'};
-          opacity:0.85;overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 2px;line-height:10px">
+          opacity:0.95;overflow:hidden;font-size:7px;color:${tc2};white-space:nowrap;padding:0 2px;line-height:10px;font-weight:700">
           ${isFirstDay?x(r.groupName.substring(0,6)):''}
         </div>`;
       }).join('');
