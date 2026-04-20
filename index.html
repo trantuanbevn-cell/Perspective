@@ -1585,13 +1585,13 @@ function renderProjectDetail(ci, p) {
         <th style="width:16%">Ghi chú</th>
         <th style="width:7%;text-align:center">OT(h)</th>
         <th style="width:9%;text-align:center">OT lý do</th>
-        ${getRatingFields().map(rf=>`<th style="min-width:46px;text-align:center;font-size:9px;padding:4px 2px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
+        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : getRatingFields().map(rf=>`<th style="min-width:46px;text-align:center;font-size:9px;padding:4px 2px;color:${rf.color}">★ ${rf.label}</th>`).join('')}
         <th style="width:26px"></th>
       </tr></thead>
       <tbody id="rbody-${p.id}">${renderGroups(p)}</tbody>
       <tfoot id="rfoot-${p.id}">
         <tr style="background:var(--rev-bg);border-top:2px solid var(--navy)">
-          <td colspan="13" style="padding:8px 12px">
+          <td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 9+getRatingFields().length}" style="padding:8px 12px">
             <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
               <span style="font-size:11px;font-weight:700;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em">Tổng dự án:</span>
               <div style="display:flex;align-items:center;gap:6px">
@@ -1788,7 +1788,7 @@ function ratingColor(v) {
 /* GROUPS — per-group gray shading for easy visual separation */
 function renderGroups(p) {
   const groups = p.groups||[];
-  if (!groups.length) return `<tr><td colspan="${9+getRatingFields().length}" style="text-align:center;padding:20px;color:var(--gray4)">
+  if (!groups.length) return `<tr><td colspan="${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? 9 : 9+getRatingFields().length}" style="text-align:center;padding:20px;color:var(--gray4)">
     Chưa có hạng mục — bấm <strong style="color:var(--navy)">＋ Thêm hạng mục</strong> ở trên</td></tr>`;
 
   // High-contrast alternating palette: strong difference between adjacent groups
@@ -1894,7 +1894,7 @@ function renderGroups(p) {
           <input class="tbl-input" value="${x(r.otNote||'')}" style="font-size:10px"
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
         </td>
-        ${getRatingFields().map(rf=>`<td style="text-align:center;padding:2px 1px">
+        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : getRatingFields().map(rf=>`<td style="text-align:center;padding:2px 1px">
           ${renderRatingCell(p.id, g.id, r.id, rf.field, r[rf.field]||0, rf.color)}
         </td>`).join('')}
         <td style="text-align:center">
@@ -3881,12 +3881,14 @@ function applyRoleUI(role) {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    // Hide report + theme buttons
+    // Hide ONLY report + theme buttons (keep ＋ Dự án mới and Sync visible)
     document.querySelectorAll('.hdr-right .btn').forEach(btn => {
       const oc = btn.getAttribute('onclick') || '';
       if (oc.includes('openExportMenu') || oc.includes('openThemePicker'))
         btn.style.display = 'none';
     });
+    // Make sure we're on main page
+    if (activePage !== 'main') showPage('main');
   }
   if (role === 'view') {
     enableViewOnlyMode(true);
