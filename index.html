@@ -2297,6 +2297,116 @@ function contractDateChanged(el) {
 }
 
 // Rating save — immediate, uses getPjGlobal for cross-navigation safety
+function calcUpScore(doneAt, dateTo) {
+  // doneAt: ISO string "2026-04-21T14:32:00"
+  // dateTo: "2026-04-21"
+  // Returns score 0-10 based on time rules
+  if (!doneAt || !dateTo) return null;
+  const done = new Date(doneAt);
+  const deadline = new Date(dateTo + 'T00:00:00');
+  const doneDate = doneAt.slice(0,10);
+  const doneHour = done.getHours() + done.getMinutes()/60;
+
+  if (doneDate < dateTo) return 10;           // Trước ngày deadline → SỚM
+  if (doneDate === dateTo && doneHour < 17) return 10; // Trước 17h → SỚM
+  if (doneDate === dateTo && doneHour < 18) return 8;  // 17h-18h → ĐÚNG GIỜ
+  if (doneDate === dateTo && doneHour < 19) return 5;  // 18h-19h → BÌNH THƯỜNG
+  if (doneDate === dateTo) return 2;          // Sau 19h → MUỘN
+  // Quá ngày
+  const diffDays = Math.round((new Date(doneDate) - deadline) / 86400000);
+  return Math.max(0, 3 - diffDays);           // 1 ngày→3, 2 ngày→1, 3+→0
+}
+
+function recalcStaffUpKPI(staffName) {
+  // Collect all done rows for this staff in active month
+  const m = D.months[D.activeMonth];
+  if (!m) return;
+  const allRows = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
+    (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && r.doneAt))
+  );
+  if (!allRows.length) return;
+
+  const total = allRows.length;
+  const scores = allRows.map(r=>r.upScore||0);
+  const avgScore = scores.reduce((a,b)=>a+b,0)/total;
+  const earlyCount = allRows.filter(r=>(r.upScore||0)>=9).length; // score 10=sớm
+  const lateCount  = allRows.filter(r=>(r.upScore||0)<=2).length; // score 0-2=muộn
+  const onTimeCount = allRows.filter(r=>(r.upScore||0)>=5).length;
+
+  const earlyPct = earlyCount/total;
+  const latePct  = lateCount/total;
+  const onTimePct = onTimeCount/total;
+
+  // rate6 = Tốc độ (% up sớm)
+  const rate6 = earlyPct>=0.8?10:earlyPct>=0.6?8:earlyPct>=0.4?6:earlyPct>=0.2?4:2;
+  // rate7 = Tỷ lệ lỗi (% muộn - nghịch chiều)
+  const rate7 = latePct<=0?10:latePct<=0.1?8:latePct<=0.25?6:latePct<=0.4?4:2;
+  // rate8 = Đúng hạn (TB điểm)
+  const rate8 = Math.round(Math.min(10, avgScore * 10) / 10 * 10) / 10;
+  // rate10 = Tập trung (% đúng giờ + sớm)
+  const rate10 = onTimePct>=0.95?10:onTimePct>=0.8?9:onTimePct>=0.65?7:onTimePct>=0.5?5:onTimePct>=0.3?3:1;
+  // rate11 = Trách nhiệm (tổng hàng được giao vs đã UP × điểm)
+  const totalAssigned = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
+    (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && (r.qty||0)>0))
+  ).length;
+  const doneRatio = totalAssigned>0 ? total/totalAssigned : 1;
+  const rate11 = Math.min(10, Math.round(doneRatio * avgScore * 10)/10);
+
+  // Apply to all rows of this staff in this month
+  // We store on staffProfiles for KPI display
+  if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
+  if (!D.settings.staffProfiles[staffName]) D.settings.staffProfiles[staffName] = {};
+  if (!D.settings.staffProfiles[staffName].upKPI) D.settings.staffProfiles[staffName].upKPI = {};
+  D.settings.staffProfiles[staffName].upKPI[D.activeMonth] = {
+    rate6, rate7, rate8: Math.round(rate8*10)/10, rate10, rate11: Math.round(rate11*10)/10,
+    total, earlyCount, lateCount, onTimeCount, avgScore: Math.round(avgScore*10)/10,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Also update rating fields directly on rows so KPI modal shows them
+  [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>
+    (p.groups||[]).forEach(g=>
+      (g.rows||[]).filter(r=>r.staff===staffName).forEach(r=>{
+        r.rate6  = rate6;
+        r.rate7  = rate7;
+        r.rate8  = Math.round(rate8*10)/10;
+        r.rate10 = rate10;
+        r.rate11 = Math.round(rate11*10)/10;
+      })
+    )
+  );
+}
+
+function markRowDone(pjId, gId, rId) {
+  const pj = allCurProjects().find(p=>p.id===pjId);
+  if (!pj) return;
+  const g = (pj.groups||[]).find(g=>g.id===gId);
+  if (!g) return;
+  const r = (g.rows||[]).find(r=>r.id===rId);
+  if (!r) return;
+  if (r.doneAt) return; // already done, no undo
+
+  const now = new Date();
+  const doneAt = now.toISOString().slice(0,19); // "2026-04-21T14:32:00"
+  const score = calcUpScore(doneAt, r.dateTo);
+  r.doneAt  = doneAt;
+  r.upScore = score;
+
+  const label = score>=9?'🟢 UP SỚM':score>=8?'🔵 ĐÚNG GIỜ':score>=5?'🟡 BÌNH THƯỜNG':'🔴 MUỘN';
+  const timeStr = now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+
+  // Recalculate KPI for this staff
+  if (r.staff) recalcStaffUpKPI(r.staff);
+
+  persistD();
+  // Re-render just this project's rows
+  const tbody = document.getElementById('rbody-' + pjId);
+  if (tbody) tbody.innerHTML = renderGroups(pj);
+  refreshPjTotals(pjId);
+
+  toast(`✓ Đã UP — ${label} lúc ${timeStr}${score!==null?' | Điểm: '+score+'/10':''}`, 4000);
+}
+
 function updRowRating(pjId, gId, rId, field, val) {
   const p = getPjGlobal(pjId);
   if (!p) return;
@@ -2436,6 +2546,19 @@ function renderGroups(p) {
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
         </td>
         ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : renderRatingGroups(p.id, g.id, r)}
+        <td style="text-align:center;min-width:64px;padding:2px 4px">
+          ${r.doneAt
+            ? `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+                <span style="font-size:9px;font-weight:700;color:#27ae60">✓ UP</span>
+                <span style="font-size:8px;color:#888">${r.doneAt.slice(11,16)}</span>
+                <span style="font-size:8px;font-weight:700;color:${(r.upScore||0)>=8?'#27ae60':(r.upScore||0)>=5?'#f39c12':'#e74c3c'}">${(r.upScore||0)>=9?'🟢Sớm':(r.upScore||0)>=8?'🔵Đúng':(r.upScore||0)>=5?'🟡Bthg':'🔴Muộn'}</span>
+              </div>`
+            : ((sessionStorage.getItem('splash_role')||'admin')==='admin' && r.staff && (r.qty||0)>0
+                ? `<button class="btn btn-xs" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;font-size:10px;padding:2px 6px;white-space:nowrap"
+                    onclick="markRowDone('${p.id}','${g.id}','${r.id}')">✓ UP</button>`
+                : `<span style="color:#ddd;font-size:10px">—</span>`)
+          }
+        </td>
         <td style="text-align:center">
           <button class="btn btn-xs btn-ghost btn-danger" onclick="delRow('${p.id}','${g.id}','${r.id}')">✕</button>
         </td>
@@ -3714,6 +3837,42 @@ function renderSettings() {
             <strong>Công thức:</strong> KPI = (A×45%) + (B×30%) + (C×25%)<br>
             OT &gt; 10h: ×1.05 | OT &gt; 20h: ×1.10 | OT &gt; 30h: ×1.20 | Revision &lt; 3/10: ×0.90
           </div>
+        </div>
+      </div>
+
+      <!-- UP Completion scoring formula -->
+      <div style="margin-top:14px;padding:12px 14px;background:#1a2a1a;border-radius:8px;color:#fff">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#7CFC00">⏱ Công thức tính điểm Hoàn thành (UP)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px">
+          <div>
+            <div style="color:#FFD966;font-weight:600;margin-bottom:6px">Mốc thời gian UP → Điểm cơ bản</div>
+            <div style="background:rgba(255,255,255,.08);padding:8px 10px;border-radius:6px;font-family:monospace;font-size:11px;line-height:2">
+              <span style="color:#7CFC00">Trước 17h ngày deadline</span> → 10 (SỚM)<br>
+              <span style="color:#4FC3F7">17h – 18h ngày deadline</span> → &nbsp;8 (ĐÚNG GIỜ)<br>
+              <span style="color:#FFD54F">18h – 19h ngày deadline</span> → &nbsp;5 (BÌNH THƯỜNG)<br>
+              <span style="color:#EF9A9A">Sau 19h / quá ngày+1</span>&nbsp;&nbsp;&nbsp;→ &nbsp;3<br>
+              <span style="color:#EF9A9A">Quá hạn + 2 ngày</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ &nbsp;1<br>
+              <span style="color:#EF9A9A">Quá hạn + 3 ngày trở lên</span> → &nbsp;0
+            </div>
+          </div>
+          <div>
+            <div style="color:#FFD966;font-weight:600;margin-bottom:6px">5 Tiêu chí KPI tự động (rate6–11)</div>
+            <div style="background:rgba(255,255,255,.08);padding:8px 10px;border-radius:6px;font-size:10px;line-height:1.9">
+              <span style="color:#7CFC00">rate6 Tốc độ</span> = % lần UP sớm<br>
+              &nbsp;&nbsp;≥80%→10, ≥60%→8, ≥40%→6, ≥20%→4, else→2<br>
+              <span style="color:#4FC3F7">rate7 Tỷ lệ lỗi</span> = % lần UP muộn (nghịch chiều)<br>
+              &nbsp;&nbsp;0%→10, ≤10%→8, ≤25%→6, ≤40%→4, else→2<br>
+              <span style="color:#FFD54F">rate8 Đúng hạn</span> = TB điểm tất cả lần UP<br>
+              <span style="color:#CE93D8">rate10 Tập trung</span> = % lần UP đúng giờ + sớm<br>
+              &nbsp;&nbsp;≥95%→10, ≥80%→9, ≥65%→7, ≥50%→5, else→3<br>
+              <span style="color:#FFAB91">rate11 Trách nhiệm</span> = (UP÷Giao) × TB điểm
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.5);line-height:1.6">
+          * 5 tiêu chí trên tự động cập nhật mỗi khi Admin bấm "✓ UP" — không cần nhập thủ công.<br>
+          * Admin vẫn có thể chỉnh rate0–rate5, rate9, rate12–rate13 trong modal đánh giá chi tiết.<br>
+          * Khi sang tháng mới, lịch sử UP reset — tính lại từ đầu cho tháng mới.
         </div>
       </div>
 
