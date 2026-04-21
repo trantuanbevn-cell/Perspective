@@ -3789,7 +3789,35 @@ function closeModal() { document.getElementById('activeModal')?.remove(); }
   const manifest={name:'Gengai Sougo VN',short_name:'GS VN',description:'Performance Management Software',start_url:'.',display:'standalone',background_color:'#1F3864',theme_color:'#1F3864',icons:[{src:ati,sizes:'192x192',type:'image/png',purpose:'any maskable'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('pwaManifest').href=URL.createObjectURL(blob);
-  if('serviceWorker' in navigator){const sw=`const C='pc-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['.']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});}
+  if('serviceWorker' in navigator){
+    // Unregister old service workers first to force cache clear
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      regs.forEach(r=>r.unregister());
+    });
+    // Register new SW with timestamp version — forces update on every deploy
+    const V = 'pc-v202604210001';
+    const sw = `const C='${V}';
+self.addEventListener('install',e=>{
+  self.skipWaiting();
+  e.waitUntil(
+    caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k))))
+  );
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil(self.clients.claim());
+});
+self.addEventListener('fetch',e=>{
+  // Never cache HTML — always fetch fresh
+  if(e.request.url.endsWith('.html')||e.request.mode==='navigate'){
+    e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+    return;
+  }
+  e.respondWith(fetch(e.request));
+});`;
+    navigator.serviceWorker.register(
+      URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))
+    ).catch(()=>{});
+  }
 })();
 
 /* STUB — overridden by sync */
