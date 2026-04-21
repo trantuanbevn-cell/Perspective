@@ -1406,13 +1406,20 @@ function renderMonthGantt(pjs) {
         const isUrgent = r.dateTo && r.dateTo >= todayStr && r.dateTo <= soon3Str;
         const isNew=r.status==='new';
         const isFirst=r.dateFrom===dkStr||dkStr===startStr, isLast=r.dateTo===dkStr;
-        const bc = isDone ? '#7f8c8d' : isUrgent ? '#e74c3c' : isNew ? '#5a9a35' : '#d4900a';
+        // Màu thanh: xanh=làm mới, vàng=sửa lại, xám=đã UP
+        const bc = isDone ? '#7f8c8d' : isNew ? '#5a9a35' : '#d4900a';
         const isFirstAppearance = !shownLabels_done.has(r.id);
         if (isFirstAppearance) shownLabels_done.add(r.id);
-        const label = isDone ? '✓ UP' : isFirstAppearance ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
+        // Label: đã UP = ✓, sắp UP = chữ đỏ, bình thường = tên hạng mục
+        const labelColor = isUrgent && !isDone ? '#ff4444' : '#fff';
+        const label = isDone
+          ? '✓ UP'
+          : isUrgent && isFirstAppearance
+            ? `<span style="color:#ff4444;text-shadow:none;font-weight:900">⚡[${r.pjNum||'?'}]</span>`
+            : isFirstAppearance ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
         const status = isDone ? '✓ Đã UP' : isUrgent ? '⚡ Sắp UP ('+r.dateTo+')' : isNew ? 'Làm mới' : 'Sửa lại';
         return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${status} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
-          style="background:${bc};height:12px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 3px;line-height:12px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3);opacity:${isDone?0.65:1}">
+          style="background:${bc};height:12px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 3px;line-height:12px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3);opacity:${isDone?0.65:1}${isUrgent&&!isDone?';box-shadow:inset 0 0 0 1.5px rgba(255,68,68,.7)':''}">
           ${label}
         </div>`;
       }).join('');
@@ -1449,8 +1456,8 @@ function renderMonthGantt(pjs) {
     <span>Chú thích:</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border-radius:2px;display:inline-block"></span>Làm mới</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>Sửa lại</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border:1.5px solid #ff4444;border-radius:2px;display:inline-block"></span><span style="color:#e74c3c;font-weight:700">⚡Sắp UP</span></span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#7f8c8d;border-radius:2px;display:inline-block"></span>✓ Đã UP</span>
-    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#e74c3c;border-radius:2px;display:inline-block"></span>⚡ Sắp UP (≤3 ngày)</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#8e44ad;border-radius:2px;display:inline-block"></span>✈ Công tác</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:rgba(231,76,60,.2);border:1px solid #e74c3c;border-radius:2px;display:inline-block"></span>Nghỉ phép</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="display:inline-block;font-size:9px">🔴</span>Ngày lễ</span>
@@ -3564,7 +3571,17 @@ function closeModal() { document.getElementById('activeModal')?.remove(); }
 function triggerAutoSync() {
   if (SYNC.gistId && SYNC.ghToken && SYNC.role==='admin') {
     clearTimeout(triggerAutoSync._t);
-    triggerAutoSync._t = setTimeout(async ()=>{ await syncPush(); }, 4000);
+    triggerAutoSync._t = setTimeout(async ()=>{
+      // Rate limit: tối thiểu 5 phút giữa 2 lần push
+      const now = Date.now();
+      const lastPush = +localStorage.getItem('sync_last_push') || 0;
+      if (now - lastPush < 5 * 60 * 1000) {
+        console.log('syncPush skipped — rate limit (5 min)');
+        return;
+      }
+      localStorage.setItem('sync_last_push', now);
+      await syncPush();
+    }, 4000);
   }
 }
 
@@ -3707,11 +3724,9 @@ async function syncPull(decryptPassword) {
 async function quickSync() {
   const role = SYNC.role;
 
-  // Not configured at all → open panel (admin only)
-  if (!SYNC.binId) {
+  if (!SYNC.gistId && !SYNC.binId) {
     if (role === 'admin') openSyncPanel();
     else {
-      // Edit/View without cloud: just save locally, show OK
       persistD();
       setSyncStatus('synced', role === 'edit' ? '✓ Edit' : '👁 View');
       toast('✓ Đã lưu dữ liệu cục bộ');
@@ -3720,19 +3735,20 @@ async function quickSync() {
   }
 
   if (role === 'admin' || role === 'edit') {
-    if (!SYNC.apiKey && role === 'admin') {
+    if (!SYNC.ghToken && role === 'admin') {
       toast('⚠ Chưa có GitHub Token — mở cài đặt Sync');
       openSyncPanel();
       return;
     }
-    // Edit without apiKey: save locally only
-    if (!SYNC.apiKey) {
+    if (!SYNC.ghToken) {
       persistD();
       setSyncStatus('synced', '✓ Edit');
       toast('✓ Đã lưu dữ liệu cục bộ');
       return;
     }
     setSyncStatus('syncing', 'Đang lưu…');
+    // Manual sync bypasses rate limit
+    localStorage.setItem('sync_last_push', Date.now());
     const ok = await syncPush();
     if (ok) {
       toast('✓ Đã đồng bộ lên cloud');
