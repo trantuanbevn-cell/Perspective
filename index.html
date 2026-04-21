@@ -2298,27 +2298,34 @@ function contractDateChanged(el) {
 
 // Rating save — immediate, uses getPjGlobal for cross-navigation safety
 function calcUpScore(doneAt, dateTo) {
-  // doneAt: ISO string "2026-04-21T14:32:00"
+  // doneAt: ISO string local "2026-04-21T14:32:00" (giờ VN)
   // dateTo: "2026-04-21"
-  // Returns score 0-10 based on time rules
   if (!doneAt || !dateTo) return null;
-  const done = new Date(doneAt);
-  const deadline = new Date(dateTo + 'T00:00:00');
-  const doneDate = doneAt.slice(0,10);
-  const doneHour = done.getHours() + done.getMinutes()/60;
 
-  if (doneDate < dateTo) return 10;           // Trước ngày deadline → SỚM
-  if (doneDate === dateTo && doneHour < 17) return 10; // Trước 17h → SỚM
-  if (doneDate === dateTo && doneHour < 18) return 8;  // 17h-18h → ĐÚNG GIỜ
-  if (doneDate === dateTo && doneHour < 19) return 5;  // 18h-19h → BÌNH THƯỜNG
-  if (doneDate === dateTo) return 2;          // Sau 19h → MUỘN
-  // Quá ngày
-  const diffDays = Math.round((new Date(doneDate) - deadline) / 86400000);
-  return Math.max(0, 3 - diffDays);           // 1 ngày→3, 2 ngày→1, 3+→0
+  // Lấy ngày và giờ từ local time string (không qua Date để tránh múi giờ UTC)
+  const doneDate = doneAt.slice(0, 10);            // "2026-04-21"
+  const hh = parseInt(doneAt.slice(11, 13), 10);   // giờ local VN
+  const mm = parseInt(doneAt.slice(14, 16), 10);
+  const doneHour = hh + mm / 60;
+
+  if (doneDate < dateTo) return 10;                          // Trước ngày deadline → SỚM
+  if (doneDate === dateTo && doneHour < 17) return 10;       // Trước 17h → SỚM
+  if (doneDate === dateTo && doneHour < 18) return 8;        // 17h–18h → ĐÚNG GIỜ
+  if (doneDate === dateTo && doneHour < 19) return 5;        // 18h–19h → BÌNH THƯỜNG
+  if (doneDate === dateTo) return 2;                         // Sau 19h cùng ngày → MUỘN
+
+  // Quá ngày — tính số ngày trễ bằng chuỗi date để tránh lỗi DST
+  const [dy, dm, dd] = dateTo.split('-').map(Number);
+  const [fy, fm, fd] = doneDate.split('-').map(Number);
+  const deadlineMs = Date.UTC(dy, dm-1, dd);
+  const doneMs     = Date.UTC(fy, fm-1, fd);
+  const diffDays   = Math.round((doneMs - deadlineMs) / 86400000);
+  if (diffDays === 1) return 3;   // Quá 1 ngày
+  if (diffDays === 2) return 1;   // Quá 2 ngày
+  return 0;                       // Quá 3+ ngày
 }
 
 function recalcStaffUpKPI(staffName) {
-  // Collect all done rows for this staff in active month
   const m = D.months[D.activeMonth];
   if (!m) return;
   const allRows = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
@@ -2326,52 +2333,60 @@ function recalcStaffUpKPI(staffName) {
   );
   if (!allRows.length) return;
 
-  const total = allRows.length;
-  const scores = allRows.map(r=>r.upScore||0);
+  const total    = allRows.length;
+  const scores   = allRows.map(r=>r.upScore||0);
   const avgScore = scores.reduce((a,b)=>a+b,0)/total;
-  const earlyCount = allRows.filter(r=>(r.upScore||0)>=9).length; // score 10=sớm
-  const lateCount  = allRows.filter(r=>(r.upScore||0)<=2).length; // score 0-2=muộn
-  const onTimeCount = allRows.filter(r=>(r.upScore||0)>=5).length;
 
-  const earlyPct = earlyCount/total;
-  const latePct  = lateCount/total;
-  const onTimePct = onTimeCount/total;
+  // SỚM: score 10 (trước ngày hoặc trước 17h)
+  const earlyCount  = allRows.filter(r=>(r.upScore||0) === 10).length;
+  // ĐÚNG GIỜ: score 8
+  const onDotCount  = allRows.filter(r=>(r.upScore||0) === 8).length;
+  // BÌNH THƯỜNG: score 5
+  const normalCount = allRows.filter(r=>(r.upScore||0) === 5).length;
+  // MUỘN: score < 5 (sau 19h hoặc quá ngày)
+  const lateCount   = allRows.filter(r=>(r.upScore||0) < 5).length;
+  // Đúng giờ hoặc sớm
+  const onTimeCount = earlyCount + onDotCount;
+
+  const earlyPct  = earlyCount  / total;
+  const latePct   = lateCount   / total;
+  const onTimePct = onTimeCount / total;
 
   // rate6 = Tốc độ (% up sớm)
   const rate6 = earlyPct>=0.8?10:earlyPct>=0.6?8:earlyPct>=0.4?6:earlyPct>=0.2?4:2;
-  // rate7 = Tỷ lệ lỗi (% muộn - nghịch chiều)
+  // rate7 = Tỷ lệ lỗi (% muộn — nghịch chiều)
   const rate7 = latePct<=0?10:latePct<=0.1?8:latePct<=0.25?6:latePct<=0.4?4:2;
   // rate8 = Đúng hạn (TB điểm)
-  const rate8 = Math.round(Math.min(10, avgScore * 10) / 10 * 10) / 10;
-  // rate10 = Tập trung (% đúng giờ + sớm)
+  const rate8 = Math.min(10, Math.round(avgScore*10)/10);
+  // rate10 = Tập trung (% sớm + đúng giờ)
   const rate10 = onTimePct>=0.95?10:onTimePct>=0.8?9:onTimePct>=0.65?7:onTimePct>=0.5?5:onTimePct>=0.3?3:1;
-  // rate11 = Trách nhiệm (tổng hàng được giao vs đã UP × điểm)
+  // rate11 = Trách nhiệm (đã UP / tổng được giao × điểm TB)
   const totalAssigned = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
     (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && (r.qty||0)>0))
   ).length;
-  const doneRatio = totalAssigned>0 ? total/totalAssigned : 1;
-  const rate11 = Math.min(10, Math.round(doneRatio * avgScore * 10)/10);
+  const doneRatio = totalAssigned>0 ? Math.min(1, total/totalAssigned) : 1;
+  const rate11 = Math.round(doneRatio * avgScore * 10) / 10;
 
-  // Apply to all rows of this staff in this month
-  // We store on staffProfiles for KPI display
+  // Lưu vào staffProfiles
   if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
   if (!D.settings.staffProfiles[staffName]) D.settings.staffProfiles[staffName] = {};
   if (!D.settings.staffProfiles[staffName].upKPI) D.settings.staffProfiles[staffName].upKPI = {};
   D.settings.staffProfiles[staffName].upKPI[D.activeMonth] = {
-    rate6, rate7, rate8: Math.round(rate8*10)/10, rate10, rate11: Math.round(rate11*10)/10,
-    total, earlyCount, lateCount, onTimeCount, avgScore: Math.round(avgScore*10)/10,
+    rate6, rate7, rate8, rate10, rate11,
+    total, earlyCount, onDotCount, normalCount, lateCount,
+    avgScore: Math.round(avgScore*10)/10,
     updatedAt: new Date().toISOString()
   };
 
-  // Also update rating fields directly on rows so KPI modal shows them
+  // Cập nhật rating fields trên tất cả row của nhân sự này
   [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>
     (p.groups||[]).forEach(g=>
       (g.rows||[]).filter(r=>r.staff===staffName).forEach(r=>{
         r.rate6  = rate6;
         r.rate7  = rate7;
-        r.rate8  = Math.round(rate8*10)/10;
+        r.rate8  = rate8;
         r.rate10 = rate10;
-        r.rate11 = Math.round(rate11*10)/10;
+        r.rate11 = rate11;
       })
     )
   );
@@ -2384,27 +2399,28 @@ function markRowDone(pjId, gId, rId) {
   if (!g) return;
   const r = (g.rows||[]).find(r=>r.id===rId);
   if (!r) return;
-  if (r.doneAt) return; // already done, no undo
+  if (r.doneAt) return; // không cho bấm lại
 
+  // Lấy local time VN — không dùng toISOString() vì đó là UTC
   const now = new Date();
-  const doneAt = now.toISOString().slice(0,19); // "2026-04-21T14:32:00"
+  const pad = n => String(n).padStart(2,'0');
+  const doneAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
   const score = calcUpScore(doneAt, r.dateTo);
   r.doneAt  = doneAt;
   r.upScore = score;
 
-  const label = score>=9?'🟢 UP SỚM':score>=8?'🔵 ĐÚNG GIỜ':score>=5?'🟡 BÌNH THƯỜNG':'🔴 MUỘN';
-  const timeStr = now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  const label = score===10?'🟢 SỚM':score===8?'🔵 ĐÚNG GIỜ':score===5?'🟡 BÌNH THƯỜNG':score>=1?'🔴 MUỘN':'🔴 QUÁ HẠN';
+  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-  // Recalculate KPI for this staff
   if (r.staff) recalcStaffUpKPI(r.staff);
 
   persistD();
-  // Re-render just this project's rows
   const tbody = document.getElementById('rbody-' + pjId);
   if (tbody) tbody.innerHTML = renderGroups(pj);
   refreshPjTotals(pjId);
 
-  toast(`✓ Đã UP — ${label} lúc ${timeStr}${score!==null?' | Điểm: '+score+'/10':''}`, 4000);
+  toast(`✓ Đã UP — ${label} lúc ${timeStr} | Điểm: ${score}/10`, 4000);
 }
 
 function updRowRating(pjId, gId, rId, field, val) {
