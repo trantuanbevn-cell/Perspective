@@ -1039,21 +1039,69 @@ function renderSidebar() {
     return;
   }
   const today = localDateStr(new Date());
-  list.innerHTML = pjs.map((p, i) => {
+  const tomorrow = localDateStr(new Date(Date.now() + 86400000));
+
+  // Lọc và sắp xếp: ẩn dự án đã hoàn thành từ hôm qua trở về trước
+  const visiblePjs = pjs.filter((p, i) => {
+    const allRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>r.dateTo);
+    if (!allRows.length) return true; // không có lịch → luôn hiện
+
+    // Hàng có dateTo <= hôm qua (đã qua ngày)
+    const pastRows = allRows.filter(r => r.dateTo < today);
+    if (!pastRows.length) return true; // chưa có hàng nào qua ngày → hiện
+
+    // Kiểm tra: tất cả hàng đã qua ngày đã UP hết chưa?
+    const allPastDone = pastRows.every(r => r.doneAt);
+    // Có hàng nào còn lịch hôm nay hoặc tương lai không?
+    const hasFutureRows = allRows.some(r => r.dateTo >= today);
+
+    // Ẩn khi: tất cả hàng qua ngày đã UP hết VÀ không có lịch tương lai
+    if (allPastDone && !hasFutureRows) return false;
+    return true;
+  });
+
+  list.innerHTML = visiblePjs.map((p, i) => {
     const thumb = (p.photos || []).find(Boolean);
     const tn = totalNew(p), tr = totalRev(p), ot = totalOT(p);
     const thumbHtml = thumb ? `<img src="${thumb}" alt="">` : `<div class="pj-thumb-ph">🏗</div>`;
 
-    // Find active staff working on this project TODAY
-    const activeRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>{
+    const allRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>r.dateTo);
+
+    // Hàng có dateTo = hôm nay
+    const todayRows = allRows.filter(r => r.dateTo === today);
+    // Hàng đang active (lịch kéo qua hôm nay)
+    const activeRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r => {
       if (!r.staff) return false;
       const from = r.dateFrom||r.dateTo, to = r.dateTo||r.dateFrom;
       return from && to && from <= today && to >= today;
     });
-    const activeStaff = [...new Set(activeRows.map(r=>r.staff))];
-    const isActive = activeStaff.length > 0;
 
-    // Staff avatar initials row
+    // Kiểm tra hoàn thành: tất cả hàng có dateTo <= hôm nay đã UP hết
+    const dueRows = allRows.filter(r => r.dateTo <= today);
+    const allDueUpped = dueRows.length > 0 && dueRows.every(r => r.doneAt);
+    // Có hàng nào hôm nay mà chưa UP không?
+    const hasPendingToday = todayRows.some(r => !r.doneAt);
+
+    const isFullyDone = allDueUpped && !hasPendingToday;
+    const isActive = activeRows.length > 0 && !isFullyDone;
+    const activeStaff = [...new Set(activeRows.map(r=>r.staff))];
+
+    // Badge trạng thái
+    let statusBadge = '';
+    if (isFullyDone) {
+      statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#1F3864;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#FFC000">✓ Hoàn thành</div>`;
+    } else if (isActive) {
+      statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#27ae60;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#fff">● Đang làm</div>`;
+    }
+
+    // Viền card
+    const cardBorder = isFullyDone
+      ? 'border-color:#1F3864;box-shadow:0 0 0 2px rgba(31,56,100,.2)'
+      : isActive
+      ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.25)'
+      : '';
+
+    // Staff avatars
     const staffAvatars = activeStaff.slice(0,4).map(s=>{
       const initials = s.replace(/[A-Z]{2,3}\s/,'').charAt(0).toUpperCase();
       const color = ['#70AD47','#4472C4','#ED7D31','#9B59B6'][activeStaff.indexOf(s)%4];
@@ -1061,11 +1109,11 @@ function renderSidebar() {
     }).join('');
 
     return `<div class="pj-card ${p.id === activePjId ? 'active' : ''}" onclick="selectPj('${p.id}')"
-      style="${isActive ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.25)' : ''}">
+      style="${cardBorder}">
       <div class="pj-thumb">
         ${thumbHtml}
         <div class="pj-thumb-num">${i + 1}</div>
-        ${isActive ? `<div style="position:absolute;top:5px;right:5px;background:#27ae60;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#fff">● Đang làm</div>` : ''}
+        ${statusBadge}
       </div>
       <div class="pj-card-body">
         <div class="pj-card-name">${x(p.nameVN || p.nameJP || '—')}</div>
@@ -1078,7 +1126,7 @@ function renderSidebar() {
             ${ot > 0 ? `<span class="chip" style="font-size:9px;padding:1px 5px;background:#fde8d8;color:#7f3500">⏱${ot.toFixed(0)}h</span>` : ''}
           </div>
         </div>
-        ${isActive ? `<div style="display:flex;gap:2px;margin-top:4px;align-items:center;flex-wrap:wrap">${staffAvatars}<span style="font-size:9px;color:var(--gray4);margin-left:2px">${activeStaff.length > 4 ? '+' + (activeStaff.length-4) + ' người' : ''}</span></div>` : ''}
+        ${isActive && staffAvatars ? `<div style="display:flex;gap:2px;margin-top:4px;align-items:center;flex-wrap:wrap">${staffAvatars}<span style="font-size:9px;color:var(--gray4);margin-left:2px">${activeStaff.length > 4 ? '+' + (activeStaff.length-4) + ' người' : ''}</span></div>` : ''}
       </div>
     </div>`;
   }).join('');
