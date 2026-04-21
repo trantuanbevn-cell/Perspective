@@ -4614,42 +4614,63 @@ function updateColorInputs() {
 ══════════════════════════════════════════════════════ */
 function openExportMenu() {
   const ml = monthLabel(D.activeMonth);
+  const pjsJP = D.months[D.activeMonth]?.projects    || [];
+  const pjsVN = D.months[D.activeMonth]?.projectsVN  || [];
+  const cntJP = pjsJP.filter(p=>totalNew(p)+totalRev(p)>0).length;
+  const cntVN = pjsVN.filter(p=>totalNew(p)+totalRev(p)>0).length;
+  const otJP  = pjsJP.reduce((s,p)=>(p.otLog||[]).reduce((ss,e)=>ss+(e.hours||0),0)+s,0);
+  const otVN  = pjsVN.reduce((s,p)=>(p.otLog||[]).reduce((ss,e)=>ss+(e.hours||0),0)+s,0);
+
+  function card(icon, title, sub, badge, color, bg, fn) {
+    return `<div style="border:1.5px solid #eee;border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:all .15s"
+      onclick="closeModal();${fn}"
+      onmouseover="this.style.borderColor='${color}';this.style.background='${bg}'"
+      onmouseout="this.style.borderColor='#eee';this.style.background=''">
+      <div style="font-size:30px;margin-bottom:8px">${icon}</div>
+      <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:4px">${title}</div>
+      <div style="font-size:10px;color:#999;line-height:1.6;margin-bottom:10px">${sub}</div>
+      <div style="background:${color};color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block">${badge}</div>
+    </div>`;
+  }
+
   showModal(`
-    <h3>📤 Xuất báo cáo — ${ml}</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
-      <div style="border:1px solid var(--gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
-        onclick="closeModal();exportProjectReport()"
-        onmouseover="this.style.borderColor='#1F3864';this.style.background='#EEF3FB'"
-        onmouseout="this.style.borderColor='var(--gray2)';this.style.background=''">
-        <div style="font-size:32px;margin-bottom:10px">📋</div>
-        <div style="font-weight:700;font-size:14px;color:#1F3864;margin-bottom:6px">Báo cáo Dự án</div>
-        <div style="font-size:11px;color:var(--gray4);line-height:1.6">Tên dự án · Hạng mục<br>Số lượng Mới / Sửa<br>Tổng từng dự án</div>
-        <div style="margin-top:12px;background:#1F3864;color:#FFC000;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">Xuất & In PDF</div>
-      </div>
-      <div style="border:1px solid var(--gray2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .15s"
-        onclick="closeModal();exportOTReport()"
-        onmouseover="this.style.borderColor='#ED7D31';this.style.background='#FFF5EE'"
-        onmouseout="this.style.borderColor='var(--gray2)';this.style.background=''">
-        <div style="font-size:32px;margin-bottom:10px">⏱</div>
-        <div style="font-weight:700;font-size:14px;color:#C55A11;margin-bottom:6px">Báo cáo OT</div>
-        <div style="font-size:11px;color:var(--gray4);line-height:1.6">Nhân sự có phát sinh OT<br>Chi tiết ngày giờ<br>Tổng OT tháng</div>
-        <div style="margin-top:12px;background:#ED7D31;color:#fff;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block">Xuất & In PDF</div>
-      </div>
+    <h3 style="margin-bottom:4px">📤 Xuất báo cáo — ${ml}</h3>
+    <div style="font-size:11px;color:#aaa;margin-bottom:14px">Chọn loại báo cáo và nguồn dữ liệu</div>
+
+    <div style="font-size:11px;font-weight:700;color:#1F3864;letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">📋 Báo cáo Dự án</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      ${card('🇯🇵','Dự án Nhật','Hạng mục · Mới / Sửa<br>Tổng từng dự án JP',`${cntJP} dự án`,'#1F3864','#EEF3FB',`exportProjectReport('jp')`)}
+      ${card('🇻🇳','Dự án Việt Nam','Hạng mục · Mới / Sửa<br>Tổng từng dự án VN',`${cntVN} dự án`,'#C8292A','#FFF0F0',`exportProjectReport('vn')`)}
     </div>
-    <div style="margin-top:14px;padding:10px 14px;background:var(--gray1);border-radius:6px;font-size:11px;color:var(--gray4)">
-      💡 Sau khi xem trước, bấm <strong>Ctrl+P</strong> → chọn <em>"Save as PDF"</em>
+
+    <div style="font-size:11px;font-weight:700;color:#C55A11;letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">⏱ Báo cáo OT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      ${card('🇯🇵','OT Dự án Nhật','Nhân sự · Ngày giờ OT<br>Tổng giờ tháng',`${otJP.toFixed(1)}h`,'#ED7D31','#FFF5EE',`exportOTReport('jp')`)}
+      ${card('🇻🇳','OT Dự án Việt Nam','Nhân sự · Ngày giờ OT<br>Tổng giờ tháng',`${otVN.toFixed(1)}h`,'#C55A11','#FFF5EE',`exportOTReport('vn')`)}
+    </div>
+
+    <div style="padding:9px 12px;background:#f7f7f7;border-radius:6px;font-size:11px;color:#999">
+      💡 Sau khi xem trước → <strong>Ctrl+P</strong> → chọn <em>"Save as PDF"</em>
     </div>
     <div class="modal-ft"><button class="btn" onclick="closeModal()">Đóng</button></div>
   `);
 }
 
-function exportProjectReport() {
-  const pjs = curProjects();
+function exportProjectReport(section) {
+  section = section || 'jp';
+  const isVN = section === 'vn';
+  const pjs = isVN
+    ? (D.months[D.activeMonth]?.projectsVN || [])
+    : (D.months[D.activeMonth]?.projects   || []);
   const m = curMonth();
   const ml = monthLabel(D.activeMonth);
   const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
   const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
+  const sectionLabel = isVN ? '🇻🇳 Dự án Việt Nam' : '🇯🇵 Dự án Nhật';
+  const headerColor  = isVN ? '#C8292A' : '#1F3864';
+  const newColor     = isVN ? '#1A7A3A' : '#375623';
+  const revColor     = isVN ? '#7F4000' : '#7F6000';
 
   const pjBlocks = pjs.map((p,i) => {
     const groups = p.groups||[];
@@ -4673,22 +4694,22 @@ function exportProjectReport() {
     }).join('');
 
     return `<div style="margin-bottom:18px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
-      <div style="background:#1F3864;color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+      <div style="background:${headerColor};color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
         <div>
           <span style="font-weight:700;font-size:13px">${i+1}. ${x(p.nameVN||p.nameJP||'—')}</span>
           ${p.nameJP&&p.nameVN?`<span style="font-size:10px;color:rgba(255,255,255,.6);margin-left:8px">${x(p.nameJP)}</span>`:''}
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <span style="background:#E2EFDA;color:#375623;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">新 ${tn}</span>
-          <span style="background:#FFF2CC;color:#7F6000;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">修 ${tr}</span>
-          <span style="background:#FFC000;color:#1F3864;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">計 ${tn+tr}</span>
+          <span style="background:#E2EFDA;color:${newColor};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">新 ${tn}</span>
+          <span style="background:#FFF2CC;color:${revColor};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">修 ${tr}</span>
+          <span style="background:#FFC000;color:${headerColor};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">計 ${tn+tr}</span>
         </div>
       </div>
       ${groupRows ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:#f5f5f5">
           <th style="padding:6px 10px;text-align:left;font-weight:600;color:#555">Hạng mục</th>
-          <th style="padding:6px 10px;text-align:center;font-weight:600;color:#375623">作成 Mới</th>
-          <th style="padding:6px 10px;text-align:center;font-weight:600;color:#7F6000">修正 Sửa</th>
+          <th style="padding:6px 10px;text-align:center;font-weight:600;color:${newColor}">作成 Mới</th>
+          <th style="padding:6px 10px;text-align:center;font-weight:600;color:${revColor}">修正 Sửa</th>
           <th style="padding:6px 10px;text-align:center;font-weight:600">Tổng</th>
         </tr></thead>
         <tbody>${groupRows}</tbody>
@@ -4697,17 +4718,17 @@ function exportProjectReport() {
   }).join('');
 
   const html = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;color:#1a1a1a;max-width:800px;margin:0 auto;padding:24px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #1F3864">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid ${headerColor}">
       <div>
         <div style="font-size:10px;color:#aaa;letter-spacing:.05em">Gengai Sougo Việt Nam / Design Studio</div>
-        <div style="font-size:22px;font-weight:700;color:#1F3864;margin-top:4px">Báo cáo Phối Cảnh — ${ml}</div>
+        <div style="font-size:22px;font-weight:700;color:${headerColor};margin-top:4px">Báo cáo ${sectionLabel} — ${ml}</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Ngày xuất: ${now}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:12px;color:#555">Tổng dự án: <strong>${pjs.filter(p=>totalNew(p)+totalRev(p)>0).length}</strong></div>
-        <div style="font-size:12px;color:#375623;margin-top:4px">作成 Làm mới: <strong>${sumNew}</strong></div>
-        <div style="font-size:12px;color:#7F6000">修正 Sửa lại: <strong>${sumRev}</strong></div>
-        <div style="font-size:14px;font-weight:800;color:#1F3864;margin-top:2px">Tổng: ${sumNew+sumRev} phối cảnh</div>
+        <div style="font-size:12px;color:${newColor};margin-top:4px">作成 Làm mới: <strong>${sumNew}</strong></div>
+        <div style="font-size:12px;color:${revColor}">修正 Sửa lại: <strong>${sumRev}</strong></div>
+        <div style="font-size:14px;font-weight:800;color:${headerColor};margin-top:2px">Tổng: ${sumNew+sumRev} phối cảnh</div>
       </div>
     </div>
     ${pjBlocks||'<p style="color:#bbb">Không có dữ liệu</p>'}
@@ -4717,13 +4738,19 @@ function exportProjectReport() {
     </div>
   </div>`;
 
-  showReportOverlay('📋 Báo cáo Dự án — ' + ml, html);
+  showReportOverlay('📋 Báo cáo ' + sectionLabel + ' — ' + ml, html);
 }
 
-function exportOTReport() {
-  const pjs = curProjects();
+function exportOTReport(section) {
+  section = section || 'jp';
+  const isVN = section === 'vn';
+  const pjs = isVN
+    ? (D.months[D.activeMonth]?.projectsVN || [])
+    : (D.months[D.activeMonth]?.projects   || []);
   const ml = monthLabel(D.activeMonth);
   const now = new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const sectionLabel = isVN ? '🇻🇳 Dự án Việt Nam' : '🇯🇵 Dự án Nhật';
+  const headerColor  = isVN ? '#C55A11' : '#ED7D31';
   const staffOT = {};
   D.settings.staffList.forEach(s=>staffOT[s]={total:0,entries:[]});
   pjs.forEach(p=>{
@@ -4741,7 +4768,7 @@ function exportOTReport() {
   const staffBlocks = activeStaff.map(s=>{
     const v = staffOT[s];
     return `<div style="margin-bottom:14px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
-      <div style="background:#ED7D31;color:#fff;padding:8px 12px;display:flex;justify-content:space-between">
+      <div style="background:${headerColor};color:#fff;padding:8px 12px;display:flex;justify-content:space-between">
         <span style="font-weight:700">${s}</span>
         <span style="font-weight:800">Tổng: ${v.total.toFixed(1)}h</span>
       </div>
@@ -4757,21 +4784,21 @@ function exportOTReport() {
   }).join('');
 
   const html = `<div style="font-family:'Be Vietnam Pro',sans-serif;font-size:13px;color:#1a1a1a;max-width:800px;margin:0 auto;padding:24px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #ED7D31">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid ${headerColor}">
       <div>
         <div style="font-size:10px;color:#aaa;letter-spacing:.05em">Gengai Sougo Việt Nam / Design Studio</div>
-        <div style="font-size:22px;font-weight:700;color:#ED7D31;margin-top:4px">Báo cáo OT — ${ml}</div>
+        <div style="font-size:22px;font-weight:700;color:${headerColor};margin-top:4px">Báo cáo OT ${sectionLabel} — ${ml}</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Ngày xuất: ${now}</div>
       </div>
       <div style="text-align:right">
         <div style="font-size:12px;color:#555">Nhân sự có OT: <strong>${activeStaff.length}</strong></div>
-        <div style="font-size:14px;font-weight:800;color:#ED7D31;margin-top:4px">Tổng: ${totalOT.toFixed(1)}h</div>
+        <div style="font-size:14px;font-weight:800;color:${headerColor};margin-top:4px">Tổng: ${totalOT.toFixed(1)}h</div>
       </div>
     </div>
     ${staffBlocks}
   </div>`;
 
-  showReportOverlay('⏱ Báo cáo OT — ' + ml, html);
+  showReportOverlay('⏱ Báo cáo OT ' + sectionLabel + ' — ' + ml, html);
 }
 
 function showReportOverlay(title, bodyHtml) {
