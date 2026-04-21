@@ -3764,6 +3764,31 @@ function syncBtnRelease(btn) {
 }
 
 /* ── Local backup: export data as JSON file ── */
+function exportToFile() {
+  try {
+    const dateKey = new Date().toISOString().slice(0,10);
+    localStorage.setItem('phoicanh_backup_' + dateKey, JSON.stringify(D));
+  } catch(e) {}
+  const exportBlob2 = new Blob([JSON.stringify(D, null, 2)], {type:'application/json'});
+  const url2 = URL.createObjectURL(exportBlob2);
+  const a2 = document.createElement('a');
+  a2.href = url2;
+  a2.download = 'phoicanh_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a2.click();
+  URL.revokeObjectURL(url2);
+  toast('✓ Đã tải backup về máy');
+}
+
+function importFromFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    importBackup(e.target);
+  };
+  input.click();
+}
+
 function exportBackup() {
   // Save timestamped backup to localStorage
   try {
