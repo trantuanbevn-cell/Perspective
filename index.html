@@ -2028,26 +2028,25 @@ function openRatingModal(pjId, gId, rowId, groupId, label, emoji) {
       </div>`
     : `<div style="padding:12px;text-align:center;color:#aaa;font-size:12px;background:#f9f9f9;border-radius:6px;flex-shrink:0">Chưa có ảnh phối cảnh</div>`;
 
-  // Rating inputs
+  // Rating slider rows
   const inputsHtml = grpFields.map(rf => {
     const v = row[rf.field] || 0;
-    const dc = ratingColor(v);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fafafa;border-radius:8px;border:1px solid #eee">
-      <span style="font-size:12px;color:${rf.color};min-width:150px;font-weight:500">${rf.label}</span>
-      <div style="flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden">
-        <div id="rbar-${rowId}-${rf.field}" style="height:100%;background:${dc};width:${v*10}%;transition:width .2s;border-radius:4px"></div>
+    const dc = v > 0 ? ratingColor(v) : '#ddd';
+    const pct = v * 10;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fafafa;border-radius:10px;border:1px solid #eee;margin-bottom:6px">
+      <span style="font-size:12px;color:#444;font-weight:600;min-width:160px;flex-shrink:0">${rf.label}</span>
+      <input type="range" min="0" max="10" step="1" value="${v}"
+        id="rslider-${rowId}-${rf.field}"
+        style="flex:1;height:6px;cursor:pointer;accent-color:${rf.color}"
+        oninput="ratingModalSlide(this,'${x(rowId)}','${x(groupId)}','${x(rf.field)}')">
+      <div id="rval-${rowId}-${rf.field}"
+        style="min-width:44px;height:44px;border-radius:50%;background:${dc};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;flex-shrink:0;transition:background .2s">
+        ${v || '–'}
       </div>
-      <input type="number" min="0" max="10" step="1" value="${v}"
-        id="rinput-${rowId}-${rf.field}"
-        class="rating-slider"
-        data-pj="${x(pjId)}" data-g="${x(gId)}" data-r="${x(rowId)}" data-f="${rf.field}"
-        style="width:48px;font-size:14px;text-align:center;border:1.5px solid #ddd;border-radius:6px;padding:4px;font-weight:700"
-        oninput="ratingModalInput(this,'${rowId}','${groupId}')">
-      <span id="rval-${rowId}-${rf.field}" style="font-size:16px;font-weight:800;color:${dc};min-width:28px;text-align:center">${v||'-'}</span>
     </div>`;
   }).join('');
 
-  // Get overall avg for this group
+  // Get overall avg
   function grpAvg(grpFields) {
     const vals = grpFields.map(rf=>row[rf.field]||0).filter(v=>v>0);
     return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
@@ -2055,78 +2054,87 @@ function openRatingModal(pjId, gId, rowId, groupId, label, emoji) {
   const avg = grpAvg(grpFields);
 
   const modalHtml = `
-  <div id="ratingModalOverlay" onclick="if(event.target===this)closeRatingModal()"
-    style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
-    <div style="background:#fff;border-radius:16px;width:min(680px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">
+  <div id="ratingModalOverlay" data-pj-id="${x(pjId)}" data-g-id="${x(gId)}" data-r-id="${x(rowId)}"
+    onclick="if(event.target===this)closeRatingModal()"
+    style="position:fixed;inset:0;background:rgba(10,15,40,.72);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
+    <div style="background:#fff;border-radius:18px;width:min(660px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.4);display:flex;flex-direction:column">
 
       <!-- Header -->
-      <div style="background:var(--navy);color:#fff;padding:14px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;flex-shrink:0">
-        <span style="font-size:20px">${emoji}</span>
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:700">${label}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.7)">${x(pj.nameJP||pj.nameVN||'—')} · ${x(g.type||'—')} · ${row.status==='new'?'Làm mới':'Sửa lại'}</div>
+      <div style="background:var(--navy);color:#fff;padding:16px 20px;border-radius:18px 18px 0 0;display:flex;align-items:center;gap:12px;flex-shrink:0;position:sticky;top:0;z-index:1">
+        <span style="font-size:22px">${emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:16px;font-weight:700">${label}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(pj.nameJP||pj.nameVN||'—')} · ${x(g.type||'—')} · ${row.status==='new'?'🟢 Làm mới':'🟡 Sửa lại'}</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:11px;color:rgba(255,255,255,.6)">Trung bình nhóm</div>
-          <div id="rmodal-avg-${rowId}-${groupId}" style="font-size:24px;font-weight:800;color:${ratingColor(avg)}">${avg>0?avg.toFixed(1):'-'}</div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.05em">TB NHÓM</div>
+          <div id="rmodal-avg-${rowId}-${groupId}" style="font-size:28px;font-weight:900;color:${ratingColor(avg)};line-height:1.1">${avg>0?avg.toFixed(1):'–'}</div>
         </div>
-        <button onclick="closeRatingModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;margin-left:8px">✕ Đóng</button>
+        <button onclick="closeRatingModal()"
+          style="background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
       </div>
 
       <!-- Photos -->
-      <div style="padding:12px 16px 0;flex-shrink:0">
-        <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">📸 Ảnh phối cảnh</div>
+      <div style="padding:14px 16px 8px;flex-shrink:0">
+        <div style="font-size:10px;color:#aaa;font-weight:700;letter-spacing:.08em;margin-bottom:8px">📸 ẢNH PHỐI CẢNH</div>
         ${photoHtml}
       </div>
 
-      <!-- Rating inputs -->
-      <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px">
-        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">📊 Đánh giá chi tiết (0–10)</div>
+      <!-- Divider -->
+      <div style="height:1px;background:#eee;margin:0 16px"></div>
+
+      <!-- Rating sliders -->
+      <div style="padding:14px 16px 20px">
+        <div style="font-size:10px;color:#aaa;font-weight:700;letter-spacing:.08em;margin-bottom:12px">📊 ĐÁNH GIÁ CHI TIẾT (0 – 10)</div>
         ${inputsHtml}
+        <div style="margin-top:14px;text-align:center">
+          <button onclick="closeRatingModal()"
+            style="background:var(--navy);color:#fff;border:none;border-radius:10px;padding:10px 36px;font-size:14px;font-weight:600;cursor:pointer">💾 Lưu & Đóng</button>
+        </div>
       </div>
 
     </div>
   </div>`;
 
-  // Remove existing modal if any
   const existing = document.getElementById('ratingModalOverlay');
   if (existing) existing.remove();
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-function ratingModalInput(el, rowId, groupId) {
-  let n = +el.value;
-  if (n < 0) n = 0; if (n > 10) n = 10;
-  el.value = n;
-  const field = el.dataset.f;
-  // Update bar
-  const bar = document.getElementById(`rbar-${rowId}-${field}`);
-  const valSpan = document.getElementById(`rval-${rowId}-${field}`);
-  const dc = ratingColor(n);
-  if (bar) { bar.style.width = (n*10)+'%'; bar.style.background = dc; }
-  if (valSpan) { valSpan.textContent = n||'-'; valSpan.style.color = dc; }
-  // Update group avg in modal header
-  const fields = getRatingFields().filter(rf=>rf.group===groupId);
-  const pjId = el.dataset.pj, gId = el.dataset.g, rId = el.dataset.r;
-  const pj = curProjects().find(p=>p.id===pjId)||allCurProjects().find(p=>p.id===pjId);
-  const g = pj && (pj.groups||[]).find(g=>g.id===gId);
-  const row = g && (g.rows||[]).find(r=>r.id===rId);
-  if (row) {
-    const vals = fields.map(rf=>{
-      const inp = document.getElementById(`rinput-${rowId}-${rf.field}`);
-      return inp ? (+inp.value||0) : (row[rf.field]||0);
-    }).filter(v=>v>0);
-    const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
-    const avgEl = document.getElementById(`rmodal-avg-${rowId}-${groupId}`);
-    if (avgEl) { avgEl.textContent = avg>0?avg.toFixed(1):'-'; avgEl.style.color = ratingColor(avg); }
-    // Update mini bar in table
-    const miniBar = document.querySelector(`.rg-bar-fill-${rowId}-${groupId}`);
-    const miniAvg = document.querySelector(`.rg-avg-${rowId}-${groupId}`);
-    if (miniBar) { miniBar.style.width=(avg*10)+'%'; miniBar.style.background=ratingColor(avg); }
-    if (miniAvg) { miniAvg.textContent=avg>0?avg.toFixed(1):'-'; miniAvg.style.color=ratingColor(avg); }
+function ratingModalSlide(el, rowId, groupId, field) {
+  const n = +el.value;
+  const dc = n > 0 ? ratingColor(n) : '#ddd';
+
+  // Update circle badge
+  const valEl = document.getElementById(`rval-${rowId}-${field}`);
+  if (valEl) { valEl.textContent = n || '–'; valEl.style.background = dc; }
+
+  // Save to data via overlay context
+  const overlay = document.getElementById('ratingModalOverlay');
+  if (overlay) {
+    const pjId = overlay.dataset.pjId;
+    const gId  = overlay.dataset.gId;
+    const rId  = overlay.dataset.rId;
+    if (pjId && gId && rId) updRowRating(pjId, gId, rId, field, n);
   }
-  // Save to data
-  ratingSliderInput(el);
+
+  // Recalculate group avg from all sliders in modal
+  const fields = getRatingFields().filter(rf=>rf.group===groupId);
+  const vals = fields.map(rf=>{
+    const sl = document.getElementById(`rslider-${rowId}-${rf.field}`);
+    return sl ? +sl.value : 0;
+  }).filter(v=>v>0);
+  const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+
+  // Update header avg
+  const avgEl = document.getElementById(`rmodal-avg-${rowId}-${groupId}`);
+  if (avgEl) { avgEl.textContent = avg>0?avg.toFixed(1):'–'; avgEl.style.color = ratingColor(avg); }
+
+  // Update mini bar in table
+  const miniBar = document.querySelector(`.rg-bar-fill-${rowId}-${groupId}`);
+  const miniAvg = document.querySelector(`.rg-avg-${rowId}-${groupId}`);
+  if (miniBar) { miniBar.style.width=(avg*10)+'%'; miniBar.style.background=ratingColor(avg); }
+  if (miniAvg) { miniAvg.textContent=avg>0?avg.toFixed(1):'-'; miniAvg.style.color=ratingColor(avg); }
 }
 
 function closeRatingModal() {
