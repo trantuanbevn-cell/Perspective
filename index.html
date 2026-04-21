@@ -1523,11 +1523,10 @@ function renderMonthGantt(pjs) {
         const isNew=r.status==='new';
         const isFirst=r.dateFrom===dkStr||dkStr===startStr, isLast=r.dateTo===dkStr;
 
-        // Màu thanh
-        const bc = isActuallyDone ? '#27ae60'          // xanh lá = đã UP
-          : isDoneByDate  ? '#95a5a6'                  // xám = quá ngày chưa UP
-          : isNew         ? '#5a9a35'                  // xanh = làm mới
-          :                 '#d4900a';                 // vàng = sửa lại
+        // Màu thanh: xám = đã xong (UP hoặc qua ngày), xanh = mới, vàng = sửa
+        const bc = (isActuallyDone || isDoneByDate) ? '#adb5bd'
+          : isNew  ? '#5a9a35'
+          :          '#d4900a';
 
         const isFirstAppearance = !shownLabels_done.has(r.id);
         if (isFirstAppearance) shownLabels_done.add(r.id);
@@ -1593,7 +1592,7 @@ function renderMonthGantt(pjs) {
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>Sửa lại</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;font-weight:800;color:#e74c3c">🔴</span><span style="color:#e74c3c;font-weight:700">Hôm nay UP</span></span>
     <span style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;color:#e67e22">⚡</span><span style="color:#e67e22;font-weight:700">Sắp UP</span></span>
-    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#27ae60;border-radius:2px;display:inline-block"></span><span style="color:#27ae60;font-weight:700">✓ Đã UP</span></span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#adb5bd;border-radius:2px;display:inline-block"></span><span style="color:#888;">Đã UP / Qua ngày</span></span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#8e44ad;border-radius:2px;display:inline-block"></span>✈ Công tác</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:rgba(231,76,60,.2);border:1px solid #e74c3c;border-radius:2px;display:inline-block"></span>Nghỉ phép</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="display:inline-block;font-size:9px">🔴</span>Ngày lễ</span>
@@ -1952,23 +1951,25 @@ const RATING_JP = [
 // Group B: Chất lượng kỹ thuật (weight 30%) — rate7..rate10
 // Group C: Thái độ & Cống hiến (weight 25%) — rate11..rate13
 const RATING_VN = [
-  // Group A: Giai đoạn thiết kế
-  {field:'rate0',  label:'Định hướng Concept',color:'#E74C3C', group:'A', weight:45},
-  {field:'rate1',  label:'Layout KT-NT',       color:'#E67E22', group:'A', weight:45},
-  {field:'rate2',  label:'Concept KT',         color:'#F1C40F', group:'A', weight:45},
-  {field:'rate3',  label:'Concept NT',         color:'#70AD47', group:'A', weight:45},
-  {field:'rate4',  label:'TKCS',               color:'#1ABC9C', group:'A', weight:45},
-  {field:'rate5',  label:'TKTC',               color:'#4fc3f7', group:'A', weight:45},
-  {field:'rate6',  label:'Spec vật liệu',      color:'#8E44AD', group:'A', weight:45},
-  // Group B: Kỹ thuật
-  {field:'rate7',  label:'Độ chính xác',       color:'#E74C3C', group:'B', weight:30},
-  {field:'rate8',  label:'Phối hợp CK',        color:'#E67E22', group:'B', weight:30},
-  {field:'rate9',  label:'Trình bày hồ sơ',    color:'#27AE60', group:'B', weight:30},
-  {field:'rate10', label:'Tỷ lệ lỗi/Revision', color:'#C0392B', group:'B', weight:30},
-  // Group C: Thái độ
-  {field:'rate11', label:'Tiến độ/Milestone',  color:'#81c784', group:'C', weight:25},
-  {field:'rate12', label:'Sáng kiến',          color:'#9B59B6', group:'C', weight:25},
-  {field:'rate13', label:'OT/Cam kết',         color:'#E67E22', group:'C', weight:25},
+  // Group A: Giai đoạn thiết kế (weight 45%) — rate0..rate6, nhập tay
+  {field:'rate0',  label:'Định hướng Concept', color:'#E74C3C', group:'A', weight:45},
+  {field:'rate1',  label:'Layout KT-NT',        color:'#E67E22', group:'A', weight:45},
+  {field:'rate2',  label:'Concept KT',          color:'#F1C40F', group:'A', weight:45},
+  {field:'rate3',  label:'Concept NT',          color:'#70AD47', group:'A', weight:45},
+  {field:'rate4',  label:'TKCS',                color:'#1ABC9C', group:'A', weight:45},
+  {field:'rate5',  label:'TKTC',                color:'#4fc3f7', group:'A', weight:45},
+  {field:'rate6',  label:'Spec vật liệu',       color:'#8E44AD', group:'A', weight:45},
+  // Group B: Kỹ thuật (weight 30%) — rate7..rate10, nhập tay
+  // rate10 (Tỷ lệ lỗi/Revision) liên kết với UP: UP muộn → tăng tỷ lệ lỗi → điểm thấp hơn
+  {field:'rate7',  label:'Độ chính xác',        color:'#E74C3C', group:'B', weight:30},
+  {field:'rate8',  label:'Phối hợp CK',         color:'#E67E22', group:'B', weight:30},
+  {field:'rate9',  label:'Trình bày hồ sơ',     color:'#27AE60', group:'B', weight:30},
+  {field:'rate10', label:'Tỷ lệ lỗi/Revision',  color:'#C0392B', group:'B', weight:30},
+  // Group C: Thái độ (weight 25%) — rate11..rate13, nhập tay
+  // rate11 (Tiến độ/Milestone) liên kết với UP: mốc thời gian UP ảnh hưởng trực tiếp tiêu chí này
+  {field:'rate11', label:'Tiến độ/Milestone',   color:'#81c784', group:'C', weight:25},
+  {field:'rate12', label:'Sáng kiến',            color:'#9B59B6', group:'C', weight:25},
+  {field:'rate13', label:'OT/Cam kết',           color:'#E67E22', group:'C', weight:25},
 ];
 function getRatingFields() {
   return activeSection === 'vn' ? RATING_VN : RATING_JP;
@@ -2025,30 +2026,33 @@ function calcKPI(rows, section, totalOTHours, totalQty, onTimeRate) {
     return Math.min(10, kpi);
     
   } else {
-    // Group A: Giai đoạn thiết kế (rate0-rate6) — weight 45%
+    // VN — Group A: Giai đoạn thiết kế rate0..rate6 (weight 45%)
     const grpA = ['rate0','rate1','rate2','rate3','rate4','rate5','rate6'];
-    const grpB = ['rate7','rate8','rate9','rate10']; // weight 30%
-    const grpC = ['rate11','rate12','rate13'];        // weight 25%
-    
+    // VN — Group B: Kỹ thuật rate7..rate10 (weight 30%)
+    const grpB = ['rate7','rate8','rate9','rate10'];
+    // VN — Group C: Thái độ rate11..rate13 (weight 25%)
+    const grpC = ['rate11','rate12','rate13'];
+
     const avgGroup = (fields_) => {
       const vals = fields_.map(f => fieldCounts[f] > 0 ? fieldSums[f]/fieldCounts[f] : null).filter(v=>v!==null);
       return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
     };
-    
+
     const A = avgGroup(grpA), B = avgGroup(grpB), C = avgGroup(grpC);
     const hasData = A > 0 || B > 0 || C > 0;
     if (!hasData) return null;
-    
+
     let kpi = (A * 0.45) + (B * 0.30) + (C * 0.25);
-    
-    // OT bonus: tiered by hours
+
+    // OT bonus
     if (totalOTHours > 30) kpi *= 1.20;
     else if (totalOTHours > 20) kpi *= 1.10;
     else if (totalOTHours > 10) kpi *= 1.05;
-    // Revision penalty: rate10 (Tỷ lệ lỗi) low
-    const errorScore = fieldCounts['rate10'] > 0 ? fieldSums['rate10']/fieldCounts['rate10'] : 10;
-    if (errorScore < 3) kpi *= 0.90;
-    
+    // Penalty: rate10 (Tỷ lệ lỗi/Revision) thấp → nhiều revision
+    // rate10 giờ liên kết với UP muộn nên phản ánh thực tế tốt hơn
+    const revScore = fieldCounts['rate10'] > 0 ? fieldSums['rate10']/fieldCounts['rate10'] : 10;
+    if (revScore < 3) kpi *= 0.90;
+
     return Math.min(10, kpi);
   }
 }
@@ -2362,68 +2366,83 @@ function calcUpScore(doneAt, dateTo) {
 function recalcStaffUpKPI(staffName) {
   const m = D.months[D.activeMonth];
   if (!m) return;
-  const allRows = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
+
+  // Thu thập tất cả row đã UP của nhân sự này, tách JP và VN
+  const jpRows = (m.projects||[]).flatMap(p=>
     (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && r.doneAt))
   );
+  const vnRows = (m.projectsVN||[]).flatMap(p=>
+    (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && r.doneAt))
+  );
+  const allRows = [...jpRows, ...vnRows];
   if (!allRows.length) return;
 
   const total    = allRows.length;
   const scores   = allRows.map(r=>r.upScore||0);
   const avgScore = scores.reduce((a,b)=>a+b,0)/total;
 
-  // SỚM: score 10 (trước ngày hoặc trước 17h)
   const earlyCount  = allRows.filter(r=>(r.upScore||0) === 10).length;
-  // ĐÚNG GIỜ: score 8
   const onDotCount  = allRows.filter(r=>(r.upScore||0) === 8).length;
-  // BÌNH THƯỜNG: score 5
   const normalCount = allRows.filter(r=>(r.upScore||0) === 5).length;
-  // MUỘN: score < 5 (sau 19h hoặc quá ngày)
   const lateCount   = allRows.filter(r=>(r.upScore||0) < 5).length;
-  // Đúng giờ hoặc sớm
   const onTimeCount = earlyCount + onDotCount;
 
   const earlyPct  = earlyCount  / total;
   const latePct   = lateCount   / total;
   const onTimePct = onTimeCount / total;
 
-  // rate6 = Tốc độ (% up sớm)
-  const rate6 = earlyPct>=0.8?10:earlyPct>=0.6?8:earlyPct>=0.4?6:earlyPct>=0.2?4:2;
-  // rate7 = Tỷ lệ lỗi (% muộn — nghịch chiều)
-  const rate7 = latePct<=0?10:latePct<=0.1?8:latePct<=0.25?6:latePct<=0.4?4:2;
-  // rate8 = Đúng hạn (TB điểm)
-  const rate8 = Math.min(10, Math.round(avgScore*10)/10);
-  // rate10 = Tập trung (% sớm + đúng giờ)
-  const rate10 = onTimePct>=0.95?10:onTimePct>=0.8?9:onTimePct>=0.65?7:onTimePct>=0.5?5:onTimePct>=0.3?3:1;
-  // rate11 = Trách nhiệm (đã UP / tổng được giao × điểm TB)
-  const totalAssigned = [...(m.projects||[]),...(m.projectsVN||[])].flatMap(p=>
+  // Điểm tốc độ (% sớm)
+  const speedScore  = earlyPct>=0.8?10:earlyPct>=0.6?8:earlyPct>=0.4?6:earlyPct>=0.2?4:2;
+  // Điểm đúng hạn TB
+  const avgUpScore  = Math.min(10, Math.round(avgScore*10)/10);
+  // Điểm tập trung (% sớm+đúng giờ)
+  const focusScore  = onTimePct>=0.95?10:onTimePct>=0.8?9:onTimePct>=0.65?7:onTimePct>=0.5?5:onTimePct>=0.3?3:1;
+  // Tỷ lệ lỗi/muộn nghịch chiều
+  const lateScore   = latePct<=0?10:latePct<=0.1?8:latePct<=0.25?6:latePct<=0.4?4:2;
+  // Trách nhiệm (UP÷Giao × TB điểm)
+  const totalAssignedJP = (m.projects||[]).flatMap(p=>
     (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && (r.qty||0)>0))
   ).length;
-  const doneRatio = totalAssigned>0 ? Math.min(1, total/totalAssigned) : 1;
-  const rate11 = Math.round(doneRatio * avgScore * 10) / 10;
+  const totalAssignedVN = (m.projectsVN||[]).flatMap(p=>
+    (p.groups||[]).flatMap(g=>(g.rows||[]).filter(r=>r.staff===staffName && (r.qty||0)>0))
+  ).length;
+  const totalAssigned = totalAssignedJP + totalAssignedVN;
+  const doneRatio   = totalAssigned>0 ? Math.min(1, total/totalAssigned) : 1;
+  const respScore   = Math.round(doneRatio * avgScore * 10) / 10;
 
-  // Lưu vào staffProfiles
+  // Lưu vào staffProfiles (dùng chung cho báo cáo)
   if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
   if (!D.settings.staffProfiles[staffName]) D.settings.staffProfiles[staffName] = {};
   if (!D.settings.staffProfiles[staffName].upKPI) D.settings.staffProfiles[staffName].upKPI = {};
   D.settings.staffProfiles[staffName].upKPI[D.activeMonth] = {
-    rate6, rate7, rate8, rate10, rate11,
+    speedScore, lateScore, avgUpScore, focusScore, respScore,
     total, earlyCount, onDotCount, normalCount, lateCount,
     avgScore: Math.round(avgScore*10)/10,
     updatedAt: new Date().toISOString()
   };
 
-  // Cập nhật rating fields trên tất cả row của nhân sự này
-  [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>
-    (p.groups||[]).forEach(g=>
-      (g.rows||[]).filter(r=>r.staff===staffName).forEach(r=>{
-        r.rate6  = rate6;
-        r.rate7  = rate7;
-        r.rate8  = rate8;
-        r.rate10 = rate10;
-        r.rate11 = rate11;
-      })
-    )
+  // ── Áp vào JP rows: rate6=Tốc độ, rate7=Tỷ lệ lỗi, rate8=TB điểm, rate10=Tập trung, rate11=Trách nhiệm ──
+  const jpAssigned = (m.projects||[]).flatMap(p=>
+    (p.groups||[]).flatMap(g=>g.rows||[])
   );
+  jpAssigned.filter(r=>r.staff===staffName).forEach(r=>{
+    r.rate6  = speedScore;
+    r.rate7  = lateScore;
+    r.rate8  = avgUpScore;
+    r.rate10 = focusScore;
+    r.rate11 = respScore;
+  });
+
+  // ── Áp vào VN rows: giữ nguyên tiêu chí VN, chỉ liên kết 2 field phù hợp nhất ──
+  // rate10 = Tỷ lệ lỗi/Revision → UP muộn nhiều → revision nhiều → điểm thấp hơn (dùng lateScore nghịch)
+  // rate11 = Tiến độ/Milestone  → UP đúng/sớm → milestone tốt → dùng avgUpScore
+  const vnAssigned = (m.projectsVN||[]).flatMap(p=>
+    (p.groups||[]).flatMap(g=>g.rows||[])
+  );
+  vnAssigned.filter(r=>r.staff===staffName).forEach(r=>{
+    r.rate10 = lateScore;   // Tỷ lệ lỗi/Revision: UP muộn → revision tăng → điểm thấp
+    r.rate11 = avgUpScore;  // Tiến độ/Milestone: điểm TB mốc thời gian UP
+  });
 }
 
 function markRowDone(pjId, gId, rId) {
@@ -3905,67 +3924,145 @@ function renderSettings() {
       </div>
 
       <!-- UP Completion scoring formula -->
-      <div style="margin-top:14px;padding:12px 14px;background:#1a2a1a;border-radius:8px;color:#fff">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#7CFC00">⏱ Công thức tính điểm Hoàn thành (UP)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px">
+      <div style="margin-top:14px;padding:14px 16px;background:#16213e;border-radius:10px;color:#fff;border:1px solid #0f3460">
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:#e2b714;letter-spacing:.04em">⏱ Công thức tính điểm Hoàn thành (UP)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:11px">
+
           <div>
-            <div style="color:#FFD966;font-weight:600;margin-bottom:6px">Mốc thời gian UP → Điểm cơ bản</div>
-            <div style="background:rgba(255,255,255,.08);padding:8px 10px;border-radius:6px;font-family:monospace;font-size:11px;line-height:2">
-              <span style="color:#7CFC00">Trước 17h ngày deadline</span> → 10 (SỚM)<br>
-              <span style="color:#4FC3F7">17h – 18h ngày deadline</span> → &nbsp;8 (ĐÚNG GIỜ)<br>
-              <span style="color:#FFD54F">18h – 19h ngày deadline</span> → &nbsp;5 (BÌNH THƯỜNG)<br>
-              <span style="color:#EF9A9A">Sau 19h / quá ngày+1</span>&nbsp;&nbsp;&nbsp;→ &nbsp;3<br>
-              <span style="color:#EF9A9A">Quá hạn + 2 ngày</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ &nbsp;1<br>
-              <span style="color:#EF9A9A">Quá hạn + 3 ngày trở lên</span> → &nbsp;0
+            <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px;font-size:11px">Mốc thời gian → Điểm UP</div>
+            <div style="background:rgba(255,255,255,.06);padding:10px 12px;border-radius:6px;font-family:monospace;font-size:11px;line-height:2.1">
+              <span style="color:#7CFC00">Trước ngày deadline</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → <b>10</b> 🟢 SỚM<br>
+              <span style="color:#7CFC00">Đúng ngày, trước 17:00</span>&nbsp;&nbsp;&nbsp;&nbsp; → <b>10</b> 🟢 SỚM<br>
+              <span style="color:#4FC3F7">Đúng ngày, 17:00–18:00</span>&nbsp;&nbsp;&nbsp; → &nbsp;<b>8</b> 🔵 ĐÚNG GIỜ<br>
+              <span style="color:#FFD54F">Đúng ngày, 18:00–19:00</span>&nbsp;&nbsp;&nbsp; → &nbsp;<b>5</b> 🟡 BÌNH THƯỜNG<br>
+              <span style="color:#EF9A9A">Đúng ngày, sau 19:00</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → &nbsp;<b>2</b> 🔴 MUỘN<br>
+              <span style="color:#EF9A9A">Quá hạn 1 ngày</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → &nbsp;<b>3</b> 🔴<br>
+              <span style="color:#EF9A9A">Quá hạn 2 ngày</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → &nbsp;<b>1</b> 🔴<br>
+              <span style="color:#EF9A9A">Quá hạn 3+ ngày</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → &nbsp;<b>0</b> 🔴
             </div>
           </div>
-          <div>
-            <div style="color:#FFD966;font-weight:600;margin-bottom:6px">5 Tiêu chí KPI tự động (rate6–11)</div>
-            <div style="background:rgba(255,255,255,.08);padding:8px 10px;border-radius:6px;font-size:10px;line-height:1.9">
-              <span style="color:#7CFC00">rate6 Tốc độ</span> = % lần UP sớm<br>
-              &nbsp;&nbsp;≥80%→10, ≥60%→8, ≥40%→6, ≥20%→4, else→2<br>
-              <span style="color:#4FC3F7">rate7 Tỷ lệ lỗi</span> = % lần UP muộn (nghịch chiều)<br>
-              &nbsp;&nbsp;0%→10, ≤10%→8, ≤25%→6, ≤40%→4, else→2<br>
-              <span style="color:#FFD54F">rate8 Đúng hạn</span> = TB điểm tất cả lần UP<br>
-              <span style="color:#CE93D8">rate10 Tập trung</span> = % lần UP đúng giờ + sớm<br>
-              &nbsp;&nbsp;≥95%→10, ≥80%→9, ≥65%→7, ≥50%→5, else→3<br>
-              <span style="color:#FFAB91">rate11 Trách nhiệm</span> = (UP÷Giao) × TB điểm
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px;font-size:11px">🇯🇵 JP — 5 tiêu chí tự động từ UP</div>
+              <div style="background:rgba(255,255,255,.06);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.95">
+                <span style="color:#7CFC00">rate6 Tốc độ</span> = % lần UP sớm (score=10)<br>
+                &nbsp;&nbsp;≥80%→10 · ≥60%→8 · ≥40%→6 · ≥20%→4 · &lt;20%→2<br>
+                <span style="color:#F48FB1">rate7 Tỷ lệ lỗi</span> = % lần UP muộn <i>(nghịch chiều)</i><br>
+                &nbsp;&nbsp;0%→10 · ≤10%→8 · ≤25%→6 · ≤40%→4 · &gt;40%→2<br>
+                <span style="color:#FFD54F">rate8 Đúng hạn</span> = TB điểm tất cả lần UP<br>
+                <span style="color:#CE93D8">rate10 Tập trung</span> = % lần UP sớm + đúng giờ<br>
+                &nbsp;&nbsp;≥95%→10 · ≥80%→9 · ≥65%→7 · ≥50%→5 · &lt;30%→3<br>
+                <span style="color:#FFAB91">rate11 Trách nhiệm</span> = (Số UP ÷ Số được giao) × TB điểm
+              </div>
+            </div>
+            <div>
+              <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px;font-size:11px">🇻🇳 VN — 2 tiêu chí liên kết với UP</div>
+              <div style="background:rgba(255,255,255,.06);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.95">
+                Tiêu chí VN giữ nguyên, UP liên kết vào 2 field phù hợp:<br>
+                <span style="color:#F48FB1">rate10 Tỷ lệ lỗi/Revision</span> ← điểm muộn nghịch chiều<br>
+                &nbsp;&nbsp;UP muộn nhiều → revision tăng → điểm thấp<br>
+                <span style="color:#FFAB91">rate11 Tiến độ/Milestone</span> ← TB điểm mốc thời gian UP<br>
+                &nbsp;&nbsp;UP đúng/sớm → milestone đạt → điểm cao<br>
+                <span style="color:#aaa;font-size:9px">rate0–9, rate12–13 VN: nhập tay như thường</span>
+              </div>
             </div>
           </div>
+
         </div>
-        <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.5);line-height:1.6">
-          * 5 tiêu chí trên tự động cập nhật mỗi khi Admin bấm "✓ UP" — không cần nhập thủ công.<br>
-          * Admin vẫn có thể chỉnh rate0–rate5, rate9, rate12–rate13 trong modal đánh giá chi tiết.<br>
-          * Khi sang tháng mới, lịch sử UP reset — tính lại từ đầu cho tháng mới.
+        <div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.05);border-radius:6px;font-size:10px;color:rgba(255,255,255,.5);line-height:1.7">
+          ✦ Tự động cập nhật ngay khi Admin bấm "✓ UP" · Không thể hủy sau khi bấm<br>
+          ✦ Các tiêu chí còn lại vẫn nhập tay trong modal Kỹ thuật / Năng lực / Thái độ<br>
+          ✦ Sang tháng mới: lịch sử UP reset, tính lại từ đầu
         </div>
       </div>
 
       <!-- Rolling KPI formula -->
-      <div style="margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#1F3864 0%,#2E4A7A 100%);border-radius:8px;color:#fff">
-        <div style="font-weight:700;font-size:13px;margin-bottom:8px">📊 Công thức Rolling KPI (Đề xuất tối ưu)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px">
+      <div style="margin-top:14px;padding:14px 16px;background:#0f3460;border-radius:10px;color:#fff;border:1px solid #16213e">
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:#e2b714;letter-spacing:.04em">📊 Công thức tính KPI tháng & Rolling KPI</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:11px">
+
           <div>
-            <div style="color:#FFD966;font-weight:600;margin-bottom:4px">Phương án Rolling (Ưu tiên)</div>
-            <div style="background:rgba(255,255,255,.1);padding:8px;border-radius:4px;font-family:monospace;font-size:11px;line-height:1.8">
-              Rolling KPI =<br>
-              &nbsp;&nbsp;TB 3 tháng gần nhất × 50%<br>
-              &nbsp;&nbsp;+ TB 12 tháng × 35%<br>
-              &nbsp;&nbsp;+ Tháng cao nhất × 15%<br>
-              <br>
-              Bonus đa năng JP+VN: × 1.15<br>
-              Cả 2 KPI ≥ 7.0: × 1.25
+            <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px">🇯🇵 KPI JP tháng</div>
+            <div style="background:rgba(255,255,255,.08);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.9;font-family:monospace">
+              KPI = A×40% + B×30% + C×30%<br><br>
+              <span style="color:#E74C3C">A Kỹ thuật (40%)</span><br>
+              rate0 Dựng hình 3D<br>
+              rate1 Ánh sáng & Vật liệu<br>
+              rate2 Bố cục/Camera<br>
+              rate3 Post-processing<br>
+              rate4 Phong cách nhất quán<br>
+              rate5 Chất lượng output<br><br>
+              <span style="color:#27AE60">B Năng lực (30%)</span><br>
+              rate6 Tốc độ <i style="color:#7CFC00">← auto UP</i><br>
+              rate7 Tỷ lệ lỗi <i style="color:#7CFC00">← auto UP</i><br>
+              rate8 Đúng hạn <i style="color:#7CFC00">← auto UP</i><br>
+              rate9 Xử lý feedback<br><br>
+              <span style="color:#F1C40F">C Thái độ (30%)</span><br>
+              rate10 Tập trung <i style="color:#7CFC00">← auto UP</i><br>
+              rate11 Trách nhiệm <i style="color:#7CFC00">← auto UP</i><br>
+              rate12 Hỗ trợ nhóm<br>
+              rate13 OT/Cống hiến
             </div>
           </div>
+
           <div>
-            <div style="color:#FFD966;font-weight:600;margin-bottom:4px">Thang xếp hạng KPI</div>
-            <div style="background:rgba(255,255,255,.1);padding:8px;border-radius:4px;font-size:11px;line-height:1.9">
-              ⭐⭐⭐⭐⭐ ≥ 9.0 — Exceptional<br>
-              ⭐⭐⭐⭐ &nbsp;&nbsp;8.0–8.9 — Xuất sắc<br>
-              ⭐⭐⭐ &nbsp;&nbsp;&nbsp;&nbsp;7.0–7.9 — Tốt<br>
-              ⭐⭐ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6.0–6.9 — Khá<br>
-              ⭐ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt; 6.0 &nbsp;&nbsp;— Cần cải thiện
+            <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px">🇻🇳 KPI VN tháng</div>
+            <div style="background:rgba(255,255,255,.08);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.9;font-family:monospace">
+              KPI = A×45% + B×30% + C×25%<br><br>
+              <span style="color:#E74C3C">A Quy trình TK (45%)</span><br>
+              rate0 Định hướng Concept<br>
+              rate1 Layout KT-NT<br>
+              rate2 Concept KT<br>
+              rate3 Concept NT<br>
+              rate4 TKCS<br>
+              rate5 TKTC<br>
+              rate6 Spec vật liệu<br><br>
+              <span style="color:#27AE60">B Kỹ thuật (30%)</span><br>
+              rate7 Độ chính xác<br>
+              rate8 Phối hợp CK<br>
+              rate9 Trình bày hồ sơ<br>
+              rate10 Tỷ lệ lỗi <i style="color:#7CFC00">← auto UP</i><br><br>
+              <span style="color:#F1C40F">C Thái độ (25%)</span><br>
+              rate11 Tiến độ <i style="color:#7CFC00">← auto UP</i><br>
+              rate12 Sáng kiến<br>
+              rate13 OT/Cam kết
             </div>
           </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px">Bonus / Penalty</div>
+              <div style="background:rgba(255,255,255,.08);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.9;font-family:monospace">
+                OT &gt; 10h → ×1.05<br>
+                OT &gt; 20h → ×1.10<br>
+                OT &gt; 30h → ×1.20<br>
+                JP lỗi &lt;3/10 → ×0.85<br>
+                VN revision &lt;3/10 → ×0.90
+              </div>
+            </div>
+            <div>
+              <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px">Rolling KPI</div>
+              <div style="background:rgba(255,255,255,.08);padding:10px 12px;border-radius:6px;font-size:10px;line-height:1.9;font-family:monospace">
+                TB 3 tháng × 50%<br>
+                + TB 12 tháng × 35%<br>
+                + Tháng cao nhất × 15%<br><br>
+                Bonus đa năng JP+VN → ×1.15<br>
+                Cả 2 KPI ≥ 7.0 → ×1.25
+              </div>
+            </div>
+            <div>
+              <div style="color:#a8d8ea;font-weight:600;margin-bottom:6px">Xếp hạng</div>
+              <div style="background:rgba(255,255,255,.08);padding:10px 12px;border-radius:6px;font-size:10px;line-height:2">
+                ⭐×5 ≥9.0 — Exceptional<br>
+                ⭐×4 8.0–8.9 — Xuất sắc<br>
+                ⭐×3 7.0–7.9 — Tốt<br>
+                ⭐×2 6.0–6.9 — Khá<br>
+                ⭐×1 &lt;6.0 — Cần cải thiện
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
