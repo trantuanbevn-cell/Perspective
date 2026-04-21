@@ -717,7 +717,37 @@ function persistD() {
     });
   }
   const json = JSON.stringify(D);
-  try { localStorage.setItem(SK, json); } catch(e) {}
+  // Check storage level after every save (throttled 30s)
+  const now30 = Date.now();
+  if (!persistD._lastCheck || now30 - persistD._lastCheck > 30000) {
+    persistD._lastCheck = now30;
+    setTimeout(checkStorageAndWarn, 500);
+  }
+
+  try {
+    localStorage.setItem(SK, json);
+  } catch(e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      // Storage full — warn user and suggest cleanup
+      const kb = Math.round(json.length * 0.75 / 1024);
+      console.warn('localStorage full:', kb + 'KB');
+      // Try saving without photos to preserve data structure
+      try {
+        const noPhoto = JSON.parse(json);
+        let freed = 0;
+        Object.values(noPhoto.months||{}).forEach(m=>{
+          [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>{
+            if (p.photos?.length) { freed += p.photos.join('').length; p.photos = []; }
+          });
+        });
+        localStorage.setItem(SK, JSON.stringify(noPhoto));
+        const freedKB = Math.round(freed * 0.75 / 1024);
+        toast(`⚠ Bộ nhớ đầy! Đã tạm xóa ảnh (${freedKB}KB) để lưu dữ liệu. Vào Cài đặt → Dọn dẹp ảnh để quản lý.`, 6000);
+      } catch(e2) {
+        toast('🚨 Bộ nhớ đầy hoàn toàn! Vào Cài đặt → Dọn dẹp ảnh ngay.', 8000);
+      }
+    }
+  }
   try { sessionStorage.setItem(SK+'_backup', json); } catch(e) {}
   // Local auto-backup (silent)
   try {
@@ -1755,8 +1785,8 @@ function uploadPhoto(pjId, slot, input) {
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // Auto compress: max 900px wide/tall, JPEG quality 0.72 → ~40-60KB/ảnh
-      const MAX = 900;
+      // Auto compress: max 480px, JPEG quality 0.50 → ~10-15KB/ảnh (tối ưu cho 12 tháng)
+      const MAX = 480;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -1765,7 +1795,7 @@ function uploadPhoto(pjId, slot, input) {
       const cv = document.createElement('canvas');
       cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
-      const compressed = cv.toDataURL('image/jpeg', 0.72);
+      const compressed = cv.toDataURL('image/jpeg', 0.50);
       const kb = Math.round(compressed.length * 0.75 / 1024);
       const p = getPj(pjId); if (!p) return;
       if (!p.photos) p.photos = [];
@@ -4465,7 +4495,7 @@ function renderStorageMeter() {
     Object.values(D.months).forEach(m => { [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { photoCount += (p.photos||[]).filter(Boolean).length; }); });
     bar.innerHTML = `
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray4);margin-bottom:3px">
-        <span>💾 ${(kb/1024).toFixed(1)}MB / 5MB</span>
+        <span style="color:${kb>4096?'#e74c3c':kb>3072?'#f39c12':'#27ae60'}">💾 ${(kb/1024).toFixed(1)}MB / 5MB (${Math.round(kb/5120*100)}%)</span>
         <span style="color:${color};font-weight:600">${pct}%</span>
       </div>
       <div style="height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
@@ -4478,23 +4508,125 @@ function renderStorageMeter() {
 }
 
 function openClearPhotosModal() {
-  let totalPhotos = 0, months = [];
+  let totalPhotos = 0, totalKB = 0, months = [];
   Object.entries(D.months).forEach(([mid, m]) => {
-    let cnt = 0;
-    [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => { cnt += (p.photos||[]).filter(Boolean).length; });
-    if (cnt > 0) { months.push({mid, label: monthLabel(mid), cnt}); totalPhotos += cnt; }
+    let cnt = 0, kb = 0;
+    [...(m.projects||[]),...(m.projectsVN||[])].forEach(p => {
+      (p.photos||[]).filter(Boolean).forEach(ph => {
+        cnt++; kb += Math.round(ph.length * 0.75 / 1024);
+      });
+    });
+    if (cnt > 0) { months.push({mid, label: monthLabel(mid), cnt, kb}); totalPhotos += cnt; totalKB += kb; }
   });
+
+  const usedKB  = Math.round(JSON.stringify(D).length * 0.75 / 1024);
+  const usedPct = Math.min(100, Math.round(usedKB / 5120 * 100));
+  const barColor = usedPct > 80 ? '#e74c3c' : usedPct > 60 ? '#f39c12' : '#27ae60';
+
   showModal(`
     <h3>🗑 Dọn dẹp ảnh — giải phóng dung lượng</h3>
-    <div style="margin-bottom:14px;font-size:12px;color:var(--gray4)">Tổng <strong>${totalPhotos} ảnh</strong> đang lưu. Chọn tháng muốn xóa ảnh:</div>
-    ${months.map(({mid, label, cnt}) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--gray2);border-radius:var(--r);margin-bottom:6px">
-        <span style="font-weight:600">${label} — ${cnt} ảnh</span>
+    <div style="background:#f7f7f7;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+        <span>Dung lượng đã dùng</span>
+        <span style="font-weight:700;color:${barColor}">${(usedKB/1024).toFixed(1)}MB / 5MB (${usedPct}%)</span>
+      </div>
+      <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${usedPct}%;background:${barColor};border-radius:4px;transition:width .3s"></div>
+      </div>
+      <div style="font-size:11px;color:#999;margin-top:6px">📸 Ảnh chiếm: <strong>${(totalKB/1024).toFixed(1)}MB</strong> (${totalPhotos} ảnh)</div>
+    </div>
+    ${months.length ? months.map(({mid, label, cnt, kb}) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid #eee;border-radius:8px;margin-bottom:6px">
+        <div>
+          <span style="font-weight:600">${label}</span>
+          <span style="font-size:11px;color:#999;margin-left:8px">${cnt} ảnh · ${(kb/1024).toFixed(1)}MB</span>
+        </div>
         <button class="btn btn-sm btn-danger" onclick="clearMonthPhotos('${mid}')">Xóa ảnh</button>
-      </div>`).join('')}
+      </div>`).join('')
+    : '<div style="color:#bbb;text-align:center;padding:12px;font-size:12px">Không có ảnh nào</div>'}
     <div class="modal-ft">
       <button class="btn" onclick="closeModal()">Đóng</button>
-      <button class="btn btn-danger" onclick="clearAllPhotos()">Xóa tất cả ảnh</button>
+      ${totalPhotos > 0 ? `<button class="btn btn-danger" onclick="clearAllPhotos()">🗑 Xóa tất cả ảnh</button>` : ''}
+    </div>
+  `);
+}
+
+// Auto-xóa ảnh tháng cũ — giữ lại 2 tháng gần nhất
+function autoCleanOldPhotos() {
+  const sorted = Object.keys(D.months).sort().reverse(); // mới → cũ
+  const keep = sorted.slice(0, 2); // giữ 2 tháng gần nhất
+  const old = sorted.slice(2);
+  if (!old.length) return 0;
+  let freed = 0;
+  old.forEach(mid => {
+    [...(D.months[mid]?.projects||[]),...(D.months[mid]?.projectsVN||[])].forEach(p => {
+      (p.photos||[]).filter(Boolean).forEach(ph => { freed += ph.length; });
+      p.photos = [];
+    });
+  });
+  const freedKB = Math.round(freed * 0.75 / 1024);
+  if (freedKB > 0) {
+    persistD();
+    toast(`✓ Đã tự động xóa ảnh ${old.length} tháng cũ, giải phóng ~${freedKB}KB`, 4000);
+  }
+  return freedKB;
+}
+
+// Kiểm tra dung lượng và cảnh báo
+function checkStorageAndWarn() {
+  try {
+    const json = JSON.stringify(D);
+    const usedKB = Math.round(json.length * 0.75 / 1024);
+    const pct = usedKB / 5120 * 100;
+    
+    if (pct >= 90) {
+      // Nguy hiểm: tự động dọn ảnh cũ
+      const freed = autoCleanOldPhotos();
+      if (freed === 0) {
+        // Vẫn đầy → cảnh báo mạnh
+        showStorageAlert(usedKB, pct, 'danger');
+      }
+    } else if (pct >= 75) {
+      // Cảnh báo vàng
+      showStorageAlert(usedKB, pct, 'warn');
+    } else if (pct >= 60) {
+      // Nhắc nhở nhẹ
+      toast(`💾 Dung lượng: ${(usedKB/1024).toFixed(1)}MB / 5MB (${Math.round(pct)}%) — Nên xóa ảnh tháng cũ`, 4000);
+    }
+    return pct;
+  } catch(e) { return 0; }
+}
+
+function showStorageAlert(usedKB, pct, level) {
+  const isDanger = level === 'danger';
+  const color = isDanger ? '#C0392B' : '#E67E22';
+  const icon  = isDanger ? '🚨' : '⚠️';
+  showModal(`
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:40px;margin-bottom:10px">${icon}</div>
+      <div style="font-size:16px;font-weight:700;color:${color};margin-bottom:8px">
+        ${isDanger ? 'Bộ nhớ gần đầy!' : 'Cảnh báo dung lượng'}
+      </div>
+      <div style="font-size:13px;color:#555;margin-bottom:14px">
+        Đã dùng <strong style="color:${color}">${(usedKB/1024).toFixed(1)}MB / 5MB (${Math.round(pct)}%)</strong>
+      </div>
+      <div style="height:12px;background:#eee;border-radius:6px;overflow:hidden;margin-bottom:16px">
+        <div style="height:100%;width:${Math.min(100,pct)}%;background:${color};border-radius:6px"></div>
+      </div>
+      <div style="font-size:12px;color:#777;line-height:1.7;margin-bottom:16px;text-align:left;background:#f9f9f9;padding:10px;border-radius:6px">
+        📸 Ảnh tháng cũ là nguyên nhân chính chiếm dung lượng.<br>
+        Hệ thống chỉ cần giữ ảnh <strong>2 tháng gần nhất</strong>.<br>
+        Data dự án & nhân sự sẽ được giữ nguyên 12 tháng.
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Để sau</button>
+      <button class="btn btn-gold" onclick="closeModal();autoCleanOldPhotos()">
+        🗑 Tự động xóa ảnh tháng cũ
+      </button>
+      <button class="btn" style="background:#f0f0f0" onclick="closeModal();openClearPhotosModal()">
+        Chọn thủ công
+      </button>
     </div>
   `);
 }
