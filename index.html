@@ -1089,14 +1089,14 @@ function renderSidebar() {
     // Badge trạng thái
     let statusBadge = '';
     if (isFullyDone) {
-      statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#1F3864;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#FFC000">✓ Hoàn thành</div>`;
+      statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#fff;border:1px solid #FFC000;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#FFC000">✓ Hoàn thành</div>`;
     } else if (isActive) {
       statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#27ae60;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#fff">● Đang làm</div>`;
     }
 
     // Viền card
     const cardBorder = isFullyDone
-      ? 'border-color:#1F3864;box-shadow:0 0 0 2px rgba(31,56,100,.2)'
+      ? 'border-color:#FFC000;box-shadow:0 0 0 2px rgba(255,192,0,.25)'
       : isActive
       ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.25)'
       : '';
