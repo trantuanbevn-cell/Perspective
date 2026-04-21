@@ -1980,43 +1980,158 @@ function renderRatingGroups(pjId, gId, row) {
     const vals = grpFields.map(rf=>row[rf.field]||0).filter(v=>v>0);
     return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
   }
+
   function grpCell(grpFields, label, emoji, groupId) {
     const avg = grpAvg(grpFields);
     const dc = avg > 0 ? ratingColor(avg) : '#ccc';
     const pct = avg * 10;
-    // Individual inputs hidden by default, shown on expand
-    const inputs = grpFields.map(rf => {
-      const v = row[rf.field] || 0;
-      const dc2 = ratingColor(v);
-      return `<div style="display:flex;align-items:center;gap:3px;padding:1px 0">
-        <span style="font-size:8px;color:${rf.color};min-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${rf.label}">${rf.label}</span>
-        <input type="number" min="0" max="10" step="1" value="${v}"
-          class="rating-slider"
-          data-pj="${x(pjId)}" data-g="${x(gId)}" data-r="${x(row.id)}" data-f="${rf.field}"
-          style="width:28px;font-size:9px;text-align:center;border:1px solid #ddd;border-radius:3px;padding:1px 2px;background:#fafafa;-moz-appearance:textfield"
-          oninput="ratingSliderInput(this);this.closest('td').querySelector('.rg-avg').textContent=calcGrpAvg(this.closest('.rg-detail'));this.closest('td').querySelector('.rg-bar-fill').style.width=(calcGrpAvg(this.closest('.rg-detail'))*10)+'%'">
-        <span style="font-size:10px;font-weight:700;color:${dc2}">${v||'-'}</span>
-      </div>`;
-    }).join('');
-
     return `<td style="padding:2px 4px;min-width:70px;vertical-align:middle">
       <div style="display:flex;flex-direction:column;gap:2px">
-        <div style="display:flex;align-items:center;gap:3px">
+        <div style="display:flex;align-items:center;gap:3px;cursor:pointer"
+             onclick="openRatingModal('${x(pjId)}','${x(gId)}','${x(row.id)}','${groupId}','${label}','${emoji}')"
+             title="Click để mở rộng ${label}">
           <span style="font-size:8px;color:var(--gray4)">${emoji}</span>
           <div style="flex:1;height:4px;background:#eee;border-radius:2px;overflow:hidden">
-            <div class="rg-bar-fill" style="height:100%;background:${dc};width:${pct}%;transition:width .2s"></div>
+            <div class="rg-bar-fill-${x(row.id)}-${groupId}" style="height:100%;background:${dc};width:${pct}%;transition:width .2s"></div>
           </div>
-          <span class="rg-avg" style="font-size:11px;font-weight:700;color:${dc};min-width:16px;text-align:right">${avg>0?avg.toFixed(1):'-'}</span>
-          <button onclick="this.closest('td').querySelector('.rg-detail').style.display=this.closest('td').querySelector('.rg-detail').style.display==='none'?'block':'none';this.textContent=this.textContent==='▼'?'▲':'▼'"
-            style="font-size:8px;border:none;background:none;cursor:pointer;color:#aaa;padding:0 2px;line-height:1">▼</button>
+          <span class="rg-avg-${x(row.id)}-${groupId}" style="font-size:11px;font-weight:700;color:${dc};min-width:16px;text-align:right">${avg>0?avg.toFixed(1):'-'}</span>
+          <span style="font-size:8px;color:#bbb">▼</span>
         </div>
-        <div class="rg-detail" style="display:none;background:#f9f9f9;border:1px solid #eee;border-radius:3px;padding:3px 4px">${inputs}</div>
       </div>
     </td>`;
   }
+
   return grpCell(grpA, 'Kỹ thuật', '📐', 'A')
        + grpCell(grpB, 'Năng lực', '⚡', 'B')
        + grpCell(grpC, 'Thái độ',  '💼', 'C');
+}
+
+function openRatingModal(pjId, gId, rowId, groupId, label, emoji) {
+  // Find project, group, row
+  const pj = curProjects().find(p=>p.id===pjId) || allCurProjects().find(p=>p.id===pjId);
+  if (!pj) return;
+  const g = (pj.groups||[]).find(g=>g.id===gId);
+  if (!g) return;
+  const row = (g.rows||[]).find(r=>r.id===rowId);
+  if (!row) return;
+
+  const fields = getRatingFields();
+  const grpFields = fields.filter(rf=>rf.group===groupId);
+
+  // Get project photos
+  const photos = pj.photos || [];
+  const photoHtml = photos.length
+    ? `<div style="display:flex;gap:8px;overflow-x:auto;padding:8px 0;flex-shrink:0">
+        ${photos.map(ph=>`<img src="${ph.url||ph}" alt="phối cảnh"
+          style="height:120px;width:auto;border-radius:6px;object-fit:cover;flex-shrink:0;cursor:pointer;border:2px solid transparent;transition:border .15s"
+          onclick="this.parentElement.querySelectorAll('img').forEach(i=>i.style.borderColor='transparent');this.style.borderColor='#4472C4'">`).join('')}
+      </div>`
+    : `<div style="padding:12px;text-align:center;color:#aaa;font-size:12px;background:#f9f9f9;border-radius:6px;flex-shrink:0">Chưa có ảnh phối cảnh</div>`;
+
+  // Rating inputs
+  const inputsHtml = grpFields.map(rf => {
+    const v = row[rf.field] || 0;
+    const dc = ratingColor(v);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fafafa;border-radius:8px;border:1px solid #eee">
+      <span style="font-size:12px;color:${rf.color};min-width:150px;font-weight:500">${rf.label}</span>
+      <div style="flex:1;height:8px;background:#eee;border-radius:4px;overflow:hidden">
+        <div id="rbar-${rowId}-${rf.field}" style="height:100%;background:${dc};width:${v*10}%;transition:width .2s;border-radius:4px"></div>
+      </div>
+      <input type="number" min="0" max="10" step="1" value="${v}"
+        id="rinput-${rowId}-${rf.field}"
+        class="rating-slider"
+        data-pj="${x(pjId)}" data-g="${x(gId)}" data-r="${x(rowId)}" data-f="${rf.field}"
+        style="width:48px;font-size:14px;text-align:center;border:1.5px solid #ddd;border-radius:6px;padding:4px;font-weight:700"
+        oninput="ratingModalInput(this,'${rowId}','${groupId}')">
+      <span id="rval-${rowId}-${rf.field}" style="font-size:16px;font-weight:800;color:${dc};min-width:28px;text-align:center">${v||'-'}</span>
+    </div>`;
+  }).join('');
+
+  // Get overall avg for this group
+  function grpAvg(grpFields) {
+    const vals = grpFields.map(rf=>row[rf.field]||0).filter(v=>v>0);
+    return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+  }
+  const avg = grpAvg(grpFields);
+
+  const modalHtml = `
+  <div id="ratingModalOverlay" onclick="if(event.target===this)closeRatingModal()"
+    style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
+    <div style="background:#fff;border-radius:16px;width:min(680px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">
+
+      <!-- Header -->
+      <div style="background:var(--navy);color:#fff;padding:14px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <span style="font-size:20px">${emoji}</span>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700">${label}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7)">${x(pj.nameJP||pj.nameVN||'—')} · ${x(g.type||'—')} · ${row.status==='new'?'Làm mới':'Sửa lại'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:rgba(255,255,255,.6)">Trung bình nhóm</div>
+          <div id="rmodal-avg-${rowId}-${groupId}" style="font-size:24px;font-weight:800;color:${ratingColor(avg)}">${avg>0?avg.toFixed(1):'-'}</div>
+        </div>
+        <button onclick="closeRatingModal()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;margin-left:8px">✕ Đóng</button>
+      </div>
+
+      <!-- Photos -->
+      <div style="padding:12px 16px 0;flex-shrink:0">
+        <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">📸 Ảnh phối cảnh</div>
+        ${photoHtml}
+      </div>
+
+      <!-- Rating inputs -->
+      <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">📊 Đánh giá chi tiết (0–10)</div>
+        ${inputsHtml}
+      </div>
+
+    </div>
+  </div>`;
+
+  // Remove existing modal if any
+  const existing = document.getElementById('ratingModalOverlay');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function ratingModalInput(el, rowId, groupId) {
+  let n = +el.value;
+  if (n < 0) n = 0; if (n > 10) n = 10;
+  el.value = n;
+  const field = el.dataset.f;
+  // Update bar
+  const bar = document.getElementById(`rbar-${rowId}-${field}`);
+  const valSpan = document.getElementById(`rval-${rowId}-${field}`);
+  const dc = ratingColor(n);
+  if (bar) { bar.style.width = (n*10)+'%'; bar.style.background = dc; }
+  if (valSpan) { valSpan.textContent = n||'-'; valSpan.style.color = dc; }
+  // Update group avg in modal header
+  const fields = getRatingFields().filter(rf=>rf.group===groupId);
+  const pjId = el.dataset.pj, gId = el.dataset.g, rId = el.dataset.r;
+  const pj = curProjects().find(p=>p.id===pjId)||allCurProjects().find(p=>p.id===pjId);
+  const g = pj && (pj.groups||[]).find(g=>g.id===gId);
+  const row = g && (g.rows||[]).find(r=>r.id===rId);
+  if (row) {
+    const vals = fields.map(rf=>{
+      const inp = document.getElementById(`rinput-${rowId}-${rf.field}`);
+      return inp ? (+inp.value||0) : (row[rf.field]||0);
+    }).filter(v=>v>0);
+    const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    const avgEl = document.getElementById(`rmodal-avg-${rowId}-${groupId}`);
+    if (avgEl) { avgEl.textContent = avg>0?avg.toFixed(1):'-'; avgEl.style.color = ratingColor(avg); }
+    // Update mini bar in table
+    const miniBar = document.querySelector(`.rg-bar-fill-${rowId}-${groupId}`);
+    const miniAvg = document.querySelector(`.rg-avg-${rowId}-${groupId}`);
+    if (miniBar) { miniBar.style.width=(avg*10)+'%'; miniBar.style.background=ratingColor(avg); }
+    if (miniAvg) { miniAvg.textContent=avg>0?avg.toFixed(1):'-'; miniAvg.style.color=ratingColor(avg); }
+  }
+  // Save to data
+  ratingSliderInput(el);
+}
+
+function closeRatingModal() {
+  const el = document.getElementById('ratingModalOverlay');
+  if (el) el.remove();
 }
 
 function calcGrpAvg(detailEl) {
