@@ -689,8 +689,7 @@ let D = (() => {
   try { localStorage.setItem('sync_gist_id', '14552f194329838b78b30f38dbbd2b5a'); } catch(e) {}
   try { localStorage.setItem('sync_edit_pw', '123456'); } catch(e) {}
   // Note: sync_gh_token is set by admin via setup panel (not stored in code for security)
-  try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
-  try { sessionStorage.setItem(SK+'_backup', JSON.stringify(D)); } catch(e) {}
+  // KHÔNG ghi đè SK — dữ liệu app được load riêng
 })();
 
 
@@ -1247,17 +1246,49 @@ function localDateStr(d) {
   return y + '-' + m + '-' + day;
 }
 
+function getHolidays() {
+  if (D.settings.holidays) return D.settings.holidays;
+  const y = new Date().getFullYear();
+  return [
+    {date:`${y}-01-01`,name:'Tết Dương lịch'},
+    {date:`${y}-02-16`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-17`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-18`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-19`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-20`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-21`,name:'Tết Nguyên Đán'},
+    {date:`${y}-02-22`,name:'Tết Nguyên Đán'},
+    {date:`${y}-04-06`,name:'Giỗ Tổ Hùng Vương'},
+    {date:`${y}-04-30`,name:'Giải phóng miền Nam'},
+    {date:`${y}-05-01`,name:'Quốc tế Lao động'},
+    {date:`${y}-09-02`,name:'Quốc khánh'},
+  ];
+}
+
 function renderMonthGantt(pjs) {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayStr = localDateStr(today);
   const days = [];
-  for(let i=0;i<21;i++){
+  // 7 ngày trước + hôm nay + 13 ngày sau = 21 ngày
+  for(let i=-7;i<14;i++){
     const d=new Date(today); d.setDate(today.getDate()+i); days.push(d);
   }
-  const endStr = localDateStr(days[20]);
+  const startStr = localDateStr(days[0]);
+  const endStr   = localDateStr(days[days.length-1]);
   function dk(d){ return localDateStr(d); }
 
-  // Collect ALL tasks across ALL projects in this month (with project index)
+  const holidays = getHolidays();
+  const holidayMap = {};
+  holidays.forEach(h=>{ holidayMap[h.date]=h.name; });
+
+  function getTrips(staff) {
+    return ((D.settings.staffProfiles||{})[staff]||{}).trips || [];
+  }
+
+  const soon3 = new Date(today); soon3.setDate(today.getDate()+3);
+  const soon3Str = localDateStr(soon3);
+
+  // Collect ALL tasks
   const allTasks = pjs.flatMap((p, pIdx) =>
     (p.groups||[]).flatMap(g =>
       (g.rows||[])
@@ -1266,7 +1297,7 @@ function renderMonthGantt(pjs) {
           ...r,
           pjName:    p.nameVN||p.nameJP||'—',
           groupName: g.type||'—',
-          pjNum:     pIdx + 1   // 1-based project number
+          pjNum:     pIdx + 1
         }))
     )
   );
@@ -1274,7 +1305,7 @@ function renderMonthGantt(pjs) {
   function overlaps(r) {
     const from=r.dateFrom||r.dateTo||'', to=r.dateTo||r.dateFrom||'';
     if(!from&&!to) return false;
-    return (!to||to>=todayStr) && (!from||from<=endStr);
+    return from<=endStr && to>=startStr;
   }
 
   // Per-staff task map
@@ -1299,12 +1330,16 @@ function renderMonthGantt(pjs) {
   });
   const hdrMonths = monthSpans.map(m=>`<th colspan="${m.span}" style="background:var(--navy2);color:var(--gold2);font-size:10px;text-align:center;padding:3px;border-right:1px solid rgba(255,255,255,.15)">${m.label}</th>`).join('');
 
-  // ── Day header ──
+  // Day header
   const hdrDays = days.map((d,i)=>{
-    const isToday=dk(d)===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
+    const dStr=dk(d), isToday=dStr===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
+    const isHoliday=!!holidayMap[dStr], isPast=dStr<todayStr;
     const isWeekBorder=d.getDay()===1&&i>0;
-    return `<th style="min-width:26px;max-width:34px;text-align:center;font-size:9px;padding:2px 1px;background:${isToday?'var(--gold)':'var(--navy)'};color:${isToday?'var(--navy)':isSun||isSat?'rgba(255,255,255,.35)':'rgba(255,255,255,.8)'};font-weight:${isToday?'800':'400'};border-left:${isWeekBorder?'2px solid rgba(255,255,255,.3)':'none'}">
-      <div>${dayVN[d.getDay()]}</div><div style="font-size:10px;font-weight:${isToday?800:600}">${d.getDate()}</div>
+    const bg=isToday?'var(--gold)':isHoliday?'#c0392b':isPast?'#2c3e50':'var(--navy)';
+    const col=isToday?'var(--navy)':isSun||isSat||isHoliday?'rgba(255,255,255,.45)':isPast?'rgba(255,255,255,.5)':'rgba(255,255,255,.85)';
+    const ttl=isHoliday?` title="${holidayMap[dStr]}"`:isToday?' title="Hôm nay"':'';
+    return `<th${ttl} style="min-width:26px;max-width:34px;text-align:center;font-size:9px;padding:2px 1px;background:${bg};color:${col};font-weight:${isToday?'800':'400'};border-left:${isWeekBorder?'2px solid rgba(255,255,255,.3)':'none'};opacity:${isPast&&!isToday?0.75:1}">
+      <div>${isHoliday?'🔴':dayVN[d.getDay()]}</div><div style="font-size:10px;font-weight:${isToday?800:600}">${d.getDate()}</div>
     </th>`;
   }).join('');
 
@@ -1313,56 +1348,75 @@ function renderMonthGantt(pjs) {
     const tasks = staffMap[staff]||[];
     const isBusy = tasks.length>0;
 
-    // Left summary
     const activeLeaveList = getStaffLeaves(staff).filter(l=>{
       const lt=l.to||l.from; return lt>=todayStr;
     });
-    const leaveParts = activeLeaveList.map(l=>'<div style="font-size:9px;color:#e74c3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🏖 '+(l.from||'?')+(l.to&&l.to!==l.from?'→'+l.to:'')+'</div>').join('');
+    const leaveParts = activeLeaveList.map(l=>`<div style="font-size:9px;color:#e74c3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🏖 ${l.from||'?'}${l.to&&l.to!==l.from?'→'+l.to:''}</div>`).join('');
+
+    // Trips
+    const trips = getTrips(staff);
+    const upcomingTrips = trips.filter(t=>(t.to||t.from)>=todayStr);
+    const tripParts = upcomingTrips.map(t=>`<div style="font-size:9px;color:#8e44ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✈ ${t.from||'?'}${t.to&&t.to!==t.from?'→'+t.to:''} ${t.note||''}</div>`).join('');
 
     const taskParts = tasks.map(r=>{
-      const overdue=r.dateTo&&r.dateTo<todayStr;
-      const numColor = r.status==='new' ? '#27ae60' : '#b8860b'; // dark gold for rev, readable on white
-      return '<div style="font-size:9px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">'
-        +'<span style="font-size:8px;font-weight:800;color:'+numColor+';flex-shrink:0;min-width:14px">[' + (r.pjNum||'?') + ']</span>'
-        +'<span style="overflow:hidden;text-overflow:ellipsis;color:'+(overdue?'#e74c3c':'inherit')+'">'+(r.groupName.length>10?r.groupName.substring(0,10)+'…':r.groupName)+'</span>'
-        +'</div>';
+      const isDone = r.dateTo && r.dateTo < todayStr;
+      const isUrgent = r.dateTo && r.dateTo >= todayStr && r.dateTo <= soon3Str;
+      const numColor = r.status==='new' ? '#27ae60' : '#b8860b';
+      const badge = isDone
+        ? '<span style="font-size:7px;background:#7f8c8d;color:#fff;border-radius:2px;padding:0 2px;margin-left:2px">✓ Đã UP</span>'
+        : isUrgent
+        ? '<span style="font-size:7px;background:#e74c3c;color:#fff;border-radius:2px;padding:0 2px;margin-left:2px">⚡Sắp UP</span>'
+        : '';
+      return `<div style="font-size:9px;display:flex;align-items:center;gap:2px;white-space:nowrap;overflow:hidden">
+        <span style="font-size:8px;font-weight:800;color:${numColor};flex-shrink:0">[${r.pjNum||'?'}]</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;color:${isDone?'#7f8c8d':isUrgent?'#e74c3c':'inherit'}">${r.groupName.length>8?r.groupName.substring(0,8)+'…':r.groupName}</span>
+        ${badge}
+      </div>`;
     }).join('');
 
-    const summary = leaveParts+taskParts || '<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>';
-    const nameBg  = isBusy ? 'var(--gray1)' : '#e8fdf0';
+    const summary = leaveParts+tripParts+taskParts || '<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>';
+    const nameBg  = tasks.length>0||trips.length>0 ? 'var(--gray1)' : '#e8fdf0';
 
     // Day cells — track which tasks have shown label (first visible cell)
     const shownLabels_done = new Set();
     const dayCells = days.map((d,i)=>{
       const dkStr=dk(d), isToday=dkStr===todayStr, isSun=d.getDay()===0, isSat=d.getDay()===6;
+      const isPast=dkStr<todayStr, isHoliday=!!holidayMap[dkStr];
       const isWeekBorder=d.getDay()===1&&i>0;
       const isOnLeave = getStaffLeaves(staff).some(l=>{
         const lf=l.from||l.to, lt=l.to||l.from;
         return lf&&lt&&lf<=dkStr&&lt>=dkStr;
       });
+      const isOnTrip = trips.some(t=>{
+        const tf=t.from||t.to, tt=t.to||t.from;
+        return tf&&tt&&tf<=dkStr&&tt>=dkStr;
+      });
       const activeTasks = tasks.filter(r=>{
         const from=r.dateFrom||r.dateTo, to=r.dateTo||r.dateFrom;
         return from&&to&&from<=dkStr&&to>=dkStr;
       });
-      const bg = isOnLeave?'rgba(231,76,60,.07)':isToday?'rgba(255,192,0,.07)':isSun||isSat?'rgba(0,0,0,.025)':'#fff';
-      const borderL = isWeekBorder?'2px solid rgba(0,0,0,.08)':'1px solid #f0f0f0';
-      if(!activeTasks.length){
-        return `<td style="background:${bg};border-left:${borderL};padding:1px"></td>`;
+      const bg = isOnLeave?'rgba(231,76,60,.1)':isHoliday?'rgba(192,57,43,.07)':isOnTrip&&!activeTasks.length?'rgba(142,68,173,.07)':isToday?'rgba(255,192,0,.1)':isPast?'rgba(0,0,0,.02)':isSun||isSat?'rgba(0,0,0,.025)':'#fff';
+      const borderL = isWeekBorder?'2px solid rgba(0,0,0,.1)':'1px solid #f0f0f0';
+      const tripBar = isOnTrip&&!activeTasks.length?`<div title="Công tác${trips.find(t=>(t.from||t.to)<=dkStr&&(t.to||t.from)>=dkStr)?.note?': '+trips.find(t=>(t.from||t.to)<=dkStr&&(t.to||t.from)>=dkStr).note:''}" style="background:#8e44ad;height:10px;margin:1px 0;border-radius:2px;font-size:7px;color:#fff;line-height:10px;padding:0 2px;overflow:hidden;text-align:center">✈</div>`:'';
+      if(!activeTasks.length&&!tripBar){
+        return `<td style="background:${bg};border-left:${borderL};padding:1px">${isHoliday?'<div style="font-size:8px;text-align:center;color:#c0392b;opacity:.4;line-height:18px">休</div>':''}</td>`;
       }
       const blocks = activeTasks.map(r=>{
-        const isNew=r.status==='new', isFirst=r.dateFrom===dkStr, isLast=r.dateTo===dkStr;
-        const bc=isNew?'#5a9a35':'#d4900a';
-        const tc='#fff';
-        // Show label on the FIRST cell this task appears in the window
+        const isDone   = r.dateTo && r.dateTo < todayStr;
+        const isUrgent = r.dateTo && r.dateTo >= todayStr && r.dateTo <= soon3Str;
+        const isNew=r.status==='new';
+        const isFirst=r.dateFrom===dkStr||dkStr===startStr, isLast=r.dateTo===dkStr;
+        const bc = isDone ? '#7f8c8d' : isUrgent ? '#e74c3c' : isNew ? '#5a9a35' : '#d4900a';
         const isFirstAppearance = !shownLabels_done.has(r.id);
         if (isFirstAppearance) shownLabels_done.add(r.id);
-        const label = isFirstAppearance ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,6) : '';
-        return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
-          style="background:${bc};height:12px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};overflow:hidden;font-size:8px;color:${tc};white-space:nowrap;padding:0 3px;line-height:12px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3)">
+        const label = isDone ? '✓ UP' : isFirstAppearance ? '[' + (r.pjNum||'?') + '] ' + (r.groupName||'').substring(0,5) : '';
+        const status = isDone ? '✓ Đã UP' : isUrgent ? '⚡ Sắp UP ('+r.dateTo+')' : isNew ? 'Làm mới' : 'Sửa lại';
+        return `<div title="[${r.pjNum||'?'}] ${x(r.groupName)} — ${x(r.pjName)}\n${status} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
+          style="background:${bc};height:12px;margin:1px 0;border-radius:${isFirst?'3px 0 0 3px':isLast?'0 3px 3px 0':'0'};overflow:hidden;font-size:7px;color:#fff;white-space:nowrap;padding:0 3px;line-height:12px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3);opacity:${isDone?0.65:1}">
           ${label}
         </div>`;
       }).join('');
-      return `<td style="background:${bg};border-left:${borderL};padding:1px;vertical-align:top">${blocks}</td>`;
+      return `<td style="background:${bg};border-left:${borderL};padding:1px;vertical-align:top">${tripBar}${blocks}</td>`;
     }).join('');
 
     return `<tr style="border-bottom:1px solid var(--gray2)">
@@ -1391,13 +1445,16 @@ function renderMonthGantt(pjs) {
     <tbody>${staffRows}</tbody>
   </table>
   </div>
-  <div style="padding:7px 12px;display:flex;gap:14px;font-size:10px;color:var(--gray4);background:var(--gray1);border-top:1px solid var(--gray2);flex-wrap:wrap">
+  <div style="padding:7px 12px;display:flex;gap:10px;font-size:10px;color:var(--gray4);background:var(--gray1);border-top:1px solid var(--gray2);flex-wrap:wrap">
     <span>Chú thích:</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:#70AD47;border-radius:2px;display:inline-block"></span>Làm mới</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:var(--gold);border-radius:2px;display:inline-block"></span>Sửa lại</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:rgba(231,76,60,.2);border:1px solid #e74c3c;border-radius:2px;display:inline-block"></span>Nghỉ phép</span>
-    <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:7px;background:rgba(255,192,0,.2);border:1px solid var(--gold);border-radius:2px;display:inline-block"></span>Hôm nay</span>
-    <span style="margin-left:auto;font-style:italic">Hover chuột vào ô màu để xem chi tiết</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border-radius:2px;display:inline-block"></span>Làm mới</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>Sửa lại</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#7f8c8d;border-radius:2px;display:inline-block"></span>✓ Đã UP</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#e74c3c;border-radius:2px;display:inline-block"></span>⚡ Sắp UP (≤3 ngày)</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#8e44ad;border-radius:2px;display:inline-block"></span>✈ Công tác</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:rgba(231,76,60,.2);border:1px solid #e74c3c;border-radius:2px;display:inline-block"></span>Nghỉ phép</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="display:inline-block;font-size:9px">🔴</span>Ngày lễ</span>
+    <span style="margin-left:auto;font-style:italic">Hover để xem chi tiết</span>
   </div>`;
 }
 
@@ -2918,6 +2975,67 @@ function openAddLeave(staffName) {
   `);
 }
 
+function addTrip(name) {
+  if (!D.settings.staffProfiles) D.settings.staffProfiles = {};
+  if (!D.settings.staffProfiles[name]) D.settings.staffProfiles[name] = {role:'',salaryGross:0,salaryNet:0,leaves:[],order:99,contractEnd:''};
+  const prof = D.settings.staffProfiles[name];
+  if (!prof.trips) prof.trips = [];
+  const from = prompt('Ngày bắt đầu công tác (YYYY-MM-DD):'); if(!from) return;
+  const to = prompt('Ngày kết thúc (YYYY-MM-DD):',from); if(!to) return;
+  const note = prompt('Địa điểm/ghi chú:') || '';
+  prof.trips.push({id:'tr_'+Date.now(),from,to,note});
+  persistD(); renderAll();
+  toast('✓ Đã thêm lịch công tác cho ' + name);
+}
+function deleteTrip(name, id) {
+  const prof = (D.settings.staffProfiles||{})[name]; if(!prof||!prof.trips) return;
+  prof.trips = prof.trips.filter(t=>t.id!==id);
+  persistD(); renderAll();
+}
+function getBusinessTrips(name) {
+  return ((D.settings.staffProfiles||{})[name]||{}).trips || [];
+}
+function openHolidaySettings() {
+  if(!D.settings.holidays) D.settings.holidays = getHolidays();
+  const rows = D.settings.holidays.map((h,i)=>`<tr>
+    <td style="padding:4px 8px;font-size:11px">${h.date}</td>
+    <td style="padding:4px 8px;font-size:11px">${h.name}</td>
+    <td style="text-align:center"><button onclick="deleteHoliday(${i})" style="background:none;border:none;cursor:pointer;color:#e74c3c;font-size:13px">✕</button></td>
+  </tr>`).join('');
+  showModal(`<div style="font-weight:700;font-size:14px;color:var(--navy);margin-bottom:12px">🗓 Quản lý ngày nghỉ lễ</div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+      <thead><tr style="background:var(--navy);color:#fff">
+        <th style="padding:6px 8px;font-size:11px;text-align:left;width:120px">Ngày</th>
+        <th style="padding:6px 8px;font-size:11px;text-align:left">Tên ngày lễ</th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody id="holiday-rows">${rows}</tbody>
+    </table>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="hd-date" type="date" class="tbl-input" style="flex:0 0 140px">
+      <input id="hd-name" placeholder="Tên ngày lễ" class="tbl-input" style="flex:1">
+      <button class="btn btn-sm btn-gold" onclick="addHolidayFromUI()">+ Thêm</button>
+    </div>
+    <div style="display:flex;justify-content:space-between">
+      <button class="btn" onclick="resetDefaultHolidays()">↺ Reset mặc định</button>
+      <button class="btn btn-gold" onclick="saveHolidays();closeModal()">💾 Lưu</button>
+    </div>`);
+}
+function addHolidayFromUI() {
+  const date=document.getElementById('hd-date').value, name=document.getElementById('hd-name').value.trim();
+  if(!date||!name){alert('Điền đầy đủ ngày và tên');return;}
+  if(!D.settings.holidays) D.settings.holidays=getHolidays();
+  D.settings.holidays.push({date,name});
+  D.settings.holidays.sort((a,b)=>a.date.localeCompare(b.date));
+  openHolidaySettings();
+}
+function deleteHoliday(i){
+  if(!D.settings.holidays) D.settings.holidays=getHolidays();
+  D.settings.holidays.splice(i,1); openHolidaySettings();
+}
+function resetDefaultHolidays(){ delete D.settings.holidays; openHolidaySettings(); }
+function saveHolidays(){ persistD(); renderAll(); toast('✓ Đã lưu ngày nghỉ lễ'); }
+
 function confirmAddLeave(name) {
   const from = document.getElementById('lv-from').value;
   const to   = document.getElementById('lv-to').value;
@@ -3263,6 +3381,7 @@ function renderSettings() {
       Điện thoại: mở cùng link → nhập mật khẩu → bấm Sync để tải dữ liệu
     </div>
     <button class="btn btn-sm" onclick="showSyncSetup()">⚙ Sửa cấu hình</button>
+    <button class="btn btn-sm" onclick="openHolidaySettings()" style="background:#e8f4fd;color:#1a5276">🗓 Ngày lễ</button>
   </div>`}
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
     <div class="card"><div class="card-hd"><span class="card-hd-title">👤 Nhân sự</span></div>
@@ -3442,14 +3561,19 @@ function closeModal() { document.getElementById('activeModal')?.remove(); }
 })();
 
 /* STUB — overridden by sync */
-function triggerAutoSync() {}
+function triggerAutoSync() {
+  if (SYNC.gistId && SYNC.ghToken && SYNC.role==='admin') {
+    clearTimeout(triggerAutoSync._t);
+    triggerAutoSync._t = setTimeout(async ()=>{ await syncPush(); }, 4000);
+  }
+}
 
 /* ══════════════════════════════════════════════════════
    SYNC SYSTEM — Password-based, 2-level access
    Backend: GitHub Gist (free, CORS-friendly)
    
    CÁCH HOẠT ĐỘNG:
-   - Admin (chủ app) tạo 1 bin trên jsonbin.io, lấy BIN_ID + API_KEY
+   - Admin tạo GitHub Token + Gist ID
    - Đặt mật khẩu EDIT và mật khẩu VIEW (lưu trong D.settings.sync)
    - Người khác chỉ cần nhập đúng mật khẩu để đọc hoặc sửa
    - Toàn bộ dữ liệu được mã hoá AES trước khi lên cloud
@@ -3510,8 +3634,7 @@ async function hashPw(pw) {
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-/* ── JSONBin API ── */
-const JBIN = 'https://api.jsonbin.io/v3';
+/* ── GitHub Gist Sync ── */
 const GIST_API = 'https://api.github.com/gists';
 
 async function syncPush() {
@@ -3546,69 +3669,41 @@ async function syncPush() {
 }
 
 async function syncPull(decryptPassword) {
-  // decryptPassword = the editPw used to encrypt the data
-  const binId = SYNC.binId || localStorage.getItem('sync_bin_id_public') || '';
-  if (!binId) throw new Error('no_bin_id');
+  const gistId  = SYNC.gistId  || localStorage.getItem('sync_gist_id')  || D.settings?.sync?.gistId  || '';
+  const ghToken = SYNC.ghToken || localStorage.getItem('sync_gh_token') || '';
+  if (!gistId) throw new Error('no_gist_id');
   try {
-    const headers = SYNC.apiKey ? { 'X-Master-Key': SYNC.apiKey } : {};
-    const res = await fetch(`${JBIN}/b/${binId}/latest`, { headers });
-    if (!res.ok) throw new Error('http_' + res.status);
-    const json = await res.json();
-    const payload = json.record?.data;
-    if (!payload) throw new Error('no_data');
-    return await decryptData(payload, decryptPassword);
-  } catch(e) {
-    const msg = e.message || '';
-    if (msg === 'no_data') throw e;
-    if (msg === 'no_bin_id') throw e;
-    if (msg.startsWith('http_')) throw new Error('connect_' + msg);
-    throw new Error('decrypt_fail');
-  }
-}
-
-/* ── STATUS BAR ── */
-function setSyncStatus(state, label) {
-  const btn = document.getElementById('syncBtn');
-  const lbl = document.getElementById('syncLabel');
-  if (!btn) return;
-  btn.className = `sync-status ${state}`;
-  lbl.textContent = label;
-  btn.title = label + ' · Bấm để sync ngay · Giữ 1s để cài đặt';
-}
-
-/* ── AUTO SYNC hook (called by save()) ── */
-function triggerAutoSync() {
-  // Admin: push 4s after last edit (debounced)
-  if ((SYNC.gistId && SYNC.ghToken) && SYNC.role==='admin') {
-    clearTimeout(triggerAutoSync._t);
-    triggerAutoSync._t = setTimeout(async ()=>{
-      await syncPush();
-    }, 4000);
-  }
-}
-
-// ── Auto-sync: push for admin every 3min, pull for edit/view every 3min
-(function startPeriodicSync() {
-  setInterval(async () => {
-    const binId = SYNC.binId || D.settings?.sync?.binId || '';
-    if (!binId) return;
-    const role = SYNC.role;
-    if (role === 'admin' && SYNC.apiKey) {
-      await syncPush();
-    } else if ((role === 'edit' || role === 'view') && binId) {
-      try {
-        const pulled = await syncPull('');
-        if (pulled) { D = pulled; save(); renderAll(); setSyncStatus('synced', role==='edit'?'✓ Edit':'👁 View'); }
-      } catch(e) {}
+    const headers = { 'Accept': 'application/vnd.github.v3+json' };
+    if (ghToken) headers['Authorization'] = `token ${ghToken}`;
+    const res = await fetch(`${GIST_API}/${gistId}`, { headers });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`HTTP ${res.status}: ${t.slice(0,80)}`);
     }
-  }, 3 * 60 * 1000); // every 3 minutes
-})();
+    const json = await res.json();
+    const fileContent = json?.files?.['phoicanh.json']?.content;
+    if (!fileContent) throw new Error('empty_data');
+    let parsed;
+    try { parsed = JSON.parse(fileContent); }
+    catch(e) { throw new Error('parse_error: ' + e.message); }
+    if (!parsed || typeof parsed !== 'object') throw new Error('invalid_data');
+    // Merge: giữ lại data local nếu cloud không có
+    const merged = Object.assign({}, D, parsed);
+    merged.settings = Object.assign({}, D.settings, parsed.settings);
+    merged.settings.sync = D.settings.sync; // giữ sync credentials local
+    Object.assign(D, merged);
+    try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
+    SYNC.lastSync = new Date().toLocaleString('vi-VN');
+    setSyncStatus('synced', '✓ Synced');
+    return parsed;
+  } catch(e) {
+    console.error('syncPull error:', e.message);
+    setSyncStatus('error', 'Lỗi pull');
+    throw e;
+  }
+}
 
-/* ══════════════════════════════════════════════════════
-   SYNC PANEL UI
-══════════════════════════════════════════════════════ */
 
-/* ── Quick Sync: 1-click push/pull without password ── */
 async function quickSync() {
   const role = SYNC.role;
 
@@ -3794,7 +3889,7 @@ function showSyncSetup() {
   `);
 }
 
-async function testJsonBinConnection(apiKey, binId) {
+async function testGistConnection(apiKey, binId) {
   try {
     const headers = {'Accept':'application/vnd.github.v3+json'};
     if (apiKey && apiKey.startsWith('ghp_')) headers['Authorization'] = `token ${apiKey}`;
@@ -3848,10 +3943,10 @@ async function confirmSyncSetup() {
   save();
   setSyncStatus('syncing','Đang kiểm tra kết nối…');
   closeModal();
-  toast('⏳ Đang kiểm tra kết nối JSONBin…');
+  toast('⏳ Đang kiểm tra kết nối GitHub Gist…');
 
   // Test connection first
-  const testResult = await testJsonBinConnection(apiKey, binId);
+  const testResult = await testGistConnection(apiKey, binId);
   console.log('Test result:', testResult);
 
   if (!testResult.ok && testResult.status === 0) {
@@ -3881,14 +3976,14 @@ async function confirmSyncSetup() {
     setSyncStatus('error','Lỗi kết nối');
     setTimeout(()=>{
       showModal(`
-        <h3>⚠ Không kết nối được JSONBin</h3>
+        <h3>⚠ Không kết nối được GitHub Gist</h3>
         <div style="font-size:12px;line-height:1.8;color:#555">
           <p style="margin-bottom:10px">Kiểm tra lần lượt:</p>
           <ol style="margin-left:16px;margin-bottom:14px">
             <li>Master Key phải bắt đầu bằng <code>$2a$10$</code> — copy đúng không?</li>
-            <li>Bin ID: mở <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> → vào Bin vừa tạo → copy ID từ URL</li>
+            <li>Gist ID: mở <a href="https://gist.github.com" target="_blank">gist.github.com</a> → copy ID từ URL</li>
             <li>Bin phải ở trạng thái <strong>Private</strong> với tài khoản đó</li>
-            <li>Thử mở URL: <code>https://api.jsonbin.io/v3/b/<strong>[BinID]</strong>/latest</code> trong tab mới — nếu thấy JSON là đúng</li>
+            <li>Thử mở URL: <code>https://api.github.com/gists/<strong>[GistID]</strong></code> trong tab mới — nếu thấy JSON là đúng</li>
           </ol>
           <div style="background:#fff8ee;border:1px solid #ffd966;border-radius:6px;padding:8px 12px;font-size:11px">
             Bin ID hiện tại: <strong>${binId}</strong><br>
