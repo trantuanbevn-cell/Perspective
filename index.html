@@ -898,48 +898,120 @@ function addMonth() {
   let [y, m] = last.split('-').map(Number);
   m++; if (m > 12) { m = 1; y++; }
   const newMid = y + '-' + String(m).padStart(2, '0');
+  const newMidStr = monthLabel(newMid);
+  const curMidStr = monthLabel(last);
 
-  // Count photos in current month
-  const curPjs = curProjects();
-  let photoCount = 0;
-  curPjs.forEach(p => { photoCount += (p.photos || []).filter(Boolean).length; });
+  // Count stats to show in confirm dialog
+  const allPjs    = [...(D.months[last]?.projects||[]), ...(D.months[last]?.projectsVN||[])];
+  const pjCount   = allPjs.length;
+  const photoCount = allPjs.reduce((s,p)=>(p.photos||[]).filter(Boolean).length+s, 0);
 
-  if (photoCount > 0) {
-    showModal(`
-      <h3>📅 Sang tháng mới — ${monthLabel(newMid)}</h3>
-      <div style="background:#EEF3FB;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#1F3864;line-height:1.75">
-        Tháng hiện tại có <strong>${photoCount} ảnh phối cảnh</strong> đang được lưu.<br>
-        Ảnh chiếm nhiều dung lượng — bạn có muốn <strong>xóa toàn bộ ảnh tháng ${monthLabel(D.activeMonth)}</strong> trước khi sang tháng mới không?<br>
-        <span style="color:var(--orange);font-size:11px">Dữ liệu số liệu (hạng mục, nhân sự, OT) vẫn được giữ nguyên.</span>
+  // Count projects with active timeline (dateFrom or dateTo extends into new month)
+  const newMidStart = newMid + '-01';
+  const activeTimeline = allPjs.filter(p =>
+    (p.groups||[]).some(g =>
+      (g.rows||[]).some(r => r.dateTo && r.dateTo >= newMidStart)
+    )
+  ).length;
+
+  showModal(`
+    <h3>📅 Sang tháng mới — ${newMidStr}</h3>
+
+    <div style="background:#f0f7ff;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12px;line-height:1.85;color:#1F3864">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">Hệ thống sẽ thực hiện:</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div>📋 <strong>${pjCount} dự án</strong> sẽ được copy sang tháng mới (tên, văn phòng, liên hệ, hạng mục)</div>
+        <div>🔄 Số lượng mới/sửa, đánh giá nhân viên sẽ <strong>reset về 0</strong></div>
+        <div>🖼 <strong>${photoCount} ảnh</strong> được copy sang tháng mới, ảnh tháng cũ sẽ <strong>bị xóa</strong></div>
+        ${activeTimeline > 0
+          ? `<div style="color:#27ae60">✅ <strong>${activeTimeline} dự án</strong> có timeline kéo sang tháng mới — <strong>giữ nguyên lịch UP</strong></div>`
+          : ''}
       </div>
-      <div class="modal-ft" style="flex-wrap:wrap;gap:8px">
-        <button class="btn" onclick="closeModal()">Hủy</button>
-        <button class="btn btn-sm" style="background:#fff3e0;color:#7f3500;border-color:#ffcc99"
-          onclick="doAddMonth('${newMid}', false)">Giữ ảnh & Sang tháng</button>
-        <button class="btn btn-gold"
-          onclick="doAddMonth('${newMid}', true)">🗑 Xóa ảnh cũ & Sang tháng</button>
-      </div>
-    `);
-  } else {
-    doAddMonth(newMid, false);
-  }
+    </div>
+
+    <div style="background:#fff8e1;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#856404">
+      ⚡ Dự án tháng cũ vẫn xem được — bấm tab tháng cũ để xem lại lịch sử
+    </div>
+
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="closeModal();doAddMonth('${last}','${newMid}')">
+        ✓ Xác nhận sang tháng ${newMidStr}
+      </button>
+    </div>
+  `);
 }
 
-function doAddMonth(newMid, clearPhotos) {
-  // Clear photos from ALL previous months if requested
-  if (clearPhotos) {
-    Object.keys(D.months).forEach(mid => {
-      if (mid !== newMid) {
-        (D.months[mid].projects || []).forEach(p => { p.photos = []; });
-      }
+function doAddMonth(prevMid, newMid) {
+  const newMidStart = newMid + '-01';
+
+  // ── Copy dự án sang tháng mới ──
+  function copyProjects(srcList) {
+    return srcList.map(p => {
+      // Kiểm tra có timeline kéo sang tháng mới không
+      const hasActiveTimeline = (p.groups||[]).some(g =>
+        (g.rows||[]).some(r => r.dateTo && r.dateTo >= newMidStart)
+      );
+
+      const newGroups = (p.groups||[]).map(g => ({
+        ...g,
+        rows: (g.rows||[]).map(r => {
+          const rowActive = r.dateTo && r.dateTo >= newMidStart;
+          return {
+            ...r,
+            // Reset số lượng và đánh giá
+            qty: 0,
+            ot: 0, otNote: '',
+            // Reset rating fields
+            rate0:0,rate1:0,rate2:0,rate3:0,rate4:0,rate5:0,
+            rate6:0,rate7:0,rate8:0,rate9:0,
+            rate10:0,rate11:0,rate12:0,rate13:0,
+            note: '',
+            // Giữ nguyên timeline nếu đang active, xóa nếu đã qua
+            dateFrom: rowActive ? r.dateFrom : '',
+            dateTo:   rowActive ? r.dateTo   : '',
+          };
+        })
+      }));
+
+      return {
+        id: 'pj_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        nameJP:    p.nameJP    || '',
+        nameVN:    p.nameVN    || '',
+        office:    p.office    || '',
+        contact:   p.contact   || '',
+        mainStaff: p.mainStaff || '',
+        groups:    newGroups,
+        photos:    (p.photos||[]).filter(Boolean), // copy ảnh sang tháng mới
+        otLog:     [],
+        notes:     '',
+      };
     });
-    toast('🗑 Đã xóa ảnh tháng cũ');
   }
-  if (!D.months[newMid]) D.months[newMid] = { projects: [], projectsVN: [], targetNew: 0, targetRev: 0 };
-  D.activeMonth = newMid; activePjId = null; save(); closeModal(); renderAll();
-  toast('✓ Đã sang tháng ' + monthLabel(newMid));
-  // Show storage status after switch
-  setTimeout(showStorageStatus, 500);
+
+  // Tạo tháng mới với dự án đã copy
+  const srcMonth = D.months[prevMid] || {};
+  D.months[newMid] = {
+    projects:   copyProjects(srcMonth.projects   || []),
+    projectsVN: copyProjects(srcMonth.projectsVN || []),
+    targetNew:  srcMonth.targetNew || 0,
+    targetRev:  srcMonth.targetRev || 0,
+  };
+
+  // ── Xóa ảnh tháng cũ (prevMid) ──
+  [...(D.months[prevMid]?.projects||[]),...(D.months[prevMid]?.projectsVN||[])].forEach(p => {
+    p.photos = [];
+  });
+
+  D.activeMonth = newMid;
+  activePjId = null;
+  persistD();
+  closeModal();
+  renderAll();
+
+  const newPjCount = (D.months[newMid].projects.length) + (D.months[newMid].projectsVN.length);
+  toast(`✓ Sang tháng ${monthLabel(newMid)} — ${newPjCount} dự án được copy, ảnh tháng cũ đã xóa`, 4000);
+  setTimeout(checkStorageAndWarn, 800);
 }
 
 function showStorageStatus() {
