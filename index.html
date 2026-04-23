@@ -2654,7 +2654,7 @@ function renderGroups(p) {
       const isDark = parseInt(gc.bg.slice(1,3),16) < 180;
 
       const deadlinePast = r.dateTo && r.dateTo < today && !r.doneAt;
-      const deadlineSoon = rHasSoonUp || rHasTodayUp;
+      const deadlineSoon = rActiveUp && r.dateTo <= soon3;
       const isVNProject  = !!(D.months[D.activeMonth]?.projectsVN||[]).find(pv=>pv.id===p.id);
       const chipNewBg  = isVNProject ? '#ede9fe' : 'var(--new-bg)';
       const chipNewTx  = isVNProject ? '#5b21b6' : 'var(--new-tx)';
