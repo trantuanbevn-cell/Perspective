@@ -46,10 +46,14 @@
   --ex-dark:   var(--dark);
   --new-bg:    #E2EFDA; --new-text: #375623;
   --rev-bg:    #FFF2CC; --rev-text: #7F6000;
+  /* Tùy biến màu nền — có thể chỉnh trong Cài đặt */
+  --app-bg:    #EAECF0;
+  --card-bg:   #FFFFFF;
+  --sidebar-bg:#F5F5F5;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;background:#EAECF0;color:var(--dark);min-height:100vh}
+body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;background:var(--app-bg);color:var(--dark);min-height:100vh}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--gray3);border-radius:3px}
 
@@ -82,12 +86,12 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 #pageDashboard,#pageStaff,#pageSettings{display:none;padding:18px 22px;overflow-y:auto;height:calc(100vh - 93px)}
 
 /* SIDEBAR */
-.sidebar{width:220px;min-width:200px;background:#f4f5f7;border-right:1px solid var(--gray2);display:flex;flex-direction:column;flex-shrink:0;height:100%;overflow:hidden}
+.sidebar{width:220px;min-width:200px;background:var(--sidebar-bg);border-right:1px solid var(--gray2);display:flex;flex-direction:column;flex-shrink:0;height:100%;overflow:hidden}
 .sidebar-hd{padding:9px 12px;background:var(--navy);color:#fff;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold);flex-shrink:0}
 .sidebar-hd span{background:var(--gold);color:var(--navy);border-radius:99px;padding:1px 7px;font-size:10px}
 .pj-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 7px;display:flex;flex-direction:column;gap:6px;min-height:0;scroll-behavior:smooth}
 /* Project card in sidebar */
-.pj-card{background:#fff;border-radius:8px;border:2px solid transparent;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s,transform .15s;flex-shrink:0;width:100%}
+.pj-card{background:var(--card-bg);border-radius:8px;border:2px solid transparent;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s,transform .15s;flex-shrink:0;width:100%}
 .pj-card:hover{border-color:var(--gold2);box-shadow:0 3px 10px rgba(0,0,0,.13);transform:translateY(-1px)}
 .pj-card.active{border-color:var(--gold);box-shadow:0 3px 12px rgba(255,192,0,.3)}
 .pj-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);overflow:hidden;position:relative;flex-shrink:0;display:block}
@@ -98,7 +102,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .pj-card-name{font-weight:700;font-size:11px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:var(--dark);margin-bottom:4px;word-break:break-word}
 .pj-card-name-jp{font-size:9px;color:var(--gray4);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:4px}
 .pj-card-sub{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px}
-.sidebar-ft{padding:7px 8px;border-top:1px solid var(--gray2);background:#eaecf0;flex-shrink:0}
+.sidebar-ft{padding:7px 8px;border-top:1px solid var(--gray2);background:var(--app-bg);flex-shrink:0}
 
 /* CONTENT */
 .content{flex:1;overflow-y:auto;background:#EAECF0}
@@ -144,14 +148,14 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* CARD */
-.card{background:#fff;border:1px solid var(--gray2);border-radius:var(--r2);margin-bottom:12px;overflow:hidden}
+.card{background:var(--card-bg);border:1px solid var(--gray2);border-radius:var(--r2);margin-bottom:12px;overflow:hidden}
 .card-hd{background:var(--navy);color:#fff;padding:9px 14px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:2px solid var(--gold)}
 .card-hd-title{display:flex;align-items:center;gap:7px}
 .card-body{padding:12px 14px}
 
 /* HERO STATS */
 .hero-row{display:grid;gap:10px;margin-bottom:12px}
-.hero-box{background:#fff;border:1px solid var(--gray2);border-radius:var(--r2);padding:13px 15px;border-top:4px solid var(--gray3)}
+.hero-box{background:var(--card-bg);border:1px solid var(--gray2);border-radius:var(--r2);padding:13px 15px;border-top:4px solid var(--gray3)}
 .hero-box.green{border-top-color:#70AD47;background:#70AD47;border-color:#5a9a35;color:#fff}
 .hero-box.gold{border-top-color:var(--gold);background:var(--gold);border-color:#d4a000;color:#fff}
 .hero-box.navy{border-top-color:var(--navy);background:var(--navy);color:#fff}
@@ -1078,12 +1082,38 @@ function renderSidebar() {
       statusBadge = `<div style="position:absolute;top:5px;right:5px;background:#27ae60;border-radius:99px;padding:1px 5px;font-size:8px;font-weight:700;color:#fff">● Đang làm</div>`;
     }
 
-    // Viền card
-    const cardBorder = isFullyDone
+    // ── Phân loại mức độ ưu tiên hiển thị ──
+    const allRowsAll = (p.groups||[]).flatMap(g=>g.rows||[]);
+    const hasTodayUp  = allRowsAll.some(r => r.dateTo === today && !r.doneAt);
+    const hasFutureUp = allRowsAll.some(r => r.dateTo > today);
+    const hasAnySchedule = allRowsAll.some(r => r.dateTo);
+    const allUpped = hasAnySchedule && allRowsAll.filter(r=>r.dateTo).every(r=>r.doneAt);
+
+    // Mức 1: Hôm nay UP — nổi bật nhất
+    // Mức 2: Có lịch tương lai — sáng bình thường
+    // Mức 3: Đã UP hết hoặc không có lịch — mờ xuống
+    const cardOpacity = hasTodayUp ? '1'
+      : hasFutureUp  ? '0.95'
+      : allUpped     ? '0.45'
+      : !hasAnySchedule ? '0.5'
+      : '0.85';
+
+    const cardFilter = hasTodayUp ? ''
+      : hasFutureUp  ? ''
+      : 'filter:saturate(0.4) brightness(0.85);';
+
+    const cardScale = hasTodayUp ? 'transform:scale(1.01);' : '';
+
+    // Viền card theo mức ưu tiên
+    const cardBorder = hasTodayUp
+      ? 'border-color:#e74c3c;box-shadow:0 0 0 2px rgba(231,76,60,.3),0 4px 12px rgba(231,76,60,.2)'
+      : isFullyDone
       ? 'border-color:#FFC000;box-shadow:0 0 0 2px rgba(255,192,0,.25)'
       : isActive
-      ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.25)'
-      : '';
+      ? 'border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.2)'
+      : hasFutureUp
+      ? 'border-color:#c8d6e5'
+      : 'border-color:#e8e8e8';
 
     // Staff avatars
     const staffAvatars = activeStaff.slice(0,4).map(s=>{
@@ -1093,7 +1123,7 @@ function renderSidebar() {
     }).join('');
 
     return `<div class="pj-card ${p.id === activePjId ? 'active' : ''}" onclick="selectPj('${p.id}')"
-      style="${cardBorder}">
+      style="${cardBorder};opacity:${cardOpacity};${cardFilter}${cardScale}transition:all .2s">
       <div class="pj-thumb">
         ${thumbHtml}
         <div class="pj-thumb-num">${i + 1}</div>
@@ -3835,6 +3865,57 @@ function toggleSalary(salId) {
 
 
 /* SETTINGS */
+function applyThemeColor(varName, value) {
+  if (!value || value.length < 4) return;
+  document.documentElement.style.setProperty(varName, value);
+  // Lưu vào localStorage
+  const saved = JSON.parse(localStorage.getItem('theme_colors')||'{}');
+  saved[varName] = value;
+  localStorage.setItem('theme_colors', JSON.stringify(saved));
+  // Sync text input
+  const map = {'--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg'};
+  const id = map[varName];
+  if (id) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+    const elTxt = document.getElementById(id+'-txt');
+    if (elTxt) elTxt.value = value;
+  }
+}
+
+function applyThemePreset(app, card, sidebar) {
+  applyThemeColor('--app-bg', app);
+  applyThemeColor('--card-bg', card);
+  applyThemeColor('--sidebar-bg', sidebar);
+}
+
+function resetThemeColors() {
+  applyThemePreset('#EAECF0', '#FFFFFF', '#F5F5F5');
+  localStorage.removeItem('theme_colors');
+  toast('✓ Đã đặt lại màu mặc định');
+}
+
+function loadSavedTheme() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('theme_colors')||'{}');
+    Object.entries(saved).forEach(([k,v]) => {
+      document.documentElement.style.setProperty(k, v);
+    });
+  } catch(e) {}
+}
+
+function updThemeColorPickers() {
+  const get = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const map = {'--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg'};
+  Object.entries(map).forEach(([varName, id]) => {
+    const val = localStorage.getItem('theme_colors') ? JSON.parse(localStorage.getItem('theme_colors'))[varName] : null;
+    if (val) {
+      const el = document.getElementById(id); if(el) el.value = val;
+      const elTxt = document.getElementById(id+'-txt'); if(elTxt) elTxt.value = val;
+    }
+  });
+}
+
 function renderSettings() {
   const sc=document.getElementById('settingsContent'); if(!sc) return;
   const syncConfigured = !!(SYNC.gistId || D.settings?.sync?.gistId || SYNC.binId);
@@ -3960,6 +4041,68 @@ function renderSettings() {
             <strong>Công thức:</strong> KPI = (A×45%) + (B×30%) + (C×25%)<br>
             OT &gt; 10h: ×1.05 | OT &gt; 20h: ×1.10 | OT &gt; 30h: ×1.20 | Revision &lt; 3/10: ×0.90
           </div>
+        </div>
+      </div>
+
+      <!-- Theme color picker -->
+      <div style="margin-top:14px;padding:14px 16px;background:#fff;border:1px solid var(--gray2);border-radius:10px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--navy)">🎨 Tùy biến màu nền</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
+
+          <div>
+            <div style="color:#666;margin-bottom:6px;font-size:11px">Nền ứng dụng</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="clr-app-bg" value="#EAECF0"
+                oninput="applyThemeColor('--app-bg',this.value)"
+                style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+              <input type="text" id="clr-app-bg-txt" value="#EAECF0"
+                oninput="applyThemeColor('--app-bg',this.value);document.getElementById('clr-app-bg').value=this.value"
+                style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">
+            </div>
+          </div>
+
+          <div>
+            <div style="color:#666;margin-bottom:6px;font-size:11px">Nền card / bảng</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="clr-card-bg" value="#FFFFFF"
+                oninput="applyThemeColor('--card-bg',this.value)"
+                style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+              <input type="text" id="clr-card-bg-txt" value="#FFFFFF"
+                oninput="applyThemeColor('--card-bg',this.value);document.getElementById('clr-card-bg').value=this.value"
+                style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">
+            </div>
+          </div>
+
+          <div>
+            <div style="color:#666;margin-bottom:6px;font-size:11px">Nền sidebar</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="clr-sidebar-bg" value="#F5F5F5"
+                oninput="applyThemeColor('--sidebar-bg',this.value)"
+                style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+              <input type="text" id="clr-sidebar-bg-txt" value="#F5F5F5"
+                oninput="applyThemeColor('--sidebar-bg',this.value);document.getElementById('clr-sidebar-bg').value=this.value"
+                style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">
+            </div>
+          </div>
+
+        </div>
+
+        <div style="margin-top:12px;font-size:11px;color:#888;margin-bottom:8px">Preset nhanh:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${[
+            {name:'Mặc định',app:'#EAECF0',card:'#FFFFFF',sidebar:'#F5F5F5'},
+            {name:'Trắng sáng',app:'#F4F4F2',card:'#FFFFFF',sidebar:'#EFEFED'},
+            {name:'Tối nhẹ',app:'#2A2A2A',card:'#F5F5F3',sidebar:'#252525'},
+            {name:'Xanh lạnh',app:'#E8EDF2',card:'#FFFFFF',sidebar:'#DDE4EC'},
+            {name:'Kem nhạt',app:'#F5F0E8',card:'#FFFEF9',sidebar:'#EDE8DF'},
+          ].map(t=>`<button onclick="applyThemePreset('${t.app}','${t.card}','${t.sidebar}')"
+            style="padding:5px 12px;border-radius:20px;border:1px solid #ddd;background:${t.app};font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px">
+            <span style="width:10px;height:10px;background:${t.card};border:1px solid #ccc;border-radius:2px;display:inline-block"></span>
+            ${t.name}
+          </button>`).join('')}
+        </div>
+        <div style="margin-top:10px;text-align:right">
+          <button class="btn btn-sm" onclick="resetThemeColors()">↺ Đặt lại mặc định</button>
         </div>
       </div>
 
@@ -4972,13 +5115,14 @@ setTimeout(()=>{
    RENDER ALL
 ══════════════════════════════════════════════════════ */
 function renderAll() {
+  loadSavedTheme();
   renderMonthStrip();
   renderSidebar();
   renderStorageMeter();
   if(activePage==='main') renderContent();
   else if(activePage==='dashboard') renderDashboard();
   else if(activePage==='staff') renderStaffPage();
-  else if(activePage==='settings') renderSettings();
+  else if(activePage==='settings') { renderSettings(); setTimeout(updThemeColorPickers, 100); }
 }
 
 function renderStorageMeter() {
