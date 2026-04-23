@@ -1043,18 +1043,23 @@ function renderSidebar() {
 
   // Lọc và sắp xếp: ẩn dự án đã hoàn thành từ hôm qua trở về trước
   const visiblePjs = pjs.filter(p => {
-    const allRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>r.dateTo);
-    if (!allRows.length) return true; // không có lịch → luôn hiện
+    const allRows = (p.groups||[]).flatMap(g=>g.rows||[]);
 
-    // Có lịch hôm nay hoặc tương lai → luôn hiện
-    const hasTodayOrFuture = allRows.some(r => r.dateTo >= today);
+    // Có hàng nào KHÔNG có dateTo → dự án còn việc, luôn hiện
+    const hasRowsWithoutDate = allRows.some(r => !r.dateTo);
+    if (hasRowsWithoutDate) return true;
+
+    // Tất cả hàng đều có dateTo
+    const rowsWithDate = allRows.filter(r => r.dateTo);
+    if (!rowsWithDate.length) return true; // không có hàng nào → hiện
+
+    // Có hàng hôm nay hoặc tương lai → luôn hiện
+    const hasTodayOrFuture = rowsWithDate.some(r => r.dateTo >= today);
     if (hasTodayOrFuture) return true;
 
-    // Chỉ còn lịch ĐÃ QUA (trước hôm nay)
-    // Ẩn chỉ khi: TẤT CẢ hàng đã qua ngày ĐỀU đã bấm UP
-    // → dự án thực sự hoàn thành, sang ngày hôm sau mới ẩn
-    const allPastUpped = allRows.every(r => r.doneAt);
-    return !allPastUpped; // còn hàng chưa UP → vẫn hiện
+    // Chỉ còn hàng trong quá khứ — ẩn CHỈ KHI tất cả đã bấm UP
+    const allPastUpped = rowsWithDate.every(r => r.doneAt);
+    return !allPastUpped;
   });
 
   list.innerHTML = visiblePjs.map((p, i) => {
