@@ -2684,8 +2684,8 @@ function renderGroups(p) {
               <span style="font-size:9px;color:var(--gold2)">Sửa:</span>
               <span style="font-size:11px;font-weight:700;color:var(--gold)">${gRev}</span>
               ${gOT>0?`<span style="font-size:9px;color:var(--orange)">⏱${gOT.toFixed(1)}h</span>`:''}
-              ${gHasTodayUp?'<span style="font-size:9px;background:#e74c3c;color:#fff;border-radius:3px;padding:0 4px;font-weight:700">🔴 Hôm nay UP</span>':''}
-              ${gHasSoonUp&&!gHasTodayUp?'<span style="font-size:9px;background:#e67e22;color:#fff;border-radius:3px;padding:0 4px;font-weight:700">⚡ Sắp UP</span>':''}
+              ${gHasTodayUp?'<span style="font-size:9px;background:#e74c3c;color:#fff;border-radius:3px;padding:0 4px;font-weight:700">🔴 HÔM NAY</span>':''}
+              ${gHasActiveUp&&!gHasTodayUp?'<span style="font-size:9px;background:#27ae60;color:#fff;border-radius:3px;padding:0 4px;font-weight:700">⚡ Có lịch UP</span>':''}
             </div>
             <div style="display:flex;gap:3px;flex-shrink:0">
               <button class="btn btn-xs" style="background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.25);font-size:9px;padding:2px 8px;white-space:nowrap"
