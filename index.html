@@ -50,6 +50,9 @@
   --app-bg:    #EAECF0;
   --card-bg:   #FFFFFF;
   --sidebar-bg:#F5F5F5;
+  --table-bg:  #FFFFFF;
+  --table-hover:#FFFBEE;
+  --table-stripe:#F9F9F9;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -186,7 +189,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .rtbl{width:100%;border-collapse:collapse;font-size:12px}
 .rtbl thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1)}
 .rtbl tbody td{padding:6px 8px;border-bottom:1px solid var(--gray1);vertical-align:middle;border-right:1px solid #f5f5f5}
-.rtbl tbody tr:hover td{background:#FFFBEE}
+.rtbl tbody tr:hover td{background:var(--table-hover)}
 .rtbl tfoot td{font-weight:700;background:var(--rev-bg)!important;border-top:2px solid var(--navy);padding:7px 9px}
 /* Group header row */
 .grp-hd td{background:var(--navy2)!important;color:#fff;padding:6px 9px;font-weight:600;font-size:11px}
@@ -195,11 +198,11 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .row-rev td{background:#fffdf0}
 
 /* Inline inputs in table */
-.tbl-input{width:100%;padding:4px 7px;border:1px solid var(--gray2);border-radius:var(--r);font-family:inherit;font-size:12px;background:#fff}
+.tbl-input{width:100%;padding:4px 7px;border:1px solid var(--gray2);border-radius:var(--r);font-family:inherit;font-size:12px;background:var(--table-bg)}
 .tbl-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,192,0,.15)}
 .tbl-input-dark{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:var(--r);padding:4px 8px;color:#fff;font-family:inherit;font-size:12px;font-weight:600;width:100%;min-width:0}
 .tbl-input-dark:focus{outline:none;border-color:var(--gold)}
-.qty-inp{width:54px;padding:4px 5px;text-align:center;border:1px solid var(--gray2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:700;background:#fff}
+.qty-inp{width:54px;padding:4px 5px;text-align:center;border:1px solid var(--gray2);border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:700;background:var(--table-bg)}
 .qty-inp:focus{outline:none;border-color:var(--gold)}
 .sel-sm{padding:4px 8px;border:1px solid var(--gray2);border-radius:var(--r);font-family:inherit;font-size:12px;background:#fff;cursor:pointer;width:100%}
 .sel-sm:focus{outline:none;border-color:var(--gold)}
@@ -242,21 +245,21 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 /* MONTH SUMMARY TABLE */
 .sum-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .sum-tbl th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
-.sum-tbl td{padding:8px 9px;border-bottom:1px solid var(--gray1)}
-.sum-tbl tr:hover td{background:#FFFBEE;cursor:pointer}
+.sum-tbl td{padding:8px 9px;border-bottom:1px solid var(--gray1);background:var(--table-bg)}
+.sum-tbl tr:hover td{background:var(--table-hover);cursor:pointer}
 .sum-tbl .tr-total td{font-weight:700;background:var(--rev-bg)!important;border-top:2px solid var(--navy)}
 .num-c{text-align:center;font-weight:600}
 
 /* PERF TABLE */
 .perf-tbl{width:100%;border-collapse:collapse;font-size:12px}
 .perf-tbl th{background:var(--navy);color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
-.perf-tbl td{padding:8px 10px;border-bottom:1px solid var(--gray1)}
-.perf-tbl tr:hover td{background:#FFFBEE}
+.perf-tbl td{padding:8px 10px;border-bottom:1px solid var(--gray1);background:var(--table-bg)}
+.perf-tbl tr:hover td{background:var(--table-hover)}
 .perf-tbl .total-row td{font-weight:700;background:var(--gray1)!important;border-top:2px solid var(--navy)}
 
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}
-.modal{background:#fff;border-radius:var(--r2);padding:22px 26px;max-width:560px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
+.modal{background:var(--card-bg);border-radius:var(--r2);padding:22px 26px;max-width:560px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
 .modal h3{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--navy);border-left:3px solid var(--gold);padding-left:10px}
 .modal-ft{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
 
@@ -280,7 +283,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 #viewBanner{position:fixed;bottom:0;left:0;right:0;background:#7F6000;color:#FFF2CC;text-align:center;padding:7px;font-size:12px;font-weight:600;z-index:500;letter-spacing:.04em}
 
 /* REPORT DOC STYLES */
-.report-doc{padding:36px 44px;font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:12px;color:#1a1a1a;background:#fff}
+.report-doc{padding:36px 44px;font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:12px;color:#1a1a1a;background:var(--table-bg)}
 .report-doc .doc-hd{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #1F3864;margin-bottom:20px}
 .report-doc .doc-logo{display:flex;align-items:center;gap:11px}
 .report-doc .doc-logo-mark{width:40px;height:40px;background:#1F3864;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#FFC000}
@@ -299,7 +302,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .report-doc table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px}
 .report-doc table th{background:#1F3864;color:#fff;padding:7px 9px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em}
 .report-doc table td{padding:7px 9px;border-bottom:1px solid #F2F2F2}
-.report-doc table tr:nth-child(even) td{background:#F9F9F9}
+.report-doc table tr:nth-child(even) td{background:var(--table-stripe)}
 .report-doc table tfoot td{font-weight:700;background:#FFF2CC!important;border-top:2px solid #1F3864}
 .report-doc .c-new{color:#375623;font-weight:600;text-align:center}
 .report-doc .c-rev{color:#7F6000;font-weight:600;text-align:center}
@@ -327,7 +330,7 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 /* THEME PICKERS */
 .color-picker-row{display:flex;align-items:center;gap:9px;margin-bottom:10px}
 .color-picker-row label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray4);font-weight:600;min-width:170px}
-.color-picker-row input[type=color]{width:38px;height:30px;padding:2px;border:1px solid var(--gray2);border-radius:var(--r);cursor:pointer;background:#fff}
+.color-picker-row input[type=color]{width:38px;height:30px;padding:2px;border:1px solid var(--gray2);border-radius:var(--r);cursor:pointer;background:var(--table-bg)}
 .theme-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s;flex-shrink:0}
 .theme-swatch.active{border-color:#fff;box-shadow:0 0 0 2px var(--navy)}
 
@@ -4124,29 +4127,30 @@ function toggleSalary(salId) {
 function applyThemeColor(varName, value) {
   if (!value || value.length < 4) return;
   document.documentElement.style.setProperty(varName, value);
-  // Lưu vào localStorage
   const saved = JSON.parse(localStorage.getItem('theme_colors')||'{}');
   saved[varName] = value;
   localStorage.setItem('theme_colors', JSON.stringify(saved));
-  // Sync text input
-  const map = {'--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg'};
+  const map = {
+    '--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg',
+    '--table-bg':'clr-table-bg','--table-hover':'clr-table-hover'
+  };
   const id = map[varName];
   if (id) {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
-    const elTxt = document.getElementById(id+'-txt');
-    if (elTxt) elTxt.value = value;
+    const el = document.getElementById(id); if(el) el.value = value;
+    const elTxt = document.getElementById(id+'-txt'); if(elTxt) elTxt.value = value;
   }
 }
 
-function applyThemePreset(app, card, sidebar) {
-  applyThemeColor('--app-bg', app);
-  applyThemeColor('--card-bg', card);
+function applyThemePreset(app, card, sidebar, table, hover) {
+  applyThemeColor('--app-bg',   app);
+  applyThemeColor('--card-bg',  card);
   applyThemeColor('--sidebar-bg', sidebar);
+  applyThemeColor('--table-bg',  table || card);
+  applyThemeColor('--table-hover', hover || '#FFFBEE');
 }
 
 function resetThemeColors() {
-  applyThemePreset('#EAECF0', '#FFFFFF', '#F5F5F5');
+  applyThemePreset('#EAECF0','#FFFFFF','#F5F5F5','#FFFFFF','#FFFBEE');
   localStorage.removeItem('theme_colors');
   toast('✓ Đã đặt lại màu mặc định');
 }
@@ -4161,10 +4165,13 @@ function loadSavedTheme() {
 }
 
 function updThemeColorPickers() {
-  const get = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-  const map = {'--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg'};
+  const saved = JSON.parse(localStorage.getItem('theme_colors')||'{}');
+  const map = {
+    '--app-bg':'clr-app-bg','--card-bg':'clr-card-bg','--sidebar-bg':'clr-sidebar-bg',
+    '--table-bg':'clr-table-bg','--table-hover':'clr-table-hover'
+  };
   Object.entries(map).forEach(([varName, id]) => {
-    const val = localStorage.getItem('theme_colors') ? JSON.parse(localStorage.getItem('theme_colors'))[varName] : null;
+    const val = saved[varName];
     if (val) {
       const el = document.getElementById(id); if(el) el.value = val;
       const elTxt = document.getElementById(id+'-txt'); if(elTxt) elTxt.value = val;
@@ -4343,17 +4350,43 @@ function renderSettings() {
 
         </div>
 
+          <div>
+            <div style="color:#666;margin-bottom:6px;font-size:11px">Nền bảng / ô dữ liệu</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="clr-table-bg" value="#FFFFFF"
+                oninput="applyThemeColor('--table-bg',this.value)"
+                style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+              <input type="text" id="clr-table-bg-txt" value="#FFFFFF"
+                oninput="applyThemeColor('--table-bg',this.value);document.getElementById('clr-table-bg').value=this.value"
+                style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">
+            </div>
+          </div>
+
+          <div>
+            <div style="color:#666;margin-bottom:6px;font-size:11px">Hover / hàng được chọn</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="color" id="clr-table-hover" value="#FFFBEE"
+                oninput="applyThemeColor('--table-hover',this.value)"
+                style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px">
+              <input type="text" id="clr-table-hover-txt" value="#FFFBEE"
+                oninput="applyThemeColor('--table-hover',this.value);document.getElementById('clr-table-hover').value=this.value"
+                style="flex:1;font-size:11px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">
+            </div>
+          </div>
+
+        </div>
+
         <div style="margin-top:12px;font-size:11px;color:#888;margin-bottom:8px">Preset nhanh:</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${[
-            {name:'Mặc định',app:'#EAECF0',card:'#FFFFFF',sidebar:'#F5F5F5'},
-            {name:'Trắng sáng',app:'#F4F4F2',card:'#FFFFFF',sidebar:'#EFEFED'},
-            {name:'Tối nhẹ',app:'#2A2A2A',card:'#F5F5F3',sidebar:'#252525'},
-            {name:'Xanh lạnh',app:'#E8EDF2',card:'#FFFFFF',sidebar:'#DDE4EC'},
-            {name:'Kem nhạt',app:'#F5F0E8',card:'#FFFEF9',sidebar:'#EDE8DF'},
-          ].map(t=>`<button onclick="applyThemePreset('${t.app}','${t.card}','${t.sidebar}')"
+            {name:'Mặc định',   app:'#EAECF0',card:'#FFFFFF',sidebar:'#F5F5F5',table:'#FFFFFF',hover:'#FFFBEE'},
+            {name:'Trắng sáng', app:'#F4F4F2',card:'#FFFFFF',sidebar:'#EFEFED',table:'#FFFFFF',hover:'#F0F7FF'},
+            {name:'Tối nhẹ',    app:'#2A2A2A',card:'#F5F5F3',sidebar:'#252525',table:'#F5F5F3',hover:'#EBF0F8'},
+            {name:'Xanh lạnh',  app:'#E8EDF2',card:'#FFFFFF',sidebar:'#DDE4EC',table:'#F0F5FA',hover:'#DDE9F5'},
+            {name:'Kem nhạt',   app:'#F5F0E8',card:'#FFFEF9',sidebar:'#EDE8DF',table:'#FFFEF9',hover:'#FFF3DC'},
+          ].map(t=>`<button onclick="applyThemePreset('${t.app}','${t.card}','${t.sidebar}','${t.table}','${t.hover}')"
             style="padding:5px 12px;border-radius:20px;border:1px solid #ddd;background:${t.app};font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px">
-            <span style="width:10px;height:10px;background:${t.card};border:1px solid #ccc;border-radius:2px;display:inline-block"></span>
+            <span style="width:10px;height:10px;background:${t.table};border:1px solid #ccc;border-radius:2px;display:inline-block"></span>
             ${t.name}
           </button>`).join('')}
         </div>
@@ -5854,7 +5887,7 @@ function printReport() {
   const w = window.open('','_blank','width=900,height=700');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Báo cáo Phối Cảnh Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Be Vietnam Pro',sans-serif;font-size:12px;color:#1a1a1a;background:#fff}@page{size:A4;margin:15mm}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Be Vietnam Pro',sans-serif;font-size:12px;color:#1a1a1a;background:var(--table-bg)}@page{size:A4;margin:15mm}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
   </head><body>${body.innerHTML}</body></html>`);
   w.document.close(); setTimeout(()=>{ w.focus(); w.print(); }, 600);
 }
