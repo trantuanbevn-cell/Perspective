@@ -5,6 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="build" content="20260423-fix-login">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Gengai Sougo Việt Nam / Design Studio — Performance Management Software</title>
 <meta name="theme-color" content="#1F3864">
@@ -4706,7 +4707,7 @@ function closeModal() { document.getElementById('activeModal')?.remove(); }
       regs.forEach(r=>r.unregister());
     });
     // Register new SW with timestamp version — forces update on every deploy
-    const V = 'pc-v202604210001';
+    const V = 'pc-v202604230001';
     const sw = `const C='${V}';
 self.addEventListener('install',e=>{
   self.skipWaiting();
@@ -5725,13 +5726,6 @@ function applyCustomColor(varName, val) {
   localStorage.setItem('app_theme', 'custom');
 }
 
-function loadSavedTheme() {
-  const key = localStorage.getItem('app_theme'); if (!key) return;
-  if (key === 'custom') {
-    const custom = JSON.parse(localStorage.getItem('app_custom_theme')||'{}');
-    if (Object.keys(custom).length) { const root = document.documentElement; Object.entries(custom).forEach(([k,v]) => root.style.setProperty(k, v)); }
-  } else if (THEMES[key]) { applyTheme(key); }
-}
 
 function cssToHex(color) {
   if (!color) return '#1F3864'; color = color.trim();
@@ -6051,6 +6045,62 @@ function applyRoleUI(role) {
 // Passwords — plain text comparison (works on file:// and https://)
 const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
 
+// ── splashLogin: khai báo global để onkeydown/onclick inline gọi được ──
+function splashLogin() {
+  const pw = (document.getElementById('splashPwInput').value || '').trim();
+  const errEl = document.getElementById('splashError');
+  if (!pw) { errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
+  errEl.textContent = '';
+
+  const role = SPLASH_PW[pw] || null;
+
+  if (!role) {
+    errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
+    document.getElementById('splashPwInput').value = '';
+    document.getElementById('splashPwInput').focus();
+    errEl.classList.remove('shake');
+    void errEl.offsetWidth;
+    errEl.classList.add('shake');
+    return;
+  }
+
+  // Save session & set role
+  sessionStorage.setItem('splash_role', role);
+  SYNC.role = role;
+  if (role === 'view') enableViewOnlyMode(true);
+
+  // Fade out splash
+  const splash = document.getElementById('splashScreen');
+  const hdr = document.querySelector('.header');
+  const pgm = document.getElementById('pageMain');
+  splash.classList.add('fade-out');
+  setTimeout(async () => {
+    splash.style.display = 'none';
+    if (hdr) hdr.style.visibility = '';
+    if (pgm) pgm.style.visibility = '';
+    applyRoleUI(role);
+
+    const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
+    if (gistId) {
+      setSyncStatus('syncing', 'Đang tải…');
+      try {
+        const pulled = await syncPull('');
+        if (pulled) {
+          renderAll();
+          setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
+          toast('✓ Đã tải dữ liệu mới nhất từ cloud');
+        } else {
+          setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
+        }
+      } catch(e) { setSyncStatus('', 'Sync'); }
+      startPeriodicPull();
+    } else if (role === 'admin') {
+      const ghToken = localStorage.getItem('sync_gh_token') || '';
+      if (!ghToken) setTimeout(()=>toast('💡 Cần GitHub Token — vào Cài đặt → Thiết lập đồng bộ để điền token'), 1200);
+    }
+  }, 650);
+}
+
 (function initSplash() {
   // Check session — already logged in
   const sessionRole = sessionStorage.getItem('splash_role');
@@ -6082,66 +6132,7 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
   if (hdr) hdr.style.visibility = 'hidden';
   if (pgm) pgm.style.visibility = 'hidden';
 
-  window.splashLogin = function() {
-    const pw = (document.getElementById('splashPwInput').value || '').trim();
-    const errEl = document.getElementById('splashError');
-    if (!pw) { errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
-    errEl.textContent = '';
-
-    const role = SPLASH_PW[pw] || null;
-
-    if (!role) {
-      errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
-      document.getElementById('splashPwInput').value = '';
-      document.getElementById('splashPwInput').focus();
-      errEl.classList.remove('shake');
-      void errEl.offsetWidth; // reflow
-      errEl.classList.add('shake');
-      return;
-    }
-
-    // Save session & set role
-    sessionStorage.setItem('splash_role', role);
-    SYNC.role = role;
-    if (role === 'view') enableViewOnlyMode(true);
-
-    // Fade out splash
-    const splash = document.getElementById('splashScreen');
-    splash.classList.add('fade-out');
-    setTimeout(async () => {
-      splash.style.display = 'none';
-      if (hdr) hdr.style.visibility = '';
-      if (pgm) pgm.style.visibility = '';
-      applyRoleUI(role);
-
-      // Auto-pull cloud data on login if Gist ID configured
-      const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
-      if (gistId) {
-        setSyncStatus('syncing', 'Đang tải…');
-        try {
-          const pulled = await syncPull('');
-          if (pulled) {
-            renderAll();
-            setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
-            toast('✓ Đã tải dữ liệu mới nhất từ cloud');
-          } else {
-            setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
-          }
-        } catch(e) {
-          setSyncStatus('', 'Sync');
-        }
-        // Bắt đầu pull định kỳ sau khi login
-        startPeriodicPull();
-      } else if (role === 'admin') {
-        const ghToken = localStorage.getItem('sync_gh_token') || '';
-        if (!ghToken) {
-          setTimeout(()=>{
-            toast('💡 Cần GitHub Token — vào Cài đặt → Thiết lập đồng bộ để điền token');
-          }, 1200);
-        }
-      }
-    }, 650);
-  };
+  window.splashLogin = splashLogin; // alias cho inline onkeydown
 })();
 
 </script>
