@@ -1042,22 +1042,19 @@ function renderSidebar() {
   const tomorrow = localDateStr(new Date(Date.now() + 86400000));
 
   // Lọc và sắp xếp: ẩn dự án đã hoàn thành từ hôm qua trở về trước
-  const visiblePjs = pjs.filter((p, i) => {
+  const visiblePjs = pjs.filter(p => {
     const allRows = (p.groups||[]).flatMap(g=>g.rows||[]).filter(r=>r.dateTo);
     if (!allRows.length) return true; // không có lịch → luôn hiện
 
-    // Hàng có dateTo <= hôm qua (đã qua ngày)
-    const pastRows = allRows.filter(r => r.dateTo < today);
-    if (!pastRows.length) return true; // chưa có hàng nào qua ngày → hiện
+    // Có lịch hôm nay hoặc tương lai → luôn hiện
+    const hasTodayOrFuture = allRows.some(r => r.dateTo >= today);
+    if (hasTodayOrFuture) return true;
 
-    // Kiểm tra: tất cả hàng đã qua ngày đã UP hết chưa?
-    const allPastDone = pastRows.every(r => r.doneAt);
-    // Có hàng nào còn lịch hôm nay hoặc tương lai không?
-    const hasFutureRows = allRows.some(r => r.dateTo >= today);
-
-    // Ẩn khi: tất cả hàng qua ngày đã UP hết VÀ không có lịch tương lai
-    if (allPastDone && !hasFutureRows) return false;
-    return true;
+    // Chỉ còn lịch ĐÃ QUA (trước hôm nay)
+    // Ẩn chỉ khi: TẤT CẢ hàng đã qua ngày ĐỀU đã bấm UP
+    // → dự án thực sự hoàn thành, sang ngày hôm sau mới ẩn
+    const allPastUpped = allRows.every(r => r.doneAt);
+    return !allPastUpped; // còn hàng chưa UP → vẫn hiện
   });
 
   list.innerHTML = visiblePjs.map((p, i) => {
@@ -4206,6 +4203,25 @@ function triggerAutoSync() {
   }
 }
 
+// Pull định kỳ mỗi 3 phút — áp dụng cho tất cả role
+function startPeriodicPull() {
+  if (startPeriodicPull._timer) clearInterval(startPeriodicPull._timer);
+  startPeriodicPull._timer = setInterval(async () => {
+    const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
+    if (!gistId) return;
+    // Admin: push nếu có thay đổi, rồi pull; các role khác: chỉ pull
+    try {
+      setSyncStatus('syncing', '↓');
+      await syncPull('');
+      renderAll();
+      const role = SYNC.role || sessionStorage.getItem('splash_role') || '';
+      setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
+    } catch(e) {
+      setSyncStatus('', 'Sync');
+    }
+  }, 3 * 60 * 1000); // 3 phút
+}
+
 /* ══════════════════════════════════════════════════════
    SYNC SYSTEM — Password-based, 2-level access
    Backend: GitHub Gist (free, CORS-friendly)
@@ -4325,18 +4341,38 @@ async function syncPull(decryptPassword) {
     try { parsed = JSON.parse(fileContent); }
     catch(e) { throw new Error('parse_error: ' + e.message); }
     if (!parsed || typeof parsed !== 'object') throw new Error('invalid_data');
-    // Merge: giữ lại data local nếu cloud không có
-    const merged = Object.assign({}, D, parsed);
-    merged.settings = Object.assign({}, D.settings, parsed.settings);
-    merged.settings.sync = D.settings.sync; // giữ sync credentials local
-    Object.assign(D, merged);
+
+    // ── CLOUD THẮNG — chỉ giữ credentials local ──
+    // Lưu credentials trước khi ghi đè
+    const localSync    = D.settings?.sync || {};
+    const localGistId  = localStorage.getItem('sync_gist_id')  || '';
+    const localToken   = localStorage.getItem('sync_gh_token') || '';
+
+    // Lấy toàn bộ data từ cloud
+    D = parsed;
+
+    // Deep merge months: giữ tất cả tháng từ cả cloud lẫn local (tránh mất dữ liệu offline)
+    if (parsed.months && localSync) {
+      const localMonths = JSON.parse(localStorage.getItem(SK) || '{}').months || {};
+      // Với mỗi tháng trong local, chỉ merge vào nếu cloud KHÔNG có tháng đó
+      Object.keys(localMonths).forEach(mid => {
+        if (!D.months[mid]) D.months[mid] = localMonths[mid];
+      });
+    }
+
+    // Khôi phục credentials local — không bao giờ dùng token từ cloud
+    if (!D.settings) D.settings = {};
+    D.settings.sync = { ...parsed.settings?.sync, ...localSync };
+    if (localGistId) localStorage.setItem('sync_gist_id', localGistId);
+    if (localToken)  localStorage.setItem('sync_gh_token', localToken);
+
     try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     setSyncStatus('synced', '✓ Synced');
     return parsed;
   } catch(e) {
     console.error('syncPull error:', e.message);
-    setSyncStatus('error', 'Lỗi pull');
+    setSyncStatus('error', 'Lỗi pull: ' + e.message.slice(0,30));
     throw e;
   }
 }
@@ -5483,14 +5519,12 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
       if (!gistId) return;
       try {
         setSyncStatus('syncing','Đang tải…');
-        const pulled = await syncPull('');
-        if (pulled) {
-          D = pulled; save(); renderAll();
-          setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
-        } else {
-          setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
-        }
+        await syncPull('');
+        renderAll();
+        setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
       } catch(e) { setSyncStatus('','Sync'); }
+      // Bắt đầu pull định kỳ
+      startPeriodicPull();
     }, 800);
     return;
   }
@@ -5533,14 +5567,14 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
       if (pgm) pgm.style.visibility = '';
       applyRoleUI(role);
 
-      // Auto-pull cloud data on login if Bin ID configured
+      // Auto-pull cloud data on login if Gist ID configured
       const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
       if (gistId) {
         setSyncStatus('syncing', 'Đang tải…');
         try {
           const pulled = await syncPull('');
           if (pulled) {
-            D = pulled; save(); renderAll();
+            renderAll();
             setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
             toast('✓ Đã tải dữ liệu mới nhất từ cloud');
           } else {
@@ -5548,8 +5582,9 @@ const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
           }
         } catch(e) {
           setSyncStatus('', 'Sync');
-          // Silent fail — local data still usable
         }
+        // Bắt đầu pull định kỳ sau khi login
+        startPeriodicPull();
       } else if (role === 'admin') {
         const ghToken = localStorage.getItem('sync_gh_token') || '';
         if (!ghToken) {
