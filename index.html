@@ -2625,14 +2625,12 @@ function renderGroups(p) {
     const gHasTodayUp  = rows.some(r=>r.dateTo===today && !r.doneAt);
     const gHasSoonUp   = rows.some(r=>r.dateTo>today && r.dateTo<=soon3 && !r.doneAt);
     const gHasFutureUp = rows.some(r=>r.dateTo>today && !r.doneAt);
-    const gAllDone     = rows.filter(r=>r.dateTo).length>0 && rows.filter(r=>r.dateTo).every(r=>r.doneAt);
-    const gHasAnyUp    = rows.some(r=>r.dateTo && !r.doneAt);
-
-    // Mức nhóm: active = có lịch UP; dim = đã xong hoặc không có lịch
-    const gIsActive = gHasTodayUp || gHasSoonUp || gHasFutureUp;
-    const gIsDim    = !gIsActive; // đã UP hết hoặc không có lịch
-    const gOpacity  = gIsDim ? '0.38' : '1';
-    const gFilter   = gIsDim ? 'filter:saturate(0.2) brightness(0.92)' : '';
+    // Chỉ mờ khi KHÔNG CÓ hàng nào có dateTo (chưa lên lịch UP gì cả)
+    const gHasAnySchedule = rows.some(r=>r.dateTo);
+    const gIsActive = gHasTodayUp || gHasSoonUp || gHasFutureUp || gHasAnySchedule;
+    const gIsDim    = !gHasAnySchedule; // chỉ mờ khi hoàn toàn chưa có lịch
+    const gOpacity  = gIsDim ? '0.42' : '1';
+    const gFilter   = gIsDim ? 'filter:saturate(0.15) brightness(0.9);' : '';
 
     // Header border màu theo trạng thái
     const gBorderColor = gHasTodayUp ? '#e74c3c'
@@ -2648,8 +2646,9 @@ function renderGroups(p) {
       const rHasSoonUp   = r.dateTo>today && r.dateTo<=soon3 && !r.doneAt;
       const rHasFutureUp = r.dateTo>today && !r.doneAt;
       const rIsDone      = !!(r.doneAt);
-      const rIsActive    = rHasTodayUp || rHasSoonUp || rHasFutureUp;
-      const rIsDim       = !rIsActive && (rIsDone || !r.dateTo);
+      const rHasSchedule = !!(r.dateTo); // có lịch UP (dù đã done hay chưa)
+      // Chỉ mờ row hoàn toàn không có dateTo
+      const rIsDim = !rHasSchedule;
 
       // Row background theo mức ưu tiên
       const rowBg = rHasTodayUp
@@ -2660,9 +2659,10 @@ function renderGroups(p) {
         ? '#F8F8F8'   // đã UP xong → xám nhạt
         : ri%2===0 ? gc.bg : gc.stripe;
 
-      const rOpacity = rIsDim ? '0.4' : '1';
-      const rFilter  = rIsDim ? 'filter:saturate(0.15) brightness(0.9)' : '';
-      const isDark   = parseInt(gc.bg.slice(1,3),16) < 180;
+      const rowStyle = rIsDim
+        ? `opacity:0.42;filter:saturate(0.15) brightness(0.9);`
+        : '';
+      const isDark = parseInt(gc.bg.slice(1,3),16) < 180;
 
       const deadlinePast = r.dateTo && r.dateTo < today && !r.doneAt;
       const deadlineSoon = rHasSoonUp || rHasTodayUp;
@@ -2673,13 +2673,13 @@ function renderGroups(p) {
       const chipRevTx  = isVNProject ? '#9d174d' : 'var(--rev-tx)';
 
       return `<tr data-gid="${g.id}" data-rid="${r.id}"
-        style="background:${rowBg};opacity:${rOpacity};${rFilter};transition:opacity .2s">
+        style="background:${rowBg};${rowStyle}transition:opacity .2s">
         ${isFirst ? `<td rowspan="${rows.length}" style="
           background:${gc.hdr};
           border-left:4px solid ${gBorderColor};
           border-right:1px solid ${gc.border};
           vertical-align:top;padding:0;
-          min-width:0;opacity:${gOpacity};${gFilter};transition:opacity .2s">
+          min-width:0;${gIsDim ? 'opacity:0.42;filter:saturate(0.15) brightness(0.9);' : ''}transition:opacity .2s">
           <div style="padding:6px 8px">
             <input class="tbl-input-dark" list="tl-${p.id}" value="${x(g.type||'')}"
               onchange="updGroup('${p.id}','${g.id}','type',this.value)"
