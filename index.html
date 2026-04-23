@@ -1042,25 +1042,7 @@ function renderSidebar() {
   const tomorrow = localDateStr(new Date(Date.now() + 86400000));
 
   // Lọc và sắp xếp: ẩn dự án đã hoàn thành từ hôm qua trở về trước
-  const visiblePjs = pjs.filter(p => {
-    const allRows = (p.groups||[]).flatMap(g=>g.rows||[]);
-
-    // Có hàng nào KHÔNG có dateTo → dự án còn việc, luôn hiện
-    const hasRowsWithoutDate = allRows.some(r => !r.dateTo);
-    if (hasRowsWithoutDate) return true;
-
-    // Tất cả hàng đều có dateTo
-    const rowsWithDate = allRows.filter(r => r.dateTo);
-    if (!rowsWithDate.length) return true; // không có hàng nào → hiện
-
-    // Có hàng hôm nay hoặc tương lai → luôn hiện
-    const hasTodayOrFuture = rowsWithDate.some(r => r.dateTo >= today);
-    if (hasTodayOrFuture) return true;
-
-    // Chỉ còn hàng trong quá khứ — ẩn CHỈ KHI tất cả đã bấm UP
-    const allPastUpped = rowsWithDate.every(r => r.doneAt);
-    return !allPastUpped;
-  });
+  const visiblePjs = pjs;
 
   list.innerHTML = visiblePjs.map((p, i) => {
     const thumb = (p.photos || []).find(Boolean);
