@@ -1435,7 +1435,9 @@ function renderMonthGantt(pjs) {
   const soon3 = new Date(today); soon3.setDate(today.getDate()+3);
   const soon3Str = localDateStr(soon3);
 
-  // Collect ALL tasks
+  // Collect ALL tasks — gắn flag isVN để phân biệt màu
+  const m = curMonth();
+  const vnIds = new Set((m.projectsVN||[]).map(p=>p.id));
   const allTasks = pjs.flatMap((p, pIdx) =>
     (p.groups||[]).flatMap(g =>
       (g.rows||[])
@@ -1444,7 +1446,8 @@ function renderMonthGantt(pjs) {
           ...r,
           pjName:    p.nameVN||p.nameJP||'—',
           groupName: g.type||'—',
-          pjNum:     pIdx + 1
+          pjNum:     pIdx + 1,
+          isVN:      vnIds.has(p.id)
         }))
     )
   );
@@ -1510,7 +1513,9 @@ function renderMonthGantt(pjs) {
       const isDoneByDate   = r.dateTo && r.dateTo < todayStr && !isActuallyDone; // quá ngày chưa UP
       const isTodayUp      = r.dateTo === todayStr && !isActuallyDone;           // hôm nay UP
       const isUrgent       = r.dateTo && r.dateTo > todayStr && r.dateTo <= soon3Str && !isActuallyDone; // sắp UP (>hôm nay)
-      const numColor = r.status==='new' ? '#27ae60' : '#b8860b';
+      const numColor = r.isVN
+        ? (r.status==='new' ? '#7c3aed' : '#db2777')
+        : (r.status==='new' ? '#27ae60' : '#b8860b');
 
       const badge = isActuallyDone
         ? '<span style="font-size:7px;background:#27ae60;color:#fff;border-radius:2px;padding:0 3px;margin-left:2px;font-weight:700">✓ Đã UP</span>'
@@ -1568,10 +1573,11 @@ function renderMonthGantt(pjs) {
         const isNew=r.status==='new';
         const isFirst=r.dateFrom===dkStr||dkStr===startStr, isLast=r.dateTo===dkStr;
 
-        // Màu thanh: xám = đã xong (UP hoặc qua ngày), xanh = mới, vàng = sửa
+        // Màu thanh: xám = done/quá ngày | JP: xanh/vàng | VN: tím/hồng
         const bc = (isActuallyDone || isDoneByDate) ? '#adb5bd'
-          : isNew  ? '#5a9a35'
-          :          '#d4900a';
+          : r.isVN
+            ? (isNew ? '#7c3aed' : '#db2777')
+            : (isNew ? '#5a9a35' : '#d4900a');
 
         const isFirstAppearance = !shownLabels_done.has(r.id);
         if (isFirstAppearance) shownLabels_done.add(r.id);
@@ -1633,8 +1639,10 @@ function renderMonthGantt(pjs) {
     <span>Chú thích:</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border-radius:2px;display:inline-block"></span>Làm mới</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>Sửa lại</span>
-    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border-radius:2px;display:inline-block"></span>Làm mới</span>
-    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>Sửa lại</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#5a9a35;border-radius:2px;display:inline-block"></span>🇯🇵 Mới</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#d4900a;border-radius:2px;display:inline-block"></span>🇯🇵 Sửa</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#7c3aed;border-radius:2px;display:inline-block"></span>🇻🇳 Mới</span>
+    <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#db2777;border-radius:2px;display:inline-block"></span>🇻🇳 Sửa</span>
     <span style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;font-weight:800;color:#e74c3c">🔴</span><span style="color:#e74c3c;font-weight:700">Hôm nay UP</span></span>
     <span style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;color:#e67e22">⚡</span><span style="color:#e67e22;font-weight:700">Sắp UP</span></span>
     <span style="display:flex;align-items:center;gap:3px"><span style="width:12px;height:7px;background:#adb5bd;border-radius:2px;display:inline-block"></span><span style="color:#888;">Đã UP / Qua ngày</span></span>
