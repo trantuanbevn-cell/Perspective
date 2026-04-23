@@ -1154,10 +1154,18 @@ function renderContent() {
   if (activePjId) {
     const p = getPj(activePjId);
     if (!p) { activePjId = null; renderContent(); return; }
-    renderHeroStats(ci);
-    const detailDiv = document.getElementById('pjDetailArea');
-    if (detailDiv) renderProjectDetail(detailDiv, p);
-    updateHeroForProject(p);
+    try {
+      renderHeroStats(ci);
+      const detailDiv = document.getElementById('pjDetailArea');
+      if (detailDiv) renderProjectDetail(detailDiv, p);
+      updateHeroForProject(p);
+    } catch(e) {
+      console.error('renderContent error:', e);
+      if (ci) ci.innerHTML = `<div style="padding:20px;color:#e74c3c;font-size:12px">
+        ⚠ Lỗi render dự án: ${e.message}<br>
+        <small style="color:#888">${e.stack?.split('\n')[1]||''}</small>
+      </div>`;
+    }
   } else {
     renderMonthOverview(ci);
   }
@@ -2602,6 +2610,7 @@ function renderGroups(p) {
     {bg:'#a8a8a8', hdr:'#989898', border:'#585858', stripe:'#a0a0a0'}, // 8 charcoal gray
   ];
 
+  const today = localDateStr(new Date());
   const soon3 = localDateStr(new Date(Date.now()+3*86400000));
 
   return groups.map((g, gi) => {
@@ -2809,7 +2818,7 @@ function renderStaffSchedule(p) {
   let wStart=0;
   days.forEach((d,i)=>{ if(i===0||(d.getDay()===1)){weekStarts.push(i);} });
 
-  // Collect ALL tasks from this project
+  // Collect ALL tasks from this project (bao gồm cả ngoài 3 tuần)
   const allTasks = (p.groups||[]).flatMap(g=>
     (g.rows||[]).filter(r=>r.staff&&(r.dateFrom||r.dateTo)).map(r=>({
       ...r,
@@ -2826,11 +2835,31 @@ function renderStaffSchedule(p) {
     return (!to || to >= todayStr) && (!from || from <= endStr);
   }
 
-  // Build per-staff map considering ONLY active tasks in window
+  // Lấy danh sách nhân sự CỦA DỰ ÁN này (có tham gia ít nhất 1 hàng)
+  const pjStaffActive = [...new Set(
+    allTasks.filter(overlaps).map(r=>r.staff).filter(Boolean)
+  )];
+  const pjStaffPast = [...new Set(
+    allTasks.filter(r=>!overlaps(r)).map(r=>r.staff).filter(Boolean)
+      .filter(s=>!pjStaffActive.includes(s))
+  )];
+  // Sắp xếp theo thứ tự trong staffList
+  const sortStaff = arr => D.settings.staffList.filter(s=>arr.includes(s));
+  const activeStaffList = sortStaff(pjStaffActive);
+  const pastStaffList   = sortStaff(pjStaffPast);
+
+  // Nếu không có nhân sự nào → báo trống
+  if (!activeStaffList.length && !pastStaffList.length) {
+    return `<div style="padding:20px;text-align:center;color:#aaa;font-size:12px">
+      Chưa có nhân sự nào được gán trong dự án này
+    </div>`;
+  }
+
+  // Build per-staff task map
   const staffMap = {};
-  D.settings.staffList.forEach(s => staffMap[s]=[]);
+  [...activeStaffList,...pastStaffList].forEach(s => staffMap[s]=[]);
   allTasks.filter(overlaps).forEach(r=>{
-    if(r.staff && staffMap[r.staff]) staffMap[r.staff].push(r);
+    if(r.staff && staffMap[r.staff]!==undefined) staffMap[r.staff].push(r);
   });
 
   // Date formatting helpers
@@ -2876,12 +2905,10 @@ function renderStaffSchedule(p) {
     `<th colspan="${m.span}" style="background:var(--navy2);color:var(--gold2);font-size:10px;text-align:center;padding:3px;border-right:1px solid rgba(255,255,255,.15)">${m.label}</th>`
   ).join('');
 
-  // Build each staff row
-  const staffRows = D.settings.staffList.map(staff=>{
-    const tasks = staffMap[staff];
-    const isBusy = tasks.length>0;
+  // Build each staff row — chỉ nhân sự của dự án này
+  function buildStaffRow(staff, isPastStaff) {
+    const tasks = (staffMap[staff]||[]);
 
-    // For each day, check which tasks are active
     const dayCells = days.map((d,i)=>{
       const dk = dateKey(d);
       const isToday = dk===todayStr;
@@ -2893,7 +2920,6 @@ function renderStaffSchedule(p) {
         const to   = r.dateTo||r.dateFrom;
         return from<=dk && to>=dk;
       });
-      // Check leave on this day
       const leaves = getStaffLeaves(staff);
       const isOnLeave = leaves.some(l=>{
         const lf=l.from||l.to, lt=l.to||l.from;
@@ -2905,45 +2931,68 @@ function renderStaffSchedule(p) {
         return `<td style="background:${bg};border-left:${borderL};padding:1px"></td>`;
       }
       const blocks = activeTasks.map(r=>{
+        const isActuallyDone = !!(r.doneAt);
         const isNew = r.status==='new';
-        const bg2 = isNew?'#5a9a35':'#d4900a'; // solid dark colors, white text readable
+        // Màu thanh: xám nếu past staff hoặc đã UP, xanh/vàng nếu active
+        const barColor = (isPastStaff || isActuallyDone) ? '#adb5bd'
+          : isNew ? '#5a9a35' : '#d4900a';
         const isFirstDay = r.dateFrom===dk;
         const isLastDay  = r.dateTo===dk;
-        return `<div title="${x(r.groupName)} (${r.pjName})\n${isNew?'Làm mới':'Sửa lại'} · ${r.qty||0} mai\n${r.dateFrom||'?'} → ${r.dateTo||'?'}"
-          style="background:${bg2};height:11px;margin:1px 0;border-radius:${isFirstDay?'3px 0 0 3px':isLastDay?'0 3px 3px 0':'0'};
-          overflow:hidden;font-size:7.5px;color:#fff;white-space:nowrap;padding:0 3px;line-height:11px;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.3)">
+        return `<div title="${x(r.groupName)} · ${isNew?'Làm mới':'Sửa lại'} · ${r.dateFrom||'?'} → ${r.dateTo||'?'}"
+          style="background:${barColor};height:11px;margin:1px 0;
+          border-radius:${isFirstDay?'3px 0 0 3px':isLastDay?'0 3px 3px 0':'0'};
+          overflow:hidden;font-size:7.5px;color:#fff;white-space:nowrap;padding:0 3px;line-height:11px;font-weight:700;
+          opacity:${isPastStaff?0.5:1}">
           ${isFirstDay?x(r.groupName.substring(0,6)):''}
         </div>`;
       }).join('');
       return `<td style="background:${bg};border-left:${borderL};padding:1px;vertical-align:top">${blocks}</td>`;
     }).join('');
 
-    // Task list summary on left
-    // Show active leaves in summary too
     const activeLeaveList = getStaffLeaves(staff).filter(l=>{
-      const lt=l.to||l.from;
-      return lt >= todayStr;
+      const lt=l.to||l.from; return lt >= todayStr;
     });
-    const taskSummary = tasks.length>0 || activeLeaveList.length>0 ? 
-      activeLeaveList.map(l=>`<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#e74c3c;flex-shrink:0;display:inline-block"></span><span style="color:#e74c3c;overflow:hidden;text-overflow:ellipsis">Nghỉ ${l.from||'?'}${l.to&&l.to!==l.from?'→'+l.to:''}</span></div>`).join('')
-      + tasks.map(r=>{
-      const overdue = r.dateTo && r.dateTo < todayStr;
-      return `<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">
-        <span style="width:6px;height:6px;border-radius:50%;background:${r.status==='new'?'#70AD47':'var(--gold)'};flex-shrink:0;display:inline-block"></span>
-        <span style="overflow:hidden;text-overflow:ellipsis;color:${overdue?'#e74c3c':'inherit'}">${x(r.groupName.length>10?r.groupName.substring(0,10)+'…':r.groupName)}</span>
-        ${overdue?'<span style="color:#e74c3c;font-weight:700">!</span>':''}
-      </div>`;
-    }).join('') : `<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>`;
+    const taskSummary = tasks.length>0 || activeLeaveList.length>0
+      ? activeLeaveList.map(l=>`<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap">
+          <span style="width:6px;height:6px;border-radius:50%;background:#e74c3c;flex-shrink:0;display:inline-block"></span>
+          <span style="color:#e74c3c;overflow:hidden;text-overflow:ellipsis">Nghỉ ${l.from||'?'}${l.to&&l.to!==l.from?'→'+l.to:''}</span>
+        </div>`).join('')
+        + tasks.map(r=>{
+          const overdue = r.dateTo && r.dateTo < todayStr && !r.doneAt;
+          const done    = !!(r.doneAt);
+          const dotColor = done ? '#adb5bd' : r.status==='new' ? '#70AD47' : 'var(--gold)';
+          return `<div style="font-size:9px;margin-bottom:1px;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">
+            <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;display:inline-block"></span>
+            <span style="overflow:hidden;text-overflow:ellipsis;color:${done?'#aaa':overdue?'#e74c3c':'inherit'};text-decoration:${done?'line-through':'none'}">${x(r.groupName.length>10?r.groupName.substring(0,10)+'…':r.groupName)}</span>
+            ${overdue?'<span style="color:#e74c3c;font-weight:700">!</span>':''}
+            ${done?'<span style="color:#27ae60;font-size:8px">✓</span>':''}
+          </div>`;
+        }).join('')
+      : `<div style="font-size:9px;color:#aaa;font-style:italic">Không có task</div>`;
 
-    const nameBg = isBusy ? 'var(--gray1)' : '#e8fdf0';
-    return `<tr style="border-bottom:1px solid var(--gray2)">
+    // Name cell: active = sáng, past = mờ xám
+    const nameBg   = isPastStaff ? '#f9f9f9' : 'var(--gray1)';
+    const nameColor= isPastStaff ? '#aaa' : 'var(--navy)';
+    const rowOpacity = isPastStaff ? 'opacity:0.55' : '';
+    return `<tr style="border-bottom:1px solid var(--gray2);${rowOpacity}">
       <td style="background:${nameBg};padding:5px 8px;min-width:90px;border-right:1px solid var(--gray2);vertical-align:top">
-        <div style="font-weight:700;font-size:11px;color:var(--navy)">${staff}</div>
+        <div style="font-weight:700;font-size:11px;color:${nameColor}">${staff}</div>
+        ${isPastStaff?'<div style="font-size:8px;color:#bbb;font-style:italic">Đã hoàn thành</div>':''}
         ${taskSummary}
       </td>
       ${dayCells}
     </tr>`;
-  }).join('');
+  }
+
+  // Render: active trước, sau đó past có divider
+  let staffRows = activeStaffList.map(s=>buildStaffRow(s,false)).join('');
+  if(pastStaffList.length>0){
+    staffRows += `<tr><td colspan="${days.length+1}"
+      style="background:#f5f5f5;padding:4px 10px;font-size:10px;color:#aaa;font-style:italic;border-top:2px dashed #e0e0e0">
+      ↓ Nhân sự đã hoàn thành / không còn lịch trong 3 tuần tới
+    </td></tr>`;
+    staffRows += pastStaffList.map(s=>buildStaffRow(s,true)).join('');
+  }
 
   return `
   <div style="overflow-x:auto">
