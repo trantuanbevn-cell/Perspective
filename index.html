@@ -655,7 +655,7 @@ function freshData() {
   const mid = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   return {
     settings: {
-      staffList: ['トゥアン','ヒエン','L.フォン','ハー','ズエン','タイン','M.フオン'],
+      staffList: ['Management トゥアン','SGN ヒエン','SGN L.フォン','HAN M.フオン','SGN ズエン','HAN ハー','HAN T.タイン','HAN H.タイン','HAN D.チュン','HAN ニュー'],
       staffProfiles: {},  // { name: {role,salaryGross,salaryNet,leaves:[{from,to,reason}],order} }
       typeList: ['外観パース','アプローチパース','エントランスパース','鳥瞰パース',
         'ラウンジパース','スタイルラウンジ','内観パース','大浴場パース',
@@ -1266,12 +1266,24 @@ function renderProjectTimeline(pjs) {
   const [yr, mo] = m.split('-').map(Number);
   const daysInMonth = new Date(yr, mo, 0).getDate();
   const todayStr = localDateStr(new Date());
-  const holidays = getHolidays();
+  // Fix: holidays là [{date,name}] → cần normalize thành Set<string>
+  const holidaySet = new Set(getHolidays().map(h => h.date || h));
   const isVN = activeSection === 'vn';
 
+  // Sắp xếp dự án: 大阪 trước, 東京 sau, còn lại cuối
+  const OFFICE_ORDER = ['大阪','東京'];
+  const sorted = [...pjs].sort((a, b) => {
+    const ia = OFFICE_ORDER.indexOf(a.office||'');
+    const ib = OFFICE_ORDER.indexOf(b.office||'');
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
   // Shared cell border style
-  const CB = '1px solid #ddd';   // cell border
-  const PB = '2px solid #aaa';   // project separator (đậm hơn)
+  const CB = '1px solid #ddd';
+  const PB = '2px solid #aaa';
 
   // Day headers
   const dayHeaders = Array.from({length: daysInMonth}, (_,i) => {
@@ -1279,7 +1291,7 @@ function renderProjectTimeline(pjs) {
     const ds  = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow = new Date(yr, mo-1, d).getDay();
     const isToday = ds === todayStr;
-    const isHol   = holidays.some(h=>h===ds) || dow===0;
+    const isHol   = holidaySet.has(ds) || dow===0 || dow===6;
     const col  = isToday ? '#27ae60' : isHol ? '#e74c3c' : 'var(--gray4)';
     const bg   = isToday ? 'rgba(39,174,96,.1)' : isHol ? 'rgba(231,76,60,.06)' : '';
     return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:600;color:${col};border-bottom:${PB};border-left:${CB};${bg?'background:'+bg:''};white-space:nowrap">${d}</th>`;
@@ -1296,11 +1308,13 @@ function renderProjectTimeline(pjs) {
     return `<td style="width:14px;padding:0;position:relative;background:${bg};border-left:${CB};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative">${bar}</div></td>`;
   }
 
-  const rows = pjs.map((p, pi) => {
+  const rows = sorted.map((p, pi) => {
     const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
     const allDone = allGrpRows.length>0 && allGrpRows.every(g=>(g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt)) && allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo));
     const rowDim = allDone ? 'opacity:0.5' : '';
-    const isLastPj = pi === pjs.length - 1;
+
+    // Kiểm tra hôm nay có hạng mục UP không
+    const hasTodayUp = allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt));
 
     // Project name row (no timeline)
     const pjRow = `<tr style="${rowDim}">
@@ -1315,10 +1329,14 @@ function renderProjectTimeline(pjs) {
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       ${Array.from({length:daysInMonth},(_,i)=>{
         const d=i+1, ds=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday=ds===todayStr, isHol=holidays.some(h=>h===ds)||new Date(yr,mo-1,d).getDay()===0;
+        const dow=new Date(yr,mo-1,d).getDay();
+        const isToday=ds===todayStr, isHol=holidaySet.has(ds)||dow===0||dow===6;
         const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'var(--table-bg)';
         return `<td style="width:14px;padding:0;background:${bg};border-left:${CB};border-bottom:none"><div style="height:8px"></div></td>`;
       }).join('')}
+      <td style="border-bottom:none;border-left:${CB};background:${hasTodayUp?'#fff5f5':'var(--table-bg)'}">
+        ${hasTodayUp?'<span style="font-size:8px;font-weight:800;color:#e74c3c;padding:0 4px">UP</span>':''}
+      </td>
     </tr>`;
 
     // Group rows
@@ -1329,12 +1347,14 @@ function renderProjectTimeline(pjs) {
       const grpRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
       const grpAllDone = (g.rows||[]).some(r=>r.dateTo) && (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt);
       const grpOpacity = grpAllDone ? '0.55' : rowDim ? '0.75' : '1';
+      const grpTodayUp = (g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt);
 
       const dayCells = Array.from({length:daysInMonth}, (_,i) => {
         const d  = i+1;
         const ds = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dow = new Date(yr,mo-1,d).getDay();
         const isToday = ds===todayStr;
-        const isHol   = holidays.some(h=>h===ds)||new Date(yr,mo-1,d).getDay()===0;
+        const isHol   = holidaySet.has(ds)||dow===0||dow===6;
 
         const activeRow = (g.rows||[]).find(r=>{
           if (!r.dateFrom && !r.dateTo) return false;
@@ -1346,22 +1366,31 @@ function renderProjectTimeline(pjs) {
         if (activeRow) {
           const from=activeRow.dateFrom||activeRow.dateTo, to=activeRow.dateTo||activeRow.dateFrom;
           const done = !!(activeRow.doneAt);
-          // Done: xám đậm hơn #888
           barColor = done ? '#888'
             : isVN ? (activeRow.status==='new'?'#7c3aed':'#db2777')
             :        (activeRow.status==='new'?'#5a9a35':'#d4900a');
 
           const prevDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d-1).padStart(2,'0')}`;
           const nextDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d+1).padStart(2,'0')}`;
-          const prevHol=d<=1||holidays.some(h=>h===prevDs)||new Date(yr,mo-1,d-1).getDay()===0;
-          const nextHol=d>=daysInMonth||holidays.some(h=>h===nextDs)||new Date(yr,mo-1,d+1).getDay()===0;
+          const pd1=new Date(yr,mo-1,d-1).getDay(), nd1=new Date(yr,mo-1,d+1).getDay();
+          const prevHol=d<=1||holidaySet.has(prevDs)||pd1===0||pd1===6;
+          const nextHol=d>=daysInMonth||holidaySet.has(nextDs)||nd1===0||nd1===6;
           const isStart=from===ds||prevHol, isEnd=to===ds||nextHol;
           pos=isStart&&isEnd?'only':isStart?'start':isEnd?'end':'mid';
-          // Label ngay đầu thanh = tên hạng mục rút gọn
           if (isStart) label = (g.type||'').replace('パース','').replace('作成','').slice(0,8);
         }
         return dayCell(ds, barColor, pos, label, isToday, isHol, isLastGrp);
       }).join('');
+
+      // Ghi chú từ rows
+      const notes=(g.rows||[]).map(r=>(r.note||'').trim()).filter(Boolean);
+      const lastCell = grpTodayUp
+        ? `<td style="padding:1px 4px;border-bottom:${rowBorderB};border-left:${CB};background:#fff5f5;vertical-align:middle;white-space:nowrap">
+             <span style="font-size:8px;font-weight:800;color:#e74c3c">UP</span>
+           </td>`
+        : `<td style="padding:1px 5px;border-bottom:${rowBorderB};border-left:${CB};background:var(--table-bg);vertical-align:middle;max-width:90px;overflow:hidden">
+             ${notes.length?`<div style="font-size:7px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px" title="${x(notes.join(' | '))}">${x(notes.join(' | '))}</div>`:''}
+           </td>`;
 
       return `<tr style="opacity:${grpOpacity}">
         <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
@@ -1371,6 +1400,7 @@ function renderProjectTimeline(pjs) {
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
         ${dayCells}
+        ${lastCell}
       </tr>`;
     }).join('');
 
@@ -1379,7 +1409,7 @@ function renderProjectTimeline(pjs) {
 
   const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
-  const NC = daysInMonth + 4; // total cols
+  const NC = daysInMonth + 5;
 
   return `<table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:11px;border:1px solid #ccc">
     <colgroup>
@@ -1387,6 +1417,7 @@ function renderProjectTimeline(pjs) {
       <col style="width:175px">
       <col style="width:26px"><col style="width:26px">
       ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
+      <col style="width:70px">
     </colgroup>
     <thead>
       <tr style="background:var(--navy)">
@@ -1395,6 +1426,7 @@ function renderProjectTimeline(pjs) {
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#7CFC00;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">作成</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#FFC000;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">修正</th>
         ${dayHeaders}
+        <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};white-space:nowrap">Ghi chú</th>
       </tr>
     </thead>
     <tbody>${rows||`<tr><td colspan="${NC}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
@@ -1409,6 +1441,7 @@ function renderProjectTimeline(pjs) {
           const isToday=ds===todayStr;
           return `<td style="width:14px;border-top:${PB};border-left:${CB};${isToday?'background:rgba(39,174,96,.2);':''}"></td>`;
         }).join('')}
+        <td style="border-top:${PB};border-left:${CB}"></td>
       </tr>
     </tfoot>
   </table>`;
@@ -1664,8 +1697,20 @@ function renderMonthGantt(pjs) {
     </th>`;
   }).join('');
 
-  // ── Staff rows ──
-  const staffRows = D.settings.staffList.map(staff => {
+  // ── Staff rows — sắp xếp theo thứ tự JP/VN ──
+  const STAFF_ORDER = [
+    'Management トゥアン',
+    'SGN ヒエン','SGN L.フォン','HAN M.フオン','SGN ズエン',
+    'HAN ハー','HAN T.タイン','HAN H.タイン','HAN D.チュン','HAN ニュー'
+  ];
+  const sortedStaff = [...D.settings.staffList].sort((a,b) => {
+    const ia = STAFF_ORDER.indexOf(a), ib = STAFF_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+  const staffRows = sortedStaff.map(staff => {
     const tasks = staffMap[staff]||[];
     const isBusy = tasks.length>0;
 
