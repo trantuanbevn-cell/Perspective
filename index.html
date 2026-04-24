@@ -700,10 +700,7 @@ let D = (() => {
   // KHÔNG ghi đè SK — dữ liệu app được load riêng
 })();
 
-// Passwords — khai báo sớm để splashLogin (hoisted) có thể dùng ngay
-const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
-
-// SYNC — khai báo sớm để splashLogin có thể dùng ngay
+// SYNC — khai báo sớm
 const SYNC = {
   get gistId()  { return localStorage.getItem('sync_gist_id') || D.settings?.sync?.gistId || ''; },
   get ghToken() { return localStorage.getItem('sync_gh_token') || ''; },
@@ -720,6 +717,9 @@ const SYNC = {
   get autoOn() { return localStorage.getItem('sync_auto')==='1'; },
   set autoOn(v) { localStorage.setItem('sync_auto', v?'1':'0'); }
 };
+
+// Passwords
+const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
 
 
 /* ── persistD: save to localStorage AND sessionStorage (file:// fallback) ── */
@@ -1413,106 +1413,6 @@ function renderProjectTimeline(pjs) {
     </tfoot>
   </table>`;
 }
-  const m     = D.activeMonth;
-  const [yr, mo] = m.split('-').map(Number);
-  const daysInMonth = new Date(yr, mo, 0).getDate();
-  const todayStr = localDateStr(new Date());
-  const holidays = getHolidays();
-
-  // Build day headers
-  const dayHeaders = Array.from({length: daysInMonth}, (_,i) => {
-    const d   = i + 1;
-    const ds  = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dow = new Date(yr, mo-1, d).getDay();
-    const isToday = ds === todayStr;
-    const isHol   = holidays.some(h=>h===ds) || dow===0;
-    const color   = isToday ? '#27ae60' : isHol ? '#e74c3c' : 'var(--gray4)';
-    return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:500;color:${color};border-bottom:1px solid var(--gray2);white-space:nowrap">${d}</th>`;
-  }).join('');
-
-
-  // Build rows for each project
-  const rows = pjs.map((p, pi) => {
-    const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
-    const pjNew = totalNew(p), pjRev = totalRev(p);
-    const allDone = allGrpRows.every(g=>(g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt));
-    const dimStyle = allDone && allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo)) ? 'opacity:0.38' : '';
-
-    // Project name row — no timeline, just label
-    const pjRow = `<tr style="${dimStyle}">
-      <td style="padding:5px 0 2px 4px;border-bottom:none;min-width:110px;max-width:110px">
-        <div style="font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px;cursor:pointer;color:var(--navy)"
-          onclick="selectPj('${p.id}')">${x(p.nameVN||p.nameJP||'—')}</div>
-      </td>
-      <td style="width:24px;padding:2px 3px 2px 0;border-bottom:none;text-align:right;font-size:8px;vertical-align:bottom"></td>
-      <td style="width:24px;padding:2px 0 2px 3px;border-bottom:none;text-align:right;font-size:8px;vertical-align:bottom"></td>
-      ${Array.from({length:daysInMonth},(_,i)=>{
-        const ds=`${yr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
-        const isToday=ds===todayStr;
-        const isHol=holidays.some(h=>h===ds)||new Date(yr,mo-1,i+1).getDay()===0;
-        const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'';
-        return `<td style="width:14px;padding:0;${bg?'background:'+bg+';':''}border-bottom:none"><div style="height:8px"></div></td>`;
-      }).join('')}
-    </tr>`;
-
-    // Group rows
-    const grpRows = allGrpRows.map((g, gi) => {
-      const isLast = gi === allGrpRows.length - 1;
-      const grpNew = (g.rows||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0);
-      const grpRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
-      const grpAllDone = (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt) && (g.rows||[]).some(r=>r.dateTo);
-
-      // Build per-day bar from rows
-      const dayCells = Array.from({length:daysInMonth}, (_,i) => {
-        const d  = i + 1;
-        const ds = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday = ds === todayStr;
-        const isHol   = holidays.some(h=>h===ds) || new Date(yr,mo-1,d).getDay()===0;
-
-        // Find active row on this day
-        const activeRow = (g.rows||[]).find(r => {
-          if (!r.dateFrom && !r.dateTo) return false;
-          const from = r.dateFrom || r.dateTo;
-          const to   = r.dateTo   || r.dateFrom;
-          return from <= ds && ds <= to && !isHol;
-        });
-
-        let barColor = null, pos = 'mid';
-        if (activeRow) {
-          const from = activeRow.dateFrom || activeRow.dateTo;
-          const to   = activeRow.dateTo   || activeRow.dateFrom;
-          const done = !!(activeRow.doneAt);
-          barColor = done ? '#bbb'
-            : isVN
-              ? (activeRow.status==='new' ? '#7c3aed' : '#db2777')
-              : (activeRow.status==='new' ? '#5a9a35' : '#d4900a');
-
-          // Determine position for border-radius — check prev/next day
-          const prevDs = `${yr}-${String(mo).padStart(2,'0')}-${String(d-1).padStart(2,'0')}`;
-          const nextDs = `${yr}-${String(mo).padStart(2,'0')}-${String(d+1).padStart(2,'0')}`;
-          const prevHol = d<=1 || holidays.some(h=>h===prevDs) || new Date(yr,mo-1,d-1).getDay()===0;
-          const nextHol = d>=daysInMonth || holidays.some(h=>h===nextDs) || new Date(yr,mo-1,d+1).getDay()===0;
-          const isStart = from===ds || prevHol;
-          const isEnd   = to===ds   || nextHol;
-          pos = isStart && isEnd ? 'only' : isStart ? 'start' : isEnd ? 'end' : 'mid';
-        }
-        return dayCell(ds, barColor, pos, isToday, isHol);
-      }).join('');
-
-      const grpDimOpacity = grpAllDone ? '0.28' : dimStyle ? '0.7' : '1';
-      return `<tr style="opacity:${grpDimOpacity}">
-        <td style="padding:0 0 ${isLast?'4':'1'}px 4px;border-bottom:${isLast?'1px solid var(--gray2)':'none'};vertical-align:middle">
-          <div style="font-size:6px;color:var(--gray4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px;line-height:1.1">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
-        </td>
-        <td style="width:24px;padding:0 3px 0 0;border-bottom:${isLast?'1px solid var(--gray2)':'none'};text-align:right;font-size:8px;font-weight:500;color:#27ae60;vertical-align:middle">${grpNew||''}</td>
-        <td style="width:24px;padding:0 0 0 3px;border-bottom:${isLast?'1px solid var(--gray2)':'none'};text-align:right;font-size:8px;font-weight:500;color:#e67e22;vertical-align:middle">${grpRev||''}</td>
-        ${dayCells}
-      </tr>`;
-    }).join('');
-
-    return pjRow + grpRows;
-  }).join('');
-
 
 function renderMonthOverview(ci) {
   const pjs=curProjects();
@@ -6039,75 +5939,87 @@ function applyRoleUI(role) {
 // ── splashLogin alias — window._splashLogin được gán trong initSplash ──
 
 (function initSplash() {
-  // Check session — already logged in
-  const sessionRole = sessionStorage.getItem('splash_role');
-  if (sessionRole) {
-    document.getElementById('splashScreen').style.display = 'none';
-    if (sessionRole === 'view') { SYNC.role='view'; enableViewOnlyMode(true); }
-    else if (sessionRole === 'edit') { SYNC.role='edit'; }
-    else { SYNC.role='admin'; }
-    setTimeout(() => applyRoleUI(sessionRole), 300);
-    // Auto-pull on page reload too
-    setTimeout(async () => {
-      const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
-      if (!gistId) return;
-      try {
-        setSyncStatus('syncing','Đang tải…');
-        await syncPull('');
-        renderAll();
-        setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
-      } catch(e) { setSyncStatus('','Sync'); }
-      // Bắt đầu pull định kỳ
-      startPeriodicPull();
-    }, 800);
-    return;
-  }
-
-  // Hide app until login
-  const hdr = document.querySelector('.header');
-  const pgm = document.getElementById('pageMain');
-  if (hdr) hdr.style.visibility = 'hidden';
-  if (pgm) pgm.style.visibility = 'hidden';
-
+  // Luôn gán _splashLogin TRƯỚC — dù có lỗi gì bên dưới
   window._splashLogin = function() {
-    const pw = (document.getElementById('splashPwInput').value || '').trim();
-    const errEl = document.getElementById('splashError');
-    if (!pw) { errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
-    errEl.textContent = '';
-    const role = SPLASH_PW[pw] || null;
-    if (!role) {
-      errEl.textContent = 'Mật khẩu không đúng. Thử lại.';
-      document.getElementById('splashPwInput').value = '';
-      document.getElementById('splashPwInput').focus();
-      errEl.classList.remove('shake'); void errEl.offsetWidth; errEl.classList.add('shake');
+    try {
+      const pw = (document.getElementById('splashPwInput').value || '').trim();
+      const errEl = document.getElementById('splashError');
+      if (!pw) { if(errEl) errEl.textContent = 'Vui lòng nhập mật khẩu'; return; }
+      if(errEl) errEl.textContent = '';
+      const role = SPLASH_PW[pw] || null;
+      if (!role) {
+        if(errEl) { errEl.textContent = 'Mật khẩu không đúng. Thử lại.'; errEl.classList.remove('shake'); void errEl.offsetWidth; errEl.classList.add('shake'); }
+        const inp = document.getElementById('splashPwInput');
+        if(inp) { inp.value = ''; inp.focus(); }
+        return;
+      }
+      try { sessionStorage.setItem('splash_role', role); } catch(e) {}
+      try { SYNC.role = role; } catch(e) {}
+      if (role === 'view') { try { enableViewOnlyMode(true); } catch(e) {} }
+      const splash = document.getElementById('splashScreen');
+      const hdr = document.querySelector('.header');
+      const pgm = document.getElementById('pageMain');
+      if(splash) splash.classList.add('fade-out');
+      setTimeout(async () => {
+        if(splash) splash.style.display = 'none';
+        if(hdr) hdr.style.visibility = '';
+        if(pgm) pgm.style.visibility = '';
+        try { applyRoleUI(role); } catch(e) {}
+        try { renderAll(); } catch(e) {}
+        try {
+          const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
+          if (gistId) {
+            setSyncStatus('syncing', 'Đang tải…');
+            try {
+              const pulled = await syncPull('');
+              if (pulled) { renderAll(); setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View'); toast('✓ Đã tải dữ liệu mới nhất từ cloud'); }
+              else { setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View'); }
+            } catch(e) { setSyncStatus('', 'Sync'); }
+            try { startPeriodicPull(); } catch(e) {}
+          } else if (role === 'admin') {
+            const ghToken = localStorage.getItem('sync_gh_token') || '';
+            if (!ghToken) setTimeout(()=>toast('💡 Cần GitHub Token — vào Cài đặt → Thiết lập đồng bộ'), 1200);
+          }
+        } catch(e) {}
+      }, 650);
+    } catch(e) { console.error('splashLogin error:', e); }
+  };
+  window.splashLogin = window._splashLogin;
+
+  // Check session — already logged in
+  try {
+    const sessionRole = sessionStorage.getItem('splash_role');
+    if (sessionRole) {
+      const splash = document.getElementById('splashScreen');
+      if(splash) splash.style.display = 'none';
+      try {
+        if (sessionRole === 'view') { SYNC.role='view'; enableViewOnlyMode(true); }
+        else if (sessionRole === 'edit') { SYNC.role='edit'; }
+        else { SYNC.role='admin'; }
+      } catch(e) {}
+      setTimeout(() => { try { applyRoleUI(sessionRole); } catch(e) {} }, 300);
+      setTimeout(async () => {
+        try {
+          const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
+          if (!gistId) return;
+          setSyncStatus('syncing','Đang tải…');
+          await syncPull('');
+          renderAll();
+          setSyncStatus('synced', sessionRole==='admin'?'✓ Admin':sessionRole==='edit'?'✓ Edit':'👁 View');
+          startPeriodicPull();
+        } catch(e) { setSyncStatus('','Sync'); }
+      }, 800);
       return;
     }
-    sessionStorage.setItem('splash_role', role);
-    SYNC.role = role;
-    if (role === 'view') enableViewOnlyMode(true);
-    const splash = document.getElementById('splashScreen');
-    splash.classList.add('fade-out');
-    setTimeout(async () => {
-      splash.style.display = 'none';
-      if (hdr) hdr.style.visibility = '';
-      if (pgm) pgm.style.visibility = '';
-      applyRoleUI(role);
-      const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
-      if (gistId) {
-        setSyncStatus('syncing', 'Đang tải…');
-        try {
-          const pulled = await syncPull('');
-          if (pulled) { renderAll(); setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View'); toast('✓ Đã tải dữ liệu mới nhất từ cloud'); }
-          else { setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View'); }
-        } catch(e) { setSyncStatus('', 'Sync'); }
-        startPeriodicPull();
-      } else if (role === 'admin') {
-        const ghToken = localStorage.getItem('sync_gh_token') || '';
-        if (!ghToken) setTimeout(()=>toast('💡 Cần GitHub Token — vào Cài đặt → Thiết lập đồng bộ'), 1200);
-      }
-    }, 650);
-  };
-  window.splashLogin = window._splashLogin; // alias
+  } catch(e) {}
+
+  // Hide app until login
+  try {
+    const hdr = document.querySelector('.header');
+    const pgm = document.getElementById('pageMain');
+    if (hdr) hdr.style.visibility = 'hidden';
+    if (pgm) pgm.style.visibility = 'hidden';
+  } catch(e) {}
 })();
 
 </script>
