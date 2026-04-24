@@ -700,6 +700,9 @@ let D = (() => {
   // KHÔNG ghi đè SK — dữ liệu app được load riêng
 })();
 
+// Passwords — khai báo sớm để splashLogin (hoisted) có thể dùng ngay
+const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
+
 
 /* ── persistD: save to localStorage AND sessionStorage (file:// fallback) ── */
 function persistD() {
@@ -6043,8 +6046,6 @@ function applyRoleUI(role) {
 }
 
 // Passwords — plain text comparison (works on file:// and https://)
-const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
-
 // ── splashLogin: khai báo global để onkeydown/onclick inline gọi được ──
 function splashLogin() {
   const pw = (document.getElementById('splashPwInput').value || '').trim();
