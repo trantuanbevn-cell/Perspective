@@ -1304,11 +1304,11 @@ function renderProjectTimeline(pjs) {
 
     // Project name row (no timeline)
     const pjRow = `<tr style="${rowDim}">
-      <td style="padding:2px 4px 1px 4px;border-bottom:none;border-right:${CB};border-left:${CB};background:var(--table-bg)">
-        <span class="badge ${officeBadgeClass(p.office)}" style="font-size:8px;padding:1px 4px">${p.office||'—'}</span>
+      <td style="padding:2px 2px 1px 2px;border-bottom:none;border-right:${CB};border-left:${CB};background:var(--table-bg)">
+        <span class="badge ${officeBadgeClass(p.office)}" style="font-size:7px;padding:1px 3px">${p.office||'—'}</span>
       </td>
-      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:175px;overflow:hidden">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;cursor:pointer;color:var(--navy)"
+      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:130px;overflow:hidden">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:125px;cursor:pointer;color:var(--navy)"
           onclick="selectPj('${p.id}')" title="${x(p.nameVN||p.nameJP||'—')}">${x(p.nameVN||p.nameJP||'—')}</div>
       </td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
@@ -1319,6 +1319,7 @@ function renderProjectTimeline(pjs) {
         const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'var(--table-bg)';
         return `<td style="width:14px;padding:0;background:${bg};border-left:${CB};border-bottom:none"><div style="height:8px"></div></td>`;
       }).join('')}
+      <td style="border-bottom:none;border-left:${CB};background:var(--table-bg)"></td>
     </tr>`;
 
     // Group rows
@@ -1364,13 +1365,21 @@ function renderProjectTimeline(pjs) {
       }).join('');
 
       return `<tr style="opacity:${grpOpacity}">
-        <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
+        <td style="padding:0 2px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
         <td style="padding:1px 4px 1px;border-bottom:${rowBorderB};border-right:${CB};background:var(--table-bg);vertical-align:middle">
-          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
+          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
         </td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
         ${dayCells}
+        <td style="padding:1px 5px;border-bottom:${rowBorderB};border-left:${CB};background:var(--table-bg);vertical-align:middle;max-width:90px;overflow:hidden">
+          ${(()=>{
+            const notes=(g.rows||[]).map(r=>(r.note||'').trim()).filter(Boolean);
+            return notes.length
+              ? `<div style="font-size:7px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;line-height:1.4" title="${x(notes.join(' | '))}">${x(notes.join(' | '))}</div>`
+              : '';
+          })()}
+        </td>
       </tr>`;
     }).join('');
 
@@ -1379,22 +1388,24 @@ function renderProjectTimeline(pjs) {
 
   const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
-  const NC = daysInMonth + 4; // total cols
+  const NC = daysInMonth + 5; // total cols (VP + name + 作成 + 修正 + days + note)
 
   return `<table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:11px;border:1px solid #ccc">
     <colgroup>
-      <col style="width:34px">
-      <col style="width:175px">
+      <col style="width:26px">
+      <col style="width:130px">
       <col style="width:26px"><col style="width:26px">
       ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
+      <col style="width:90px">
     </colgroup>
     <thead>
       <tr style="background:var(--navy)">
-        <th style="text-align:center;padding:4px 3px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-right:${CB};white-space:nowrap">VP</th>
-        <th style="text-align:left;padding:4px 6px;font-size:9px;color:rgba(255,255,255,.9);border-bottom:${PB};border-right:${CB};white-space:nowrap">Dự án / Hạng mục</th>
+        <th style="text-align:center;padding:4px 2px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-right:${CB};white-space:nowrap">VP</th>
+        <th style="text-align:left;padding:4px 5px;font-size:9px;color:rgba(255,255,255,.9);border-bottom:${PB};border-right:${CB};white-space:nowrap">Dự án / Hạng mục</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#7CFC00;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">作成</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#FFC000;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">修正</th>
         ${dayHeaders}
+        <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};text-align:left;white-space:nowrap">Ghi chú</th>
       </tr>
     </thead>
     <tbody>${rows||`<tr><td colspan="${NC}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
@@ -1409,6 +1420,7 @@ function renderProjectTimeline(pjs) {
           const isToday=ds===todayStr;
           return `<td style="width:14px;border-top:${PB};border-left:${CB};${isToday?'background:rgba(39,174,96,.2);':''}"></td>`;
         }).join('')}
+        <td style="border-top:${PB};border-left:${CB}"></td>
       </tr>
     </tfoot>
   </table>`;
