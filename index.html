@@ -693,8 +693,8 @@ let D = (() => {
   s.viewHash  = '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7';
   s.editPw    = '123456';
   // GitHub Gist sync
-  s.gistId    = 'bef0ed5c6aa11b7b1c0c925f85a469cf';
-  try { localStorage.setItem('sync_gist_id', 'bef0ed5c6aa11b7b1c0c925f85a469cf'); } catch(e) {}
+  s.gistId    = '14552f194329838b78b30f38dbbd2b5a';
+  try { localStorage.setItem('sync_gist_id', '14552f194329838b78b30f38dbbd2b5a'); } catch(e) {}
   try { localStorage.setItem('sync_edit_pw', '123456'); } catch(e) {}
   // Note: sync_gh_token is set by admin via setup panel (not stored in code for security)
   // KHÔNG ghi đè SK — dữ liệu app được load riêng
@@ -4731,12 +4731,62 @@ async function hashPw(pw) {
 /* ── GitHub Gist Sync ── */
 const GIST_API = 'https://api.github.com/gists';
 
+/* ── Nén ảnh base64 xuống còn ~50% chất lượng, giảm kích thước tối đa 800px ── */
+async function compressBase64Photo(b64, quality=0.5, maxPx=800) {
+  return new Promise(resolve => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else        { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(b64); // fallback: giữ nguyên nếu lỗi
+      img.src = b64;
+    } catch(e) { resolve(b64); }
+  });
+}
+
+/* ── Tạo bản clone của D chỉ giữ ảnh đầu tiên (đã nén) mỗi dự án ── */
+async function buildSyncPayload() {
+  // Deep clone để không ảnh hưởng D gốc
+  const clone = JSON.parse(JSON.stringify(D));
+  const jobs = [];
+  Object.values(clone.months || {}).forEach(m => {
+    [...(m.projects||[]), ...(m.projectsVN||[])].forEach(p => {
+      if (p.photos && p.photos.length > 0) {
+        const first = p.photos[0];
+        p.photos = [null]; // placeholder
+        jobs.push(
+          compressBase64Photo(first, 0.5, 800).then(compressed => {
+            p.photos[0] = compressed;
+          })
+        );
+      }
+      // Xóa ảnh thừa (chỉ giữ 1)
+      if (p.photos && p.photos.length > 1) p.photos.length = 1;
+    });
+  });
+  await Promise.all(jobs);
+  return clone;
+}
+
 async function syncPush() {
   const gistId  = localStorage.getItem('sync_gist_id')  || D.settings?.sync?.gistId  || '';
   const ghToken = localStorage.getItem('sync_gh_token') || D.settings?.sync?.ghToken || '';
   if (!gistId || !ghToken) return false;
   try {
-    const body = JSON.stringify(D);
+    setSyncStatus('syncing', '⏳ Đang nén ảnh…');
+    const payload = await buildSyncPayload();
+    const body = JSON.stringify(payload);
+    const sizeKB = Math.round(body.length * 0.75 / 1024);
+    setSyncStatus('syncing', `⬆ ${sizeKB}KB…`);
     const res = await fetch(`${GIST_API}/${gistId}`, {
       method: 'PATCH',
       headers: {
@@ -4752,7 +4802,7 @@ async function syncPush() {
     }
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     setSyncStatus('synced', '✓ Admin');
-    toast('✅ Đã đồng bộ lên cloud');
+    toast(`✅ Đã đồng bộ lên cloud (${sizeKB}KB)`);
     return true;
   } catch(e) {
     console.error('syncPush error:', e.message);
@@ -4982,7 +5032,7 @@ function showSyncSetup() {
         </div>
         <div class="field">
           <label style="font-size:11px">Gist ID</label>
-          <input id="su-binid" value="bef0ed5c6aa11b7b1c0c925f85a469cf" placeholder="Gist ID..."
+          <input id="su-binid" value="14552f194329838b78b30f38dbbd2b5a" placeholder="Gist ID..."
             style="font-family:monospace;font-size:11px">
         </div>
       </div>
