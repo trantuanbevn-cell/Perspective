@@ -655,7 +655,7 @@ function freshData() {
   const mid = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   return {
     settings: {
-      staffList: ['トゥアン','ヒエン','L.フォン','ハー','ズエン','タイン','M.フオン'],
+      staffList: ['Management トゥアン','ヒエン','L.フォン','ハー','ズエン','タイン','M.フオン'],
       staffProfiles: {},  // { name: {role,salaryGross,salaryNet,leaves:[{from,to,reason}],order} }
       typeList: ['外観パース','アプローチパース','エントランスパース','鳥瞰パース',
         'ラウンジパース','スタイルラウンジ','内観パース','大浴場パース',
@@ -1266,8 +1266,18 @@ function renderProjectTimeline(pjs) {
   const [yr, mo] = m.split('-').map(Number);
   const daysInMonth = new Date(yr, mo, 0).getDate();
   const todayStr = localDateStr(new Date());
-  const holidays = getHolidays();
+  // Ngày lễ: lấy từ settings, normalize thành Set<string>
+  const holidaySet = new Set(getHolidays().map(h => h.date || h));
+
   const isVN = activeSection === 'vn';
+
+  // Sắp xếp dự án cùng VP đứng cạnh nhau
+  const sorted = [...pjs].sort((a, b) => {
+    const oa = (a.office||'').trim(), ob = (b.office||'').trim();
+    if (oa < ob) return -1;
+    if (oa > ob) return 1;
+    return 0;
+  });
 
   // Shared cell border style
   const CB = '1px solid #ddd';   // cell border
@@ -1279,7 +1289,7 @@ function renderProjectTimeline(pjs) {
     const ds  = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow = new Date(yr, mo-1, d).getDay();
     const isToday = ds === todayStr;
-    const isHol   = holidays.some(h=>h===ds) || dow===0;
+    const isHol   = holidaySet.has(ds) || dow===0;
     const col  = isToday ? '#27ae60' : isHol ? '#e74c3c' : 'var(--gray4)';
     const bg   = isToday ? 'rgba(39,174,96,.1)' : isHol ? 'rgba(231,76,60,.06)' : '';
     return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:600;color:${col};border-bottom:${PB};border-left:${CB};${bg?'background:'+bg:''};white-space:nowrap">${d}</th>`;
@@ -1296,29 +1306,30 @@ function renderProjectTimeline(pjs) {
     return `<td style="width:14px;padding:0;position:relative;background:${bg};border-left:${CB};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative">${bar}</div></td>`;
   }
 
-  const rows = pjs.map((p, pi) => {
+  const rows = sorted.map((p, pi) => {
     const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
     const allDone = allGrpRows.length>0 && allGrpRows.every(g=>(g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt)) && allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo));
     const rowDim = allDone ? 'opacity:0.5' : '';
-    const isLastPj = pi === pjs.length - 1;
+    const isLastPj = pi === sorted.length - 1;
 
     // Project name row (no timeline)
     const pjRow = `<tr style="${rowDim}">
-      <td style="padding:2px 4px 1px 4px;border-bottom:none;border-right:${CB};border-left:${CB};background:var(--table-bg)">
-        <span class="badge ${officeBadgeClass(p.office)}" style="font-size:8px;padding:1px 4px">${p.office||'—'}</span>
+      <td style="padding:2px 2px 1px 2px;border-bottom:none;border-right:${CB};border-left:${CB};background:var(--table-bg)">
+        <span class="badge ${officeBadgeClass(p.office)}" style="font-size:7px;padding:1px 3px">${p.office||'—'}</span>
       </td>
-      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:175px;overflow:hidden">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;cursor:pointer;color:var(--navy)"
+      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:130px;overflow:hidden">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:125px;cursor:pointer;color:var(--navy)"
           onclick="selectPj('${p.id}')" title="${x(p.nameVN||p.nameJP||'—')}">${x(p.nameVN||p.nameJP||'—')}</div>
       </td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       ${Array.from({length:daysInMonth},(_,i)=>{
         const d=i+1, ds=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday=ds===todayStr, isHol=holidays.some(h=>h===ds)||new Date(yr,mo-1,d).getDay()===0;
+        const isToday=ds===todayStr, isHol=holidaySet.has(ds)||new Date(yr,mo-1,d).getDay()===0;
         const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'var(--table-bg)';
         return `<td style="width:14px;padding:0;background:${bg};border-left:${CB};border-bottom:none"><div style="height:8px"></div></td>`;
       }).join('')}
+      <td style="border-bottom:none;border-left:${CB};background:var(--table-bg)"></td>
     </tr>`;
 
     // Group rows
@@ -1330,11 +1341,14 @@ function renderProjectTimeline(pjs) {
       const grpAllDone = (g.rows||[]).some(r=>r.dateTo) && (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt);
       const grpOpacity = grpAllDone ? '0.55' : rowDim ? '0.75' : '1';
 
+      // Kiểm tra hôm nay có hạng mục UP không (dateTo = today, chưa done)
+      const hasTodayUp = (g.rows||[]).some(r => r.dateTo === todayStr && !r.doneAt);
+
       const dayCells = Array.from({length:daysInMonth}, (_,i) => {
         const d  = i+1;
         const ds = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const isToday = ds===todayStr;
-        const isHol   = holidays.some(h=>h===ds)||new Date(yr,mo-1,d).getDay()===0;
+        const isHol   = holidaySet.has(ds)||new Date(yr,mo-1,d).getDay()===0;
 
         const activeRow = (g.rows||[]).find(r=>{
           if (!r.dateFrom && !r.dateTo) return false;
@@ -1346,31 +1360,40 @@ function renderProjectTimeline(pjs) {
         if (activeRow) {
           const from=activeRow.dateFrom||activeRow.dateTo, to=activeRow.dateTo||activeRow.dateFrom;
           const done = !!(activeRow.doneAt);
-          // Done: xám đậm hơn #888
           barColor = done ? '#888'
             : isVN ? (activeRow.status==='new'?'#7c3aed':'#db2777')
             :        (activeRow.status==='new'?'#5a9a35':'#d4900a');
 
           const prevDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d-1).padStart(2,'0')}`;
           const nextDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d+1).padStart(2,'0')}`;
-          const prevHol=d<=1||holidays.some(h=>h===prevDs)||new Date(yr,mo-1,d-1).getDay()===0;
-          const nextHol=d>=daysInMonth||holidays.some(h=>h===nextDs)||new Date(yr,mo-1,d+1).getDay()===0;
+          const prevHol=d<=1||holidaySet.has(prevDs)||new Date(yr,mo-1,d-1).getDay()===0;
+          const nextHol=d>=daysInMonth||holidaySet.has(nextDs)||new Date(yr,mo-1,d+1).getDay()===0;
           const isStart=from===ds||prevHol, isEnd=to===ds||nextHol;
           pos=isStart&&isEnd?'only':isStart?'start':isEnd?'end':'mid';
-          // Label ngay đầu thanh = tên hạng mục rút gọn
           if (isStart) label = (g.type||'').replace('パース','').replace('作成','').slice(0,8);
         }
         return dayCell(ds, barColor, pos, label, isToday, isHol, isLastGrp);
       }).join('');
 
+      // Ghi chú từ rows
+      const notes=(g.rows||[]).map(r=>(r.note||'').trim()).filter(Boolean);
+      const noteCell = `<td style="padding:1px 5px;border-bottom:${rowBorderB};border-left:${CB};background:var(--table-bg);vertical-align:middle;max-width:90px;overflow:hidden">
+        ${notes.length ? `<div style="font-size:7px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;line-height:1.4" title="${x(notes.join(' | '))}">${x(notes.join(' | '))}</div>` : ''}
+      </td>`;
+
       return `<tr style="opacity:${grpOpacity}">
-        <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
+        <td style="padding:0 2px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
         <td style="padding:1px 4px 1px;border-bottom:${rowBorderB};border-right:${CB};background:var(--table-bg);vertical-align:middle">
-          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
+          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
         </td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
         ${dayCells}
+        ${hasTodayUp
+          ? `<td style="padding:1px 4px;border-bottom:${rowBorderB};border-left:${CB};background:#fff5f5;vertical-align:middle;white-space:nowrap">
+               <span style="font-size:8px;font-weight:800;color:#e74c3c;letter-spacing:.02em">UP</span>
+             </td>`
+          : noteCell}
       </tr>`;
     }).join('');
 
@@ -1379,22 +1402,24 @@ function renderProjectTimeline(pjs) {
 
   const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
-  const NC = daysInMonth + 4; // total cols
+  const NC = daysInMonth + 5; // total cols (VP + name + 作成 + 修正 + days + note/UP)
 
   return `<table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:11px;border:1px solid #ccc">
     <colgroup>
-      <col style="width:34px">
-      <col style="width:175px">
+      <col style="width:26px">
+      <col style="width:130px">
       <col style="width:26px"><col style="width:26px">
       ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
+      <col style="width:90px">
     </colgroup>
     <thead>
       <tr style="background:var(--navy)">
-        <th style="text-align:center;padding:4px 3px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-right:${CB};white-space:nowrap">VP</th>
-        <th style="text-align:left;padding:4px 6px;font-size:9px;color:rgba(255,255,255,.9);border-bottom:${PB};border-right:${CB};white-space:nowrap">Dự án / Hạng mục</th>
+        <th style="text-align:center;padding:4px 2px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-right:${CB};white-space:nowrap">VP</th>
+        <th style="text-align:left;padding:4px 5px;font-size:9px;color:rgba(255,255,255,.9);border-bottom:${PB};border-right:${CB};white-space:nowrap">Dự án / Hạng mục</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#7CFC00;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">作成</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#FFC000;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">修正</th>
         ${dayHeaders}
+        <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};text-align:left;white-space:nowrap">Ghi chú / UP</th>
       </tr>
     </thead>
     <tbody>${rows||`<tr><td colspan="${NC}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
@@ -1409,6 +1434,7 @@ function renderProjectTimeline(pjs) {
           const isToday=ds===todayStr;
           return `<td style="width:14px;border-top:${PB};border-left:${CB};${isToday?'background:rgba(39,174,96,.2);':''}"></td>`;
         }).join('')}
+        <td style="border-top:${PB};border-left:${CB}"></td>
       </tr>
     </tfoot>
   </table>`;
@@ -1664,8 +1690,20 @@ function renderMonthGantt(pjs) {
     </th>`;
   }).join('');
 
+  // Sắp xếp nhân sự: Management トゥアン đứng đầu, nhóm JP, nhóm VN
+  const STAFF_JP = ['Management トゥアン','SGN ヒエン','SGN L.フォン','HAN M.フオン','SGN ズエン'];
+  const STAFF_VN = ['HAN ハー','HAN T.タイン','HAN H.タイン','HAN D.チュン','HAN ニュー'];
+  function staffSortOrder(s) {
+    const jpIdx = STAFF_JP.indexOf(s);
+    if (jpIdx !== -1) return jpIdx; // JP: 0–4
+    const vnIdx = STAFF_VN.indexOf(s);
+    if (vnIdx !== -1) return 100 + vnIdx; // VN: 100–104
+    return 200; // unknown: cuối
+  }
+  const sortedStaff = [...D.settings.staffList].sort((a,b) => staffSortOrder(a) - staffSortOrder(b));
+
   // ── Staff rows ──
-  const staffRows = D.settings.staffList.map(staff => {
+  const staffRows = sortedStaff.map(staff => {
     const tasks = staffMap[staff]||[];
     const isBusy = tasks.length>0;
 
@@ -1795,7 +1833,10 @@ function renderMonthGantt(pjs) {
       </td>
       ${dayCells}
     </tr>`;
-  }).join('');
+  });
+
+  // Ghép các dòng nhân sự — không hiển thị divider JP/VN
+  const staffRowsHtml = staffRows.join('');
 
   return `<div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px">
@@ -1811,7 +1852,7 @@ function renderMonthGantt(pjs) {
         ${hdrDays}
       </tr>
     </thead>
-    <tbody>${staffRows}</tbody>
+    <tbody>${staffRowsHtml}</tbody>
   </table>
   </div>
   <div style="padding:7px 12px;display:flex;gap:10px;font-size:10px;color:var(--gray4);background:var(--gray1);border-top:1px solid var(--gray2);flex-wrap:wrap">
@@ -4731,62 +4772,12 @@ async function hashPw(pw) {
 /* ── GitHub Gist Sync ── */
 const GIST_API = 'https://api.github.com/gists';
 
-/* ── Nén ảnh base64 xuống còn ~50% chất lượng, giảm kích thước tối đa 800px ── */
-async function compressBase64Photo(b64, quality=0.5, maxPx=800) {
-  return new Promise(resolve => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxPx || h > maxPx) {
-          if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
-          else        { w = Math.round(w * maxPx / h); h = maxPx; }
-        }
-        const cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(cv.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = () => resolve(b64); // fallback: giữ nguyên nếu lỗi
-      img.src = b64;
-    } catch(e) { resolve(b64); }
-  });
-}
-
-/* ── Tạo bản clone của D chỉ giữ ảnh đầu tiên (đã nén) mỗi dự án ── */
-async function buildSyncPayload() {
-  // Deep clone để không ảnh hưởng D gốc
-  const clone = JSON.parse(JSON.stringify(D));
-  const jobs = [];
-  Object.values(clone.months || {}).forEach(m => {
-    [...(m.projects||[]), ...(m.projectsVN||[])].forEach(p => {
-      if (p.photos && p.photos.length > 0) {
-        const first = p.photos[0];
-        p.photos = [null]; // placeholder
-        jobs.push(
-          compressBase64Photo(first, 0.5, 800).then(compressed => {
-            p.photos[0] = compressed;
-          })
-        );
-      }
-      // Xóa ảnh thừa (chỉ giữ 1)
-      if (p.photos && p.photos.length > 1) p.photos.length = 1;
-    });
-  });
-  await Promise.all(jobs);
-  return clone;
-}
-
 async function syncPush() {
   const gistId  = localStorage.getItem('sync_gist_id')  || D.settings?.sync?.gistId  || '';
   const ghToken = localStorage.getItem('sync_gh_token') || D.settings?.sync?.ghToken || '';
   if (!gistId || !ghToken) return false;
   try {
-    setSyncStatus('syncing', '⏳ Đang nén ảnh…');
-    const payload = await buildSyncPayload();
-    const body = JSON.stringify(payload);
-    const sizeKB = Math.round(body.length * 0.75 / 1024);
-    setSyncStatus('syncing', `⬆ ${sizeKB}KB…`);
+    const body = JSON.stringify(D);
     const res = await fetch(`${GIST_API}/${gistId}`, {
       method: 'PATCH',
       headers: {
@@ -4802,7 +4793,7 @@ async function syncPush() {
     }
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     setSyncStatus('synced', '✓ Admin');
-    toast(`✅ Đã đồng bộ lên cloud (${sizeKB}KB)`);
+    toast('✅ Đã đồng bộ lên cloud');
     return true;
   } catch(e) {
     console.error('syncPush error:', e.message);
