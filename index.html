@@ -1266,26 +1266,13 @@ function renderProjectTimeline(pjs) {
   const [yr, mo] = m.split('-').map(Number);
   const daysInMonth = new Date(yr, mo, 0).getDate();
   const todayStr = localDateStr(new Date());
-  // Fix: holidays là [{date,name}] → cần normalize thành Set<string>
   const holidaySet = new Set(getHolidays().map(h => h.date || h));
   const isVN = activeSection === 'vn';
 
-  // Sắp xếp dự án: 大阪 trước, 東京 sau, còn lại cuối
-  const OFFICE_ORDER = ['大阪','東京'];
-  const sorted = [...pjs].sort((a, b) => {
-    const ia = OFFICE_ORDER.indexOf(a.office||'');
-    const ib = OFFICE_ORDER.indexOf(b.office||'');
-    if (ia === -1 && ib === -1) return 0;
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
-  });
-
-  // Shared cell border style
   const CB = '1px solid #ddd';
   const PB = '2px solid #aaa';
 
-  // Day headers
+  // Day headers — T7+CN+ngày lễ đỏ
   const dayHeaders = Array.from({length: daysInMonth}, (_,i) => {
     const d   = i + 1;
     const ds  = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1298,23 +1285,33 @@ function renderProjectTimeline(pjs) {
   }).join('');
 
   // Day cell builder
-  function dayCell(ds, barColor, pos, label, isToday, isHol, isLast) {
-    const d = parseInt(ds.slice(8),10);
+  function dayCell(ds, barColor, pos, label, isToday, isHol, isLast, showUp) {
     const bg = isToday ? 'rgba(39,174,96,.07)' : isHol ? 'rgba(231,76,60,.04)' : 'var(--table-bg)';
     const br = pos==='start'?'2px 0 0 2px':pos==='end'?'0 2px 2px 0':pos==='only'?'2px':'0';
+    const labelHtml = (pos==='start' && label)
+      ? `<div style="position:absolute;top:0;left:2px;font-size:6px;color:${barColor};white-space:nowrap;line-height:1;font-weight:700;z-index:10;pointer-events:none;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff">${label}</div>`
+      : '';
     const bar = barColor
-      ? `<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;height:3px;background:${barColor};border-radius:${br}"></div>
-         ${pos==='start'&&label?`<div style="position:absolute;top:1px;left:2px;font-size:6px;color:${barColor};white-space:nowrap;overflow:hidden;max-width:60px;line-height:1;font-weight:600;opacity:.9">${label}</div>`:''}` : '';
-    return `<td style="width:14px;padding:0;position:relative;background:${bg};border-left:${CB};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative">${bar}</div></td>`;
+      ? `<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;height:3px;background:${barColor};border-radius:${br}"></div>${labelHtml}`
+      : '';
+    const upHtml = (isToday && showUp)
+      ? `<div style="position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:6px;font-weight:900;color:#e74c3c;line-height:1;z-index:11;text-shadow:0 0 2px #fff">UP</div>`
+      : '';
+    return `<td style="width:14px;padding:0;position:relative;overflow:visible;background:${bg};border-left:${CB};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative;overflow:visible">${bar}${upHtml}</div></td>`;
   }
+
+  // Sắp xếp dự án: 大阪 trước, 東京 sau
+  const OFFICE_ORDER = ['大阪','東京'];
+  const sorted = [...pjs].sort((a,b)=>{
+    const ia=OFFICE_ORDER.indexOf(a.office||''), ib=OFFICE_ORDER.indexOf(b.office||'');
+    if(ia===-1&&ib===-1) return 0; if(ia===-1) return 1; if(ib===-1) return -1;
+    return ia-ib;
+  });
 
   const rows = sorted.map((p, pi) => {
     const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
     const allDone = allGrpRows.length>0 && allGrpRows.every(g=>(g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt)) && allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo));
     const rowDim = allDone ? 'opacity:0.5' : '';
-
-    // Kiểm tra hôm nay có hạng mục UP không
-    const hasTodayUp = allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt));
 
     // Project name row (no timeline)
     const pjRow = `<tr style="${rowDim}">
@@ -1334,9 +1331,7 @@ function renderProjectTimeline(pjs) {
         const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'var(--table-bg)';
         return `<td style="width:14px;padding:0;background:${bg};border-left:${CB};border-bottom:none"><div style="height:8px"></div></td>`;
       }).join('')}
-      <td style="border-bottom:none;border-left:${CB};background:${hasTodayUp?'#fff5f5':'var(--table-bg)'}">
-        ${hasTodayUp?'<span style="font-size:8px;font-weight:800;color:#e74c3c;padding:0 4px">UP</span>':''}
-      </td>
+      <td style="border-bottom:none;border-left:${CB};background:var(--table-bg)"></td>
     </tr>`;
 
     // Group rows
@@ -1347,7 +1342,6 @@ function renderProjectTimeline(pjs) {
       const grpRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
       const grpAllDone = (g.rows||[]).some(r=>r.dateTo) && (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt);
       const grpOpacity = grpAllDone ? '0.55' : rowDim ? '0.75' : '1';
-      const grpTodayUp = (g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt);
 
       const dayCells = Array.from({length:daysInMonth}, (_,i) => {
         const d  = i+1;
@@ -1377,20 +1371,16 @@ function renderProjectTimeline(pjs) {
           const nextHol=d>=daysInMonth||holidaySet.has(nextDs)||nd1===0||nd1===6;
           const isStart=from===ds||prevHol, isEnd=to===ds||nextHol;
           pos=isStart&&isEnd?'only':isStart?'start':isEnd?'end':'mid';
-          if (isStart) label = (g.type||'').replace('パース','').replace('作成','').slice(0,8);
+          // Tên hạng mục đầy đủ — không cắt
+          if (isStart) label = (g.type||'').replace('パース','').replace('作成','');
         }
-        return dayCell(ds, barColor, pos, label, isToday, isHol, isLastGrp);
+        // UP: chỉ hiện đúng ngày hôm nay
+        const showUp = isToday && (g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt);
+        return dayCell(ds, barColor, pos, label, isToday, isHol, isLastGrp, showUp);
       }).join('');
 
-      // Ghi chú từ rows
-      const notes=(g.rows||[]).map(r=>(r.note||'').trim()).filter(Boolean);
-      const lastCell = grpTodayUp
-        ? `<td style="padding:1px 4px;border-bottom:${rowBorderB};border-left:${CB};background:#fff5f5;vertical-align:middle;white-space:nowrap">
-             <span style="font-size:8px;font-weight:800;color:#e74c3c">UP</span>
-           </td>`
-        : `<td style="padding:1px 5px;border-bottom:${rowBorderB};border-left:${CB};background:var(--table-bg);vertical-align:middle;max-width:90px;overflow:hidden">
-             ${notes.length?`<div style="font-size:7px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px" title="${x(notes.join(' | '))}">${x(notes.join(' | '))}</div>`:''}
-           </td>`;
+      // Ghi chú từ tất cả row trong hạng mục
+      const notes = (g.rows||[]).map(r=>(r.note||'').trim()).filter(Boolean);
 
       return `<tr style="opacity:${grpOpacity}">
         <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
@@ -1400,7 +1390,9 @@ function renderProjectTimeline(pjs) {
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
         ${dayCells}
-        ${lastCell}
+        <td style="padding:1px 5px;border-bottom:${rowBorderB};border-left:${CB};background:var(--table-bg);vertical-align:middle;max-width:90px;overflow:hidden">
+          ${notes.length?`<div style="font-size:7px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;line-height:1.4" title="${x(notes.join(' | '))}">${x(notes.join(' | '))}</div>`:''}
+        </td>
       </tr>`;
     }).join('');
 
@@ -1417,7 +1409,7 @@ function renderProjectTimeline(pjs) {
       <col style="width:175px">
       <col style="width:26px"><col style="width:26px">
       ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
-      <col style="width:70px">
+      <col style="width:90px">
     </colgroup>
     <thead>
       <tr style="background:var(--navy)">
@@ -1426,7 +1418,7 @@ function renderProjectTimeline(pjs) {
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#7CFC00;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">作成</th>
         <th style="width:26px;padding:4px 3px;font-size:8px;font-weight:700;color:#FFC000;border-bottom:${PB};border-right:${CB};text-align:right;white-space:nowrap">修正</th>
         ${dayHeaders}
-        <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};white-space:nowrap">Ghi chú</th>
+        <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};text-align:left;white-space:nowrap">Ghi chú</th>
       </tr>
     </thead>
     <tbody>${rows||`<tr><td colspan="${NC}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
@@ -1698,17 +1690,10 @@ function renderMonthGantt(pjs) {
   }).join('');
 
   // ── Staff rows — sắp xếp theo thứ tự JP/VN ──
-  const STAFF_ORDER = [
-    'Management トゥアン',
-    'SGN ヒエン','SGN L.フォン','HAN M.フオン','SGN ズエン',
-    'HAN ハー','HAN T.タイン','HAN H.タイン','HAN D.チュン','HAN ニュー'
-  ];
-  const sortedStaff = [...D.settings.staffList].sort((a,b) => {
-    const ia = STAFF_ORDER.indexOf(a), ib = STAFF_ORDER.indexOf(b);
-    if (ia === -1 && ib === -1) return 0;
-    if (ia === -1) return 1;
-    if (ib === -1) return -1;
-    return ia - ib;
+  const STAFF_ORDER = ['Management トゥアン','SGN ヒエン','SGN L.フォン','HAN M.フオン','SGN ズエン','HAN ハー','HAN T.タイン','HAN H.タイン','HAN D.チュン','HAN ニュー'];
+  const sortedStaff = [...D.settings.staffList].sort((a,b)=>{
+    const ia=STAFF_ORDER.indexOf(a),ib=STAFF_ORDER.indexOf(b);
+    if(ia===-1&&ib===-1)return 0;if(ia===-1)return 1;if(ib===-1)return -1;return ia-ib;
   });
   const staffRows = sortedStaff.map(staff => {
     const tasks = staffMap[staff]||[];
