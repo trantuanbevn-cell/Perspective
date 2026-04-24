@@ -1307,9 +1307,9 @@ function renderProjectTimeline(pjs) {
       <td style="padding:2px 4px 1px 4px;border-bottom:none;border-right:${CB};border-left:${CB};background:var(--table-bg)">
         <span class="badge ${officeBadgeClass(p.office)}" style="font-size:8px;padding:1px 4px">${p.office||'—'}</span>
       </td>
-      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg)">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;color:var(--navy)"
-          onclick="selectPj('${p.id}')">${x(p.nameVN||p.nameJP||'—')}</div>
+      <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:175px;overflow:hidden">
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;cursor:pointer;color:var(--navy)"
+          onclick="selectPj('${p.id}')" title="${x(p.nameVN||p.nameJP||'—')}">${x(p.nameVN||p.nameJP||'—')}</div>
       </td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
@@ -1366,7 +1366,7 @@ function renderProjectTimeline(pjs) {
       return `<tr style="opacity:${grpOpacity}">
         <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
         <td style="padding:1px 4px 1px;border-bottom:${rowBorderB};border-right:${CB};background:var(--table-bg);vertical-align:middle">
-          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
+          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
         </td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
@@ -1383,8 +1383,8 @@ function renderProjectTimeline(pjs) {
 
   return `<table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:11px;border:1px solid #ccc">
     <colgroup>
-      <col style="width:38px">
-      <col style="min-width:160px">
+      <col style="width:34px">
+      <col style="width:175px">
       <col style="width:26px"><col style="width:26px">
       ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
     </colgroup>
