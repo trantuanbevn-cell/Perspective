@@ -6046,8 +6046,7 @@ function applyRoleUI(role) {
 }
 
 // Passwords — plain text comparison (works on file:// and https://)
-// ── splashLogin: gán vào window._splashLogin trong initSplash sau khi tất cả const đã init ──
-function splashLogin() { window._splashLogin && window._splashLogin(); }
+// ── splashLogin alias — window._splashLogin được gán trong initSplash ──
 
 (function initSplash() {
   // Check session — already logged in
