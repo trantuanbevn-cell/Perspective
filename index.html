@@ -1430,18 +1430,8 @@ function renderProjectTimeline(pjs) {
     return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:500;color:${color};border-bottom:1px solid var(--gray2);white-space:nowrap">${d}</th>`;
   }).join('');
 
-  // Build day cell for bar
-  function dayCell(ds, barColor, pos, isToday, isHol) {
-    const bg = isToday ? 'rgba(39,174,96,.07)' : isHol ? 'rgba(231,76,60,.04)' : '';
-    const br = pos==='start' ? '2px 0 0 2px' : pos==='end' ? '0 2px 2px 0' : pos==='only' ? '2px' : '0';
-    const bar = barColor
-      ? `<div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;height:3px;background:${barColor};border-radius:${br}"></div>`
-      : '';
-    return `<td style="width:14px;padding:0;position:relative;${bg?'background:'+bg+';':''}"><div style="height:11px;position:relative">${bar}</div></td>`;
-  }
 
   // Build rows for each project
-  const isVN = activeSection === 'vn';
   const rows = pjs.map((p, pi) => {
     const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
     const pjNew = totalNew(p), pjRev = totalRev(p);
@@ -6016,7 +6006,7 @@ function closeReport() { document.getElementById('rptOverlay')?.remove(); }
 ══════════════════════════════════════════════════════ */
 loadSavedTheme();
 showPage('main');
-renderAll();
+try { renderAll(); } catch(e) { console.error('renderAll init error:', e); }
 
 /* ══════════════════════════════════════════════════════
    ROLE UI + SPLASH SCREEN
@@ -6046,8 +6036,7 @@ function applyRoleUI(role) {
 }
 
 // Passwords — plain text comparison (works on file:// and https://)
-// ── splashLogin: gán vào window._splashLogin trong initSplash sau khi tất cả const đã init ──
-function splashLogin() { window._splashLogin && window._splashLogin(); }
+// ── splashLogin alias — window._splashLogin được gán trong initSplash ──
 
 (function initSplash() {
   // Check session — already logged in
