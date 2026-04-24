@@ -703,6 +703,24 @@ let D = (() => {
 // Passwords — khai báo sớm để splashLogin (hoisted) có thể dùng ngay
 const SPLASH_PW = {'204290':'admin','123456':'edit','280510':'view'};
 
+// SYNC — khai báo sớm để splashLogin có thể dùng ngay
+const SYNC = {
+  get gistId()  { return localStorage.getItem('sync_gist_id') || D.settings?.sync?.gistId || ''; },
+  get ghToken() { return localStorage.getItem('sync_gh_token') || ''; },
+  set gistId(v)  { localStorage.setItem('sync_gist_id', v); },
+  set ghToken(v) { localStorage.setItem('sync_gh_token', v); },
+  get binId()  { return localStorage.getItem('sync_bin_id')||''; },
+  get apiKey() { return localStorage.getItem('sync_api_key')||''; },
+  set binId(v)  { localStorage.setItem('sync_bin_id', v); },
+  set apiKey(v) { localStorage.setItem('sync_api_key', v); },
+  get lastSync() { return localStorage.getItem('sync_last')||''; },
+  set lastSync(v){ localStorage.setItem('sync_last', v); },
+  get role() { return sessionStorage.getItem('sync_role')||'none'; },
+  set role(v) { sessionStorage.setItem('sync_role', v); },
+  get autoOn() { return localStorage.getItem('sync_auto')==='1'; },
+  set autoOn(v) { localStorage.setItem('sync_auto', v?'1':'0'); }
+};
+
 
 /* ── persistD: save to localStorage AND sessionStorage (file:// fallback) ── */
 function persistD() {
@@ -4782,24 +4800,6 @@ function startPeriodicPull() {
    - Người khác chỉ cần nhập đúng mật khẩu để đọc hoặc sửa
    - Toàn bộ dữ liệu được mã hoá AES trước khi lên cloud
 ══════════════════════════════════════════════════════ */
-
-const SYNC = {
-  get gistId()  { return localStorage.getItem('sync_gist_id') || D.settings?.sync?.gistId || ''; },
-  get ghToken() { return localStorage.getItem('sync_gh_token') || ''; },
-  set gistId(v)  { localStorage.setItem('sync_gist_id', v); },
-  set ghToken(v) { localStorage.setItem('sync_gh_token', v); },
-  // Keep binId/apiKey for backward compat
-  get binId()  { return localStorage.getItem('sync_bin_id')||''; },
-  get apiKey() { return localStorage.getItem('sync_api_key')||''; },
-  set binId(v)  { localStorage.setItem('sync_bin_id', v); },
-  set apiKey(v) { localStorage.setItem('sync_api_key', v); },
-  get lastSync() { return localStorage.getItem('sync_last')||''; },
-  set lastSync(v){ localStorage.setItem('sync_last', v); },
-  get role() { return sessionStorage.getItem('sync_role')||'none'; },
-  set role(v) { sessionStorage.setItem('sync_role', v); },
-  get autoOn() { return localStorage.getItem('sync_auto')==='1'; },
-  set autoOn(v) { localStorage.setItem('sync_auto', v?'1':'0'); }
-};
 
 /* ── AES-GCM encryption (pure Web Crypto, no libs) ── */
 async function deriveKey(password, salt) {
