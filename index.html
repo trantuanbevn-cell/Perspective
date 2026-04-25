@@ -1346,7 +1346,15 @@ function renderProjectTimeline(pjs) {
       const grpNew = (g.rows||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0);
       const grpRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
       const grpAllDone = (g.rows||[]).some(r=>r.dateTo) && (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt);
-      const grpOpacity = grpAllDone ? '0.55' : rowDim ? '0.75' : '1';
+      // Có lịch UP chưa done VÀ dateTo >= hôm nay (không tính quá hạn)
+      const grpHasPendingUp = (g.rows||[]).some(r=>r.dateTo && !r.doneAt && r.dateTo >= todayStr);
+      // Opacity: done→mờ, có UP pending→sáng, không có UP→mờ nhẹ
+      const grpOpacity = grpAllDone ? '0.45' : grpHasPendingUp ? '1' : (rowDim ? '0.55' : '0.5');
+      // Màu tên hạng mục
+      const grpNameColor = grpAllDone ? '#aaa' : grpHasPendingUp
+        ? (isVN ? '#7c3aed' : '#5a9a35')   // sáng theo màu JP/VN
+        : '#bbb';                            // xám nhạt nếu không có lịch
+      const grpNameWeight = grpHasPendingUp && !grpAllDone ? '700' : '400';
 
       const dayCells = Array.from({length:daysInMonth}, (_,i) => {
         const d  = i+1;
@@ -1365,7 +1373,9 @@ function renderProjectTimeline(pjs) {
         if (activeRow) {
           const from=activeRow.dateFrom||activeRow.dateTo, to=activeRow.dateTo||activeRow.dateFrom;
           const done = !!(activeRow.doneAt);
-          barColor = done ? '#888'
+          const pastDeadline = activeRow.dateTo && activeRow.dateTo < todayStr && !done;
+          // Xám: đã done HOẶC quá ngày dateTo chưa done
+          barColor = (done || pastDeadline) ? '#bbb'
             : isVN ? (activeRow.status==='new'?'#7c3aed':'#db2777')
             :        (activeRow.status==='new'?'#5a9a35':'#d4900a');
 
@@ -1390,7 +1400,7 @@ function renderProjectTimeline(pjs) {
       return `<tr style="opacity:${grpOpacity}">
         <td style="padding:0 4px 0;border-bottom:${rowBorderB};border-right:${CB};border-left:${CB};background:var(--table-bg)"></td>
         <td style="padding:1px 4px 1px;border-bottom:${rowBorderB};border-right:${CB};background:var(--table-bg);vertical-align:middle">
-          <div style="font-size:7px;color:${grpAllDone?'#888':'var(--gray4)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
+          <div style="font-size:7px;color:${grpNameColor};font-weight:${grpNameWeight};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:165px;line-height:1.2;font-style:${grpAllDone?'italic':'normal'}">${x(g.type||'—')}${grpAllDone?' ✓':''}</div>
         </td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#27ae60;background:var(--table-bg);vertical-align:middle">${grpNew||''}</td>
         <td style="padding:1px 3px;border-bottom:${rowBorderB};border-right:${CB};text-align:right;font-size:8px;font-weight:600;color:#e67e22;background:var(--table-bg);vertical-align:middle">${grpRev||''}</td>
@@ -2835,6 +2845,7 @@ function renderGroups(p) {
     // Border: xanh khi active, transparent khi xám
     const gBorderColor  = gHasActiveUp ? '#27ae60' : 'transparent';
     const gBorderWidth  = gHasActiveUp ? '3px' : '2px';
+    // Tên hạng mục: KHÔNG mờ nếu có bất kỳ row nào có lịch UP đang chờ
     const gDimStyle     = gHasActiveUp ? '' : 'opacity:0.42;filter:saturate(0.1) brightness(0.85);';
 
     const rowsHtml = rows.map((r, ri) => {
