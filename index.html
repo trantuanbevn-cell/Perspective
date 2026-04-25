@@ -4849,26 +4849,39 @@ async function compressBase64Photo(b64, quality=0.5, maxPx=800) {
   });
 }
 
-/* ── Clone D, chỉ giữ ảnh đầu tiên mỗi dự án, nén JPEG 50%, max 800px ── */
+/* ── Clone D, chỉ giữ ảnh đầu tiên mỗi dự án, nén JPEG mạnh để fit Gist ── */
 async function buildSyncPayload() {
   const clone = JSON.parse(JSON.stringify(D));
   const jobs = [];
   Object.values(clone.months || {}).forEach(m => {
-    [...(m.projects||[]), ...(m.projectsVN||[])].forEach(p => {
-      if (p.photos && p.photos.length > 0) {
-        const first = p.photos[0];
-        p.photos = [null];
+    [...(m.projects||[]), ...(m.projectsVN||[])].forEach(pj => {
+      // Lọc bỏ null/undefined trong photos
+      const validPhotos = (pj.photos||[]).filter(Boolean);
+      if (validPhotos.length > 0) {
+        const first = validPhotos[0];
+        // Reset về array 1 phần tử trước, sẽ fill sau khi nén xong
+        pj.photos = ['__PENDING__'];
+        const capturedPj = pj; // capture đúng reference
         jobs.push(
-          compressBase64Photo(first, 0.5, 800).then(compressed => {
-            p.photos[0] = compressed;
+          // Nén mạnh: quality 0.35, max 400px → ~15-25KB/ảnh
+          compressBase64Photo(first, 0.35, 400).then(compressed => {
+            capturedPj.photos = [compressed];
+          }).catch(() => {
+            capturedPj.photos = []; // nếu lỗi thì bỏ ảnh
           })
         );
       } else {
-        p.photos = [];
+        pj.photos = [];
       }
     });
   });
   await Promise.all(jobs);
+  // Dọn sạch bất kỳ __PENDING__ còn sót
+  Object.values(clone.months || {}).forEach(m => {
+    [...(m.projects||[]), ...(m.projectsVN||[])].forEach(pj => {
+      if ((pj.photos||[]).includes('__PENDING__')) pj.photos = [];
+    });
+  });
   return clone;
 }
 
