@@ -4852,6 +4852,12 @@ async function compressBase64Photo(b64, quality=0.5, maxPx=800) {
 /* ── Clone D, chỉ giữ ảnh đầu tiên mỗi dự án, nén JPEG mạnh để fit Gist ── */
 async function buildSyncPayload() {
   const clone = JSON.parse(JSON.stringify(D));
+  // QUAN TRỌNG: Xóa token khỏi payload trước khi push lên cloud
+  // GitHub scan Gist content và auto-revoke token nếu phát hiện
+  if (clone.settings?.sync) {
+    delete clone.settings.sync.ghToken;
+    delete clone.settings.sync.apiKey;
+  }
   const jobs = [];
   Object.values(clone.months || {}).forEach(m => {
     [...(m.projects||[]), ...(m.projectsVN||[])].forEach(pj => {
@@ -5225,7 +5231,8 @@ async function confirmSyncSetup() {
 
   if (!D.settings.sync) D.settings.sync = {};
   D.settings.sync.gistId  = binId;
-  D.settings.sync.ghToken = apiKey;
+  // KHÔNG lưu ghToken vào D — GitHub scan Gist content và auto-revoke token
+  // Token chỉ tồn tại trong localStorage, không bao giờ đi lên cloud
   D.settings.sync.binId   = binId;
   D.settings.sync.editPw  = editPw;
   // Hash passwords (non-blocking — use SPLASH_PW as source of truth)
