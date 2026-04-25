@@ -2417,7 +2417,7 @@ function getStaffMonthlyKPIs(staffName, section) {
 
 /* ── Rating cell: save on oninput so navigation doesn’t lose data ── */
 /* ── Rating Group rendering: 3 compact columns + popup detail ── */
-function renderRatingGroups(pjId, gId, row) {
+function renderRatingGroups(pjId, gId, row, dimStyle) {
   const fields = getRatingFields();
   const grpA = fields.filter(rf=>rf.group==='A');
   const grpB = fields.filter(rf=>rf.group==='B');
@@ -2432,7 +2432,7 @@ function renderRatingGroups(pjId, gId, row) {
     const avg = grpAvg(grpFields);
     const dc = avg > 0 ? ratingColor(avg) : '#ccc';
     const pct = avg * 10;
-    return `<td style="padding:2px 4px;min-width:70px;vertical-align:middle">
+    return `<td style="padding:2px 4px;min-width:70px;vertical-align:middle;${dimStyle||''}">
       <div style="display:flex;flex-direction:column;gap:2px">
         <div style="display:flex;align-items:center;gap:3px;cursor:pointer"
              onclick="openRatingModal('${x(pjId)}','${x(gId)}','${x(row.id)}','${groupId}','${label}','${emoji}')"
@@ -2960,7 +2960,7 @@ function renderGroups(p) {
           <input class="tbl-input" value="${x(r.otNote||'')}" style="font-size:10px"
             onchange="updRow('${p.id}','${g.id}','${r.id}','otNote',this.value)" placeholder="Lý do OT…">
         </td>
-        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : renderRatingGroups(p.id, g.id, r)}
+        ${(sessionStorage.getItem('splash_role')||'admin')==='edit' ? '' : renderRatingGroups(p.id, g.id, r, cellDim)}
         <td style="text-align:center;min-width:64px;padding:2px 4px;${cellDim}">
           ${r.doneAt
             ? `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
