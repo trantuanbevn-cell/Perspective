@@ -5245,6 +5245,12 @@ async function confirmSyncSetup() {
     console.warn('hashPw failed, skipping:', e);
   }
 
+  // XÓA TOKEN KHỎI D TRƯỚC KHI SAVE — token chỉ tồn tại trong localStorage riêng
+  if (D.settings?.sync) {
+    delete D.settings.sync.ghToken;
+    delete D.settings.sync.apiKey;
+  }
+
   save();
   setSyncStatus('syncing','Đang kiểm tra kết nối…');
   closeModal();
