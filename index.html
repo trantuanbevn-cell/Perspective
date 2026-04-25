@@ -4947,18 +4947,37 @@ async function syncPull(decryptPassword) {
     if (!parsed || typeof parsed !== 'object') throw new Error('invalid_data');
 
     // ── CLOUD THẮNG — chỉ giữ credentials local ──
-    // Lưu credentials từ localStorage TRƯỚC KHI ghi đè D
-    // localStorage là nguồn tin cậy duy nhất — không dùng D.settings.sync
+    // Lưu credentials VÀ ảnh local TRƯỚC KHI ghi đè D
     const localGistId  = localStorage.getItem('sync_gist_id')  || '';
     const localToken   = localStorage.getItem('sync_gh_token') || '';
     const localEditPw  = localStorage.getItem('sync_edit_pw')  || '';
 
+    // Lưu toàn bộ photos local trước khi bị ghi đè
+    const localData = JSON.parse(localStorage.getItem(SK) || '{}');
+    const localPhotos = {}; // key: pj.id → photos array gốc
+    Object.values(localData.months || {}).forEach(m => {
+      [...(m.projects||[]), ...(m.projectsVN||[])].forEach(pj => {
+        if (pj.id && (pj.photos||[]).filter(Boolean).length > 0) {
+          localPhotos[pj.id] = pj.photos.filter(Boolean);
+        }
+      });
+    });
+
     // Lấy toàn bộ data từ cloud
     D = parsed;
 
-    // Deep merge months: giữ tất cả tháng từ cả cloud lẫn local (tránh mất dữ liệu offline)
+    // Khôi phục ảnh gốc từ local — cloud chỉ có 1 ảnh nén, local có đầy đủ
+    Object.values(D.months || {}).forEach(m => {
+      [...(m.projects||[]), ...(m.projectsVN||[])].forEach(pj => {
+        if (pj.id && localPhotos[pj.id]) {
+          pj.photos = localPhotos[pj.id]; // giữ ảnh local đầy đủ
+        }
+      });
+    });
+
+    // Deep merge months: giữ tháng local không có trên cloud
     if (parsed.months) {
-      const localMonths = JSON.parse(localStorage.getItem(SK) || '{}').months || {};
+      const localMonths = localData.months || {};
       Object.keys(localMonths).forEach(mid => {
         if (!D.months[mid]) D.months[mid] = localMonths[mid];
       });
