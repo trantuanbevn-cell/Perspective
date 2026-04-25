@@ -4466,7 +4466,7 @@ function renderStaffPage() {
 
 function openLateModal(staffName) {
   const today = localDateStr(new Date());
-  openModal(`<div class="modal-hd"><span class="modal-title">⏰ Ghi nhận đi muộn — ${staffName}</span></div>
+  showModal(`<div class="modal-hd"><span class="modal-title">⏰ Ghi nhận đi muộn — ${staffName}</span></div>
     <div class="modal-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="field"><label>Ngày</label>
@@ -4475,6 +4475,20 @@ function openLateModal(staffName) {
         <div class="field"><label>Số phút muộn</label>
           <input type="number" id="late-mins" min="1" max="480" placeholder="15" class="qty-inp" style="width:80px;font-size:13px;font-weight:700;color:#e74c3c">
         </div>
+      </div>
+      <div class="field"><label>Giờ đi làm thực tế</label>
+        <input type="time" id="late-time" class="tbl-input" style="font-size:12px" 
+          oninput="
+            const t=this.value;
+            if(t){
+              const [h,m]=t.split(':').map(Number);
+              const base=9*60;
+              const actual=h*60+m;
+              const diff=actual-base;
+              if(diff>0) document.getElementById('late-mins').value=diff;
+            }
+          ">
+        <div style="font-size:10px;color:var(--gray4);margin-top:3px">Giờ chuẩn 9:00 — nhập giờ thực tế để tự tính phút muộn</div>
       </div>
       <div class="field"><label>Ghi chú (lý do)</label>
         <input type="text" id="late-note" placeholder="Kẹt xe, họp đột xuất…" class="tbl-input" style="font-size:12px">
@@ -4486,7 +4500,7 @@ function openLateModal(staffName) {
         const d=document.getElementById('late-date').value;
         const m=+document.getElementById('late-mins').value;
         const n=document.getElementById('late-note').value;
-        if(!d||!m){alert('Vui lòng nhập đầy đủ ngày và số phút');return;}
+        if(!d||!m){alert('Vui lòng nhập đầy đủ ngày và số phút muộn');return;}
         addLateRecord('${staffName}',d,m,n);
         closeModal();renderStaffPage();toast('✓ Đã ghi nhận đi muộn');
       ">💾 Lưu</button>
