@@ -694,11 +694,8 @@ let D = (() => {
   s.editHash  = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
   s.viewHash  = '813f7512db1c116c5d706c0fcf98a3b7fd14fcba7a89b08fd1727dd16de8d3e7';
   s.editPw    = '123456';
-  // GitHub Gist sync
-  s.gistId    = 'bef0ed5c6aa11b7b1c0c925f85a469cf';
-  try { localStorage.setItem('sync_gist_id', 'bef0ed5c6aa11b7b1c0c925f85a469cf'); } catch(e) {}
+  // Gist ID: KHÔNG ghi đè nếu đã có trong localStorage (admin tự cấu hình)
   try { localStorage.setItem('sync_edit_pw', '123456'); } catch(e) {}
-  // Note: sync_gh_token is set by admin via setup panel (not stored in code for security)
   // KHÔNG ghi đè SK — dữ liệu app được load riêng
 })();
 
@@ -4757,21 +4754,26 @@ function triggerAutoSync() {
   }
 }
 
-// Pull định kỳ mỗi 3 phút — áp dụng cho tất cả role
+// Pull định kỳ mỗi 3 phút — chỉ áp dụng cho view/edit, KHÔNG pull về máy admin
 function startPeriodicPull() {
   if (startPeriodicPull._timer) clearInterval(startPeriodicPull._timer);
   startPeriodicPull._timer = setInterval(async () => {
     const gistId = SYNC.gistId || D.settings?.sync?.gistId || '';
     if (!gistId) return;
-    // Admin: push nếu có thay đổi, rồi pull; các role khác: chỉ pull
+    const role = SYNC.role || sessionStorage.getItem('splash_role') || '';
     try {
       setSyncStatus('syncing', '↓');
-      await syncPull('');
-      renderAll();
-      const role = SYNC.role || sessionStorage.getItem('splash_role') || '';
+      if (role === 'admin') {
+        // Admin: nguồn dữ liệu chính — chỉ push, không pull (tránh mất ảnh local)
+        await syncPush();
+      } else {
+        // View/Edit: chỉ pull từ cloud
+        await syncPull('');
+        renderAll();
+      }
       setSyncStatus('synced', role==='admin'?'✓ Admin':role==='edit'?'✓ Edit':'👁 View');
     } catch(e) {
-      setSyncStatus('', 'Sync');
+      if (e.message !== 'empty_cloud_first_push') setSyncStatus('', 'Sync');
     }
   }, 3 * 60 * 1000); // 3 phút
 }
@@ -4945,6 +4947,8 @@ async function syncPull(decryptPassword) {
     try { parsed = JSON.parse(fileContent); }
     catch(e) { throw new Error('parse_error: ' + e.message); }
     if (!parsed || typeof parsed !== 'object') throw new Error('invalid_data');
+    // Nếu cloud data rỗng (Gist mới tạo = {}) thì chỉ push, không pull
+    if (!parsed.months && !parsed.settings) throw new Error('empty_cloud_first_push');
 
     // ── CLOUD THẮNG — chỉ giữ credentials local ──
     // Lưu credentials VÀ ảnh local TRƯỚC KHI ghi đè D
@@ -5167,7 +5171,7 @@ function showSyncSetup() {
         </div>
         <div class="field">
           <label style="font-size:11px">Gist ID</label>
-          <input id="su-binid" value="bef0ed5c6aa11b7b1c0c925f85a469cf" placeholder="Gist ID..."
+          <input id="su-binid" value="${SYNC.gistId||''}" placeholder="Gist ID..."
             style="font-family:monospace;font-size:11px">
         </div>
       </div>
