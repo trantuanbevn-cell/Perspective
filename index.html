@@ -662,6 +662,8 @@ function freshData() {
         '和室パース','浴室パース','集会室パース','レストランパース','着色立面作成',
         'スカイラウンジ','中庭パース','風除室パース','バルコニーパース','住戸内パース'],
       contactList: ['ソン','フン','ニャー','TT.チエン','N.ビン','ニュン','カイン','Inamura','Ogura','Okuda'],
+      contactListVN: ['HAN X.グエン','HAN ソン','Management トゥアン','SGN ニャー'],
+      typeListVN: [],
       sync: {}
     },
     months: { [mid]: { projects: [], projectsVN: [], targetNew: 0, targetRev: 0 } },
@@ -745,6 +747,9 @@ function persistD() {
       if (p.contractEnd === undefined) p.contractEnd = '';
     });
   }
+  // Migrate: init new lists nếu chưa có (data cũ)
+  if (!D.settings.contactListVN) D.settings.contactListVN = ['HAN X.グエン','HAN ソン','Management トゥアン','SGN ニャー'];
+  if (!D.settings.typeListVN) D.settings.typeListVN = [];
   const json = JSON.stringify(D);
   // Check storage level after every save (throttled 30s)
   const now30 = Date.now();
@@ -1612,8 +1617,8 @@ function renderMonthGantt(pjs) {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayStr = localDateStr(today);
   const days = [];
-  // 7 ngày trước + hôm nay + 13 ngày sau = 21 ngày
-  for(let i=-7;i<14;i++){
+  // 7 ngày trước + hôm nay + 20 ngày sau = 28 ngày (4 tuần)
+  for(let i=-7;i<21;i++){
     const d=new Date(today); d.setDate(today.getDate()+i); days.push(d);
   }
   const startStr = localDateStr(days[0]);
@@ -1819,15 +1824,33 @@ function renderMonthGantt(pjs) {
     }).join('');
 
     return `<tr style="border-bottom:1px solid #ddd">
-      <td style="background:${nameBg};padding:4px 8px;min-width:100px;max-width:120px;border-right:1px solid #bbb;vertical-align:top">
+      <td style="background:${nameBg};padding:4px 8px;min-width:130px;max-width:150px;border-right:1px solid #bbb;vertical-align:top">
         <div style="font-weight:700;font-size:12px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${staff}</div>
         ${summary ? `<div style="margin-top:2px">${summary}</div>` : (tasks.length===0&&trips.length===0?'<div style="font-size:9px;color:#27AE60">✓ Rảnh</div>':'')}
         ${tasks.length>0?`<div style="margin-top:1px">${tasks.map(r=>{
           const isNew=r.status==='new';
           const bc=r.isVN?(isNew?'#7c3aed':'#db2777'):(isNew?'#5a9a35':'#d4900a');
           const typeName=(r.groupName||'').replace('パース','').replace('作成','').trim();
-          return `<div style="font-size:8px;color:${bc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;line-height:${ROW_H}px">[${r.pjNum||'?'}] ${typeName}</div>`;
+          return `<div style="font-size:8px;color:${bc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;line-height:${ROW_H}px">[${r.pjNum||'?'}] ${typeName}</div>`;
         }).join('')}</div>`:''}
+      </td>
+      <td style="background:${nameBg};padding:4px 2px;border-right:1px solid #bbb;vertical-align:middle;text-align:center;min-width:36px">
+        ${(()=>{
+          // Tổng OT từ tất cả hạng mục của nhân sự này trong tháng hiện tại
+          const m = curMonth();
+          let otTotal = 0;
+          [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>{
+            (p.groups||[]).forEach(g=>{
+              (g.rows||[]).forEach(r=>{
+                if(r.staff===staff && r.ot) otTotal += (r.ot||0);
+              });
+            });
+            (p.otLog||[]).forEach(e=>{ if(e.staff===staff) otTotal+=(e.hours||0); });
+          });
+          return otTotal > 0
+            ? `<div style="font-size:11px;font-weight:800;color:#e67e22">${otTotal}</div><div style="font-size:8px;color:#aaa">h</div>`
+            : `<div style="font-size:10px;color:#ccc">—</div>`;
+        })()}
       </td>
       ${dayCells}
     </tr>`;
@@ -1837,13 +1860,15 @@ function renderMonthGantt(pjs) {
   <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px">
     <thead>
       <tr>
-        <th style="background:var(--navy);width:100px;min-width:90px;padding:4px 8px;color:rgba(255,255,255,.7);font-size:10px;text-align:left">Nhân sự</th>
+        <th style="background:var(--navy);width:140px;min-width:130px;padding:4px 8px;color:rgba(255,255,255,.7);font-size:10px;text-align:left">Nhân sự</th>
+        <th style="background:var(--navy);width:36px;min-width:36px;padding:4px 4px;color:#FFC000;font-size:10px;text-align:center;white-space:nowrap">OT</th>
         ${hdrMonths}
       </tr>
       <tr>
         <th style="background:var(--navy2);padding:4px 8px;font-size:9px;color:var(--gold2);text-align:left">
           Hôm nay: <strong style="color:var(--gold)">${todayStr.split('-').slice(1).join('/')}</strong>
         </th>
+        <th style="background:var(--navy2);padding:4px;font-size:9px;color:var(--gold2);text-align:center">h</th>
         ${hdrDays}
       </tr>
     </thead>
@@ -4299,12 +4324,23 @@ function renderSettings() {
       <div class="card-body"><div class="tag-cloud" id="contactTags">
         ${D.settings.contactList.map(c=>`<div class="tag-edit"><input value="${x(c)}" style="width:80px"><span class="tag-del" onclick="this.parentElement.remove()">×</span></div>`).join('')}
       </div><button class="btn btn-sm" style="margin-top:9px" onclick="addTag('contactTags',80)">+ Thêm</button></div></div>
-    <div class="card" style="grid-column:1/-1"><div class="card-hd"><span class="card-hd-title">🏷 Danh mục hạng mục</span></div>
+    <div class="card"><div class="card-hd"><span class="card-hd-title">📞 Liên hệ Việt Nam</span></div>
+      <div class="card-body"><div class="tag-cloud" id="contactVNTags">
+        ${(D.settings.contactListVN||[]).map(c=>`<div class="tag-edit"><input value="${x(c)}" style="width:80px"><span class="tag-del" onclick="this.parentElement.remove()">×</span></div>`).join('')}
+      </div><button class="btn btn-sm" style="margin-top:9px" onclick="addTag('contactVNTags',80)">+ Thêm</button></div></div>
+    <div class="card"><div class="card-hd"><span class="card-hd-title">🏷 Danh mục hạng mục Nhật</span></div>
       <div class="card-body">
-        <p style="font-size:11px;color:var(--gray4);margin-bottom:9px">Chỉnh sửa hoặc thêm hạng mục theo nhu cầu</p>
+        <p style="font-size:11px;color:var(--gray4);margin-bottom:9px">Hạng mục dự án Nhật (JP)</p>
         <div class="tag-cloud" id="typeTags">
           ${D.settings.typeList.map(t=>`<div class="tag-edit"><input value="${x(t)}" style="width:140px"><span class="tag-del" onclick="this.parentElement.remove()">×</span></div>`).join('')}
         </div><button class="btn btn-sm" style="margin-top:9px" onclick="addTag('typeTags',140)">+ Thêm hạng mục</button>
+      </div></div>
+    <div class="card"><div class="card-hd"><span class="card-hd-title">🏷 Danh mục hạng mục Việt Nam</span></div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--gray4);margin-bottom:9px">Hạng mục dự án Việt Nam (VN)</p>
+        <div class="tag-cloud" id="typeVNTags">
+          ${(D.settings.typeListVN||[]).map(t=>`<div class="tag-edit"><input value="${x(t)}" style="width:140px"><span class="tag-del" onclick="this.parentElement.remove()">×</span></div>`).join('')}
+        </div><button class="btn btn-sm" style="margin-top:9px" onclick="addTag('typeVNTags',140)">+ Thêm hạng mục</button>
       </div></div>
   </div>
   <div style="margin-top:16px">
@@ -4647,7 +4683,9 @@ function addTag(cid,w) {
 function saveSettings() {
   D.settings.staffList=[...document.querySelectorAll('#staffTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
   D.settings.typeList=[...document.querySelectorAll('#typeTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
+  D.settings.typeListVN=[...document.querySelectorAll('#typeVNTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
   D.settings.contactList=[...document.querySelectorAll('#contactTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
+  D.settings.contactListVN=[...document.querySelectorAll('#contactVNTags .tag-edit input')].map(e=>e.value.trim()).filter(Boolean);
   save(); toast('✓ Đã lưu cài đặt');
 }
 
