@@ -742,6 +742,7 @@ function persistD() {
   if (D.settings && D.settings.staffProfiles) {
     Object.values(D.settings.staffProfiles).forEach(p => {
       if (p.contractEnd === undefined) p.contractEnd = '';
+      if (!p.lateLog) p.lateLog = []; // [{date, minutes, note}]
     });
   }
   // Migrate: init new lists nếu chưa có (data cũ)
@@ -3607,7 +3608,108 @@ function renderDashboard() {
     </div>`;
   }
 
+  // ── Realtime: hôm nay UP, sắp hạn, ai rảnh ──────────────────────────────
+  const todayStr2 = localDateStr(new Date());
+  const soon3 = new Date(); soon3.setDate(soon3.getDate()+3);
+  const soon3Str = localDateStr(soon3);
+  const curM = D.months[D.activeMonth]||{projects:[],projectsVN:[]};
+  const allPjs = [...(curM.projects||[]),...(curM.projectsVN||[])];
+
+  const todayUps=[], soonUps=[], busyStaff=new Set(), allStaff=new Set(D.settings.staffList);
+  allPjs.forEach(p=>{
+    (p.groups||[]).forEach(g=>{
+      (g.rows||[]).forEach(r=>{
+        if(!r.dateTo||r.doneAt) return;
+        if(r.staff) busyStaff.add(r.staff);
+        if(r.dateTo===todayStr2) todayUps.push({pj:p.nameVN||p.nameJP,grp:g.type,staff:r.staff,isVN:p.isVN});
+        else if(r.dateTo>todayStr2&&r.dateTo<=soon3Str) soonUps.push({pj:p.nameVN||p.nameJP,grp:g.type,staff:r.staff,date:r.dateTo});
+      });
+    });
+  });
+  const freeStaff = [...allStaff].filter(s=>!busyStaff.has(s));
+
+  // ── Leaderboard tháng hiện tại ──────────────────────────────────────────
+  const leaderboard = sortedStaffList().map(s=>{
+    const sc2 = calcStaffScore(s, D.activeMonth);
+    return {s, sc2};
+  }).filter(x=>x.sc2.totalUp>0||x.sc2.avgRating>0||x.sc2.lateCount>0)
+    .sort((a,b)=>b.sc2.score-a.sc2.score);
+
   dc.innerHTML=`
+  <!-- Realtime panels -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+    <!-- Hôm nay UP -->
+    <div class="card" style="border-top:3px solid #e74c3c">
+      <div class="card-hd"><span class="card-hd-title">🔴 Hôm nay UP (${todayStr2.slice(5).replace('-','/')})</span>
+        <span style="font-size:18px;font-weight:900;color:#e74c3c">${todayUps.length}</span></div>
+      <div class="card-body" style="padding:8px;max-height:160px;overflow-y:auto">
+        ${todayUps.length===0
+          ? '<div style="text-align:center;color:var(--gray4);font-size:11px;padding:12px">Không có hạng mục UP hôm nay</div>'
+          : todayUps.map(u=>`<div style="padding:4px 6px;margin-bottom:3px;border-radius:4px;background:#fff5f5;border-left:3px solid #e74c3c">
+              <div style="font-size:10px;font-weight:700;color:#e74c3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(u.grp||'—')}</div>
+              <div style="font-size:9px;color:var(--gray4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(u.pj)} · ${u.staff||'?'}</div>
+            </div>`).join('')}
+      </div>
+    </div>
+    <!-- Sắp UP trong 3 ngày -->
+    <div class="card" style="border-top:3px solid #e67e22">
+      <div class="card-hd"><span class="card-hd-title">⚡ Sắp UP (3 ngày tới)</span>
+        <span style="font-size:18px;font-weight:900;color:#e67e22">${soonUps.length}</span></div>
+      <div class="card-body" style="padding:8px;max-height:160px;overflow-y:auto">
+        ${soonUps.length===0
+          ? '<div style="text-align:center;color:var(--gray4);font-size:11px;padding:12px">Không có hạng mục sắp UP</div>'
+          : soonUps.map(u=>`<div style="padding:4px 6px;margin-bottom:3px;border-radius:4px;background:#fff8f2;border-left:3px solid #e67e22">
+              <div style="font-size:10px;font-weight:700;color:#e67e22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(u.grp||'—')}</div>
+              <div style="font-size:9px;color:var(--gray4)">${x(u.pj)} · ${u.staff||'?'} · ${u.date.slice(5).replace('-','/')}</div>
+            </div>`).join('')}
+      </div>
+    </div>
+    <!-- Ai đang rảnh -->
+    <div class="card" style="border-top:3px solid #27ae60">
+      <div class="card-hd"><span class="card-hd-title">✅ Nhân sự rảnh</span>
+        <span style="font-size:18px;font-weight:900;color:#27ae60">${freeStaff.length}</span></div>
+      <div class="card-body" style="padding:8px">
+        ${freeStaff.length===0
+          ? '<div style="text-align:center;color:var(--gray4);font-size:11px;padding:12px">Tất cả đang có lịch</div>'
+          : freeStaff.map(s=>`<div style="display:inline-block;padding:3px 8px;margin:2px;border-radius:99px;background:#e8fdf0;font-size:10px;font-weight:600;color:#27ae60">${s}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  ${leaderboard.length>0?`<div class="card" style="margin-bottom:12px">
+    <div class="card-hd"><span class="card-hd-title">🏆 Leaderboard tháng ${D.activeMonth.replace(/^\d{4}-/,'').replace(/^0/,'')}/${D.activeMonth.slice(0,4)}</span></div>
+    <div class="card-body" style="padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:var(--navy);color:#fff">
+          <th style="padding:6px 10px;text-align:left;width:30px">#</th>
+          <th style="padding:6px 10px;text-align:left">Nhân sự</th>
+          <th style="padding:6px 10px;text-align:center">Điểm</th>
+          <th style="padding:6px 10px;text-align:center">Đánh giá</th>
+          <th style="padding:6px 10px;text-align:center">Đúng hạn</th>
+          <th style="padding:6px 10px;text-align:center">Đi muộn</th>
+          <th style="padding:6px 10px;text-align:center">OT</th>
+        </tr></thead>
+        <tbody>${leaderboard.map((item,i)=>{
+          const {s,sc2}=item;
+          const sc=sc2.score;
+          const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          const scoreColor=sc>=8?'#27ae60':sc>=6?'#f39c12':sc>=4?'#e67e22':'#e74c3c';
+          return `<tr style="border-bottom:1px solid var(--gray2);background:${i%2?'var(--gray1)':'#fff'}">
+            <td style="padding:6px 10px;font-size:13px">${medal||i+1}</td>
+            <td style="padding:6px 10px;font-weight:600;color:var(--navy)">${s}</td>
+            <td style="padding:6px 10px;text-align:center;font-size:15px;font-weight:900;color:${scoreColor}">${sc.toFixed(1)}</td>
+            <td style="padding:6px 10px;text-align:center">${sc2.avgRating>0?sc2.avgRating.toFixed(1):'-'}</td>
+            <td style="padding:6px 10px;text-align:center;color:${sc2.onTimeRate>=0.8?'#27ae60':'#e67e22'}">${sc2.totalUp>0?Math.round(sc2.onTimeRate*100)+'%':'-'}</td>
+            <td style="padding:6px 10px;text-align:center;color:${sc2.lateCount>0?'#e74c3c':'#27ae60'};font-weight:${sc2.lateCount>0?700:400}">${sc2.lateCount>0?sc2.lateCount+' lần':'✓'}</td>
+            <td style="padding:6px 10px;text-align:center;color:var(--orange)">${sc2.ot>0?sc2.ot.toFixed(1)+'h':'-'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+  </div>`:''}
+
+  <!-- Stat boxes -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
     <div class="hero-box green" style="padding:12px"><div class="hero-num" style="font-size:28px">${totN}</div><div class="hero-lbl">Tổng 作成 (Làm mới)</div></div>
     <div class="hero-box gold" style="padding:12px"><div class="hero-num" style="font-size:28px">${totR}</div><div class="hero-lbl">Tổng 修正 (Sửa lại)</div></div>
@@ -3730,6 +3832,88 @@ function saveStaffProfile(name, field, val) {
   const p = getStaffProfile(name);
   p[field] = val;
   persistD();
+}
+
+// ── Đi muộn ──────────────────────────────────────────────────────────────
+function getLateLog(name) {
+  return getStaffProfile(name).lateLog || [];
+}
+function addLateRecord(name, date, minutes, note) {
+  const p = getStaffProfile(name);
+  if (!p.lateLog) p.lateLog = [];
+  // Không trùng ngày
+  const idx = p.lateLog.findIndex(l=>l.date===date);
+  if (idx>=0) p.lateLog[idx] = {date, minutes:+minutes, note};
+  else p.lateLog.push({date, minutes:+minutes, note});
+  persistD();
+}
+function deleteLateRecord(name, date) {
+  const p = getStaffProfile(name);
+  if (!p.lateLog) return;
+  p.lateLog = p.lateLog.filter(l=>l.date!==date);
+  persistD();
+}
+function getLateThisMonth(name, mid) {
+  mid = mid || D.activeMonth;
+  return getLateLog(name).filter(l=>l.date && l.date.startsWith(mid));
+}
+
+// ── Tính điểm tổng hợp tháng ──────────────────────────────────────────────
+function calcStaffScore(name, mid) {
+  mid = mid || D.activeMonth;
+  const m = D.months[mid] || {projects:[], projectsVN:[]};
+  const pjs = [...(m.projects||[]), ...(m.projectsVN||[])];
+  const today = localDateStr(new Date());
+
+  // Rating trung bình (kỹ thuật + năng lực + thái độ)
+  const fields = getRatingFields ? getRatingFields() : [];
+  let ratingSum = 0, ratingCount = 0;
+  pjs.forEach(p=>{
+    (p.groups||[]).forEach(g=>{
+      (g.rows||[]).filter(r=>r.staff===name).forEach(r=>{
+        const vals = fields.map(f=>r[f.field]||0).filter(v=>v>0);
+        if (vals.length) { ratingSum += vals.reduce((a,b)=>a+b,0)/vals.length; ratingCount++; }
+      });
+    });
+  });
+  const avgRating = ratingCount>0 ? ratingSum/ratingCount : 0;
+
+  // Tỷ lệ đúng hạn
+  let totalUp=0, onTimeUp=0;
+  pjs.forEach(p=>{
+    (p.groups||[]).forEach(g=>{
+      (g.rows||[]).filter(r=>r.staff===name && r.dateTo && r.dateTo.startsWith(mid)).forEach(r=>{
+        totalUp++;
+        if (r.doneAt && r.doneAt.slice(0,10) <= r.dateTo) onTimeUp++;
+      });
+    });
+  });
+  const onTimeRate = totalUp>0 ? onTimeUp/totalUp : null;
+
+  // Đi muộn tháng này
+  const lates = getLateThisMonth(name, mid);
+  const lateCount = lates.length;
+  const lateMins = lates.reduce((s,l)=>s+(l.minutes||0), 0);
+
+  // OT tháng này
+  let ot = 0;
+  pjs.forEach(p=>{
+    (p.groups||[]).forEach(g=>{
+      (g.rows||[]).filter(r=>r.staff===name).forEach(r=>{ ot+=(r.ot||0); });
+    });
+    (p.otLog||[]).filter(e=>e.staff===name).forEach(e=>{ ot+=(e.hours||0); });
+  });
+
+  // Điểm tổng hợp /10
+  let score = 0, parts = 0;
+  if (avgRating>0)   { score += avgRating*4; parts+=4; }       // Rating: 40%
+  if (onTimeRate!==null) { score += onTimeRate*10*3; parts+=3; } // Đúng hạn: 30%
+  // Đi muộn trừ điểm: mỗi lần -0.3, tối đa -3 điểm
+  const latePenalty = Math.min(lateCount*0.3, 3);
+  if (parts>0) score = Math.max(0, score/parts*10 - latePenalty);
+  else score = Math.max(0, 10 - latePenalty);
+
+  return { avgRating, onTimeRate, onTimeUp, totalUp, lateCount, lateMins, ot, score };
 }
 
 // Get all leaves for a staff across all months
@@ -4211,6 +4395,60 @@ function renderStaffPage() {
 
           </div><!-- end collapsible -->
 
+          <!-- Điểm tổng hợp tháng -->
+          ${(()=>{
+            const sc2 = calcStaffScore(s);
+            const scoreColor = sc2.score>=8?'#27ae60':sc2.score>=6?'#f39c12':sc2.score>=4?'#e67e22':'#e74c3c';
+            const latesThisMonth = getLateThisMonth(s);
+            return `<div style="margin-top:8px;padding:8px 10px;background:${scoreColor}18;border-radius:var(--r);border-left:3px solid ${scoreColor}">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.05em">⭐ Điểm tháng ${mid.replace(/^\d{4}-/,'').replace(/^0/,'')}</span>
+                <span style="font-size:18px;font-weight:900;color:${scoreColor}">${sc2.score.toFixed(1)}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;font-size:9px;color:var(--gray4)">
+                <div style="text-align:center;padding:3px;background:#fff;border-radius:3px">
+                  <div style="font-weight:700;color:var(--navy);font-size:11px">${sc2.avgRating>0?sc2.avgRating.toFixed(1):'-'}</div>
+                  <div>Đánh giá</div>
+                </div>
+                <div style="text-align:center;padding:3px;background:#fff;border-radius:3px">
+                  <div style="font-weight:700;color:${sc2.onTimeRate>=0.8?'#27ae60':'#e67e22'};font-size:11px">${sc2.totalUp>0?Math.round(sc2.onTimeRate*100)+'%':'-'}</div>
+                  <div>Đúng hạn</div>
+                </div>
+                <div style="text-align:center;padding:3px;background:#fff;border-radius:3px">
+                  <div style="font-weight:700;color:${latesThisMonth.length>0?'#e74c3c':'#27ae60'};font-size:11px">${latesThisMonth.length}</div>
+                  <div>Đi muộn</div>
+                </div>
+                <div style="text-align:center;padding:3px;background:#fff;border-radius:3px">
+                  <div style="font-weight:700;color:var(--orange);font-size:11px">${sc2.ot>0?sc2.ot.toFixed(1)+'h':'-'}</div>
+                  <div>OT</div>
+                </div>
+              </div>
+            </div>
+            <!-- Theo dõi đi muộn tháng này -->
+            <div style="margin-top:8px;border:1px solid var(--gray2);border-radius:var(--r);overflow:hidden">
+              <div style="padding:6px 10px;background:var(--navy2);display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:10px;font-weight:700;color:#fff">⏰ Đi muộn tháng ${mid.replace(/^\d{4}-/,'').replace(/^0/,'')}</span>
+                <button class="btn btn-xs" style="background:#fff;color:var(--navy);font-size:9px;padding:2px 8px"
+                  onclick="openLateModal('${s}')">+ Ghi nhận</button>
+              </div>
+              <div style="padding:6px 8px;max-height:140px;overflow-y:auto">
+                ${latesThisMonth.length===0
+                  ? '<div style="font-size:10px;color:var(--gray4);text-align:center;padding:8px">Không có ghi nhận đi muộn</div>'
+                  : latesThisMonth.sort((a,b)=>a.date>b.date?-1:1).map(l=>`
+                    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--gray1)">
+                      <span style="font-size:10px;color:var(--gray4);min-width:72px">${l.date.slice(5).replace('-','/')}</span>
+                      <span style="font-size:11px;font-weight:700;color:#e74c3c">${l.minutes} phút</span>
+                      ${l.note?`<span style="font-size:10px;color:var(--gray4);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(l.note)}</span>`:'<span style="flex:1"></span>'}
+                      <button class="btn btn-xs btn-ghost btn-danger" onclick="deleteLateRecord('${s}','${l.date}');renderStaffPage()">✕</button>
+                    </div>`).join('')
+                }
+              </div>
+              ${latesThisMonth.length>0?`<div style="padding:4px 10px;background:var(--gray1);font-size:10px;color:#e74c3c;font-weight:600">
+                Tổng: ${latesThisMonth.length} lần · ${latesThisMonth.reduce((s,l)=>s+(l.minutes||0),0)} phút
+              </div>`:''}
+            </div>`;
+          })()}
+
           <!-- Order control -->
           <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--gray1);display:flex;align-items:center;gap:8px">
             <span style="font-size:10px;color:var(--gray4)">Thứ tự:</span>
@@ -4224,6 +4462,35 @@ function renderStaffPage() {
     }).join('')}
   </div>
   `;
+}
+
+function openLateModal(staffName) {
+  const today = localDateStr(new Date());
+  openModal(`<div class="modal-hd"><span class="modal-title">⏰ Ghi nhận đi muộn — ${staffName}</span></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="field"><label>Ngày</label>
+          <input type="date" id="late-date" value="${today}" class="tbl-input" style="font-size:12px">
+        </div>
+        <div class="field"><label>Số phút muộn</label>
+          <input type="number" id="late-mins" min="1" max="480" placeholder="15" class="qty-inp" style="width:80px;font-size:13px;font-weight:700;color:#e74c3c">
+        </div>
+      </div>
+      <div class="field"><label>Ghi chú (lý do)</label>
+        <input type="text" id="late-note" placeholder="Kẹt xe, họp đột xuất…" class="tbl-input" style="font-size:12px">
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-gold" onclick="
+        const d=document.getElementById('late-date').value;
+        const m=+document.getElementById('late-mins').value;
+        const n=document.getElementById('late-note').value;
+        if(!d||!m){alert('Vui lòng nhập đầy đủ ngày và số phút');return;}
+        addLateRecord('${staffName}',d,m,n);
+        closeModal();renderStaffPage();toast('✓ Đã ghi nhận đi muộn');
+      ">💾 Lưu</button>
+    </div>`);
 }
 
 function toggleSalary(salId) {
@@ -4995,7 +5262,17 @@ async function syncPull(decryptPassword) {
     if (localToken)  { localStorage.setItem('sync_gh_token', localToken); }
     if (localEditPw) { D.settings.sync.editPw = localEditPw; localStorage.setItem('sync_edit_pw', localEditPw); }
 
-    try { localStorage.setItem(SK, JSON.stringify(D)); } catch(e) {}
+    try {
+      localStorage.setItem(SK, JSON.stringify(D));
+    } catch(e) {
+      // localStorage đầy — lưu lại không có ảnh
+      console.warn('syncPull: localStorage full, saving without photos');
+      const noPhoto = JSON.parse(JSON.stringify(D));
+      Object.values(noPhoto.months||{}).forEach(m=>{
+        [...(m.projects||[]),...(m.projectsVN||[])].forEach(p=>{ p.photos=[]; });
+      });
+      try { localStorage.setItem(SK, JSON.stringify(noPhoto)); } catch(e2) {}
+    }
     SYNC.lastSync = new Date().toLocaleString('vi-VN');
     setSyncStatus('synced', '✓ Synced');
     return parsed;
