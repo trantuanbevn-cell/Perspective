@@ -1470,7 +1470,15 @@ function renderProjectTimeline(pjs) {
             return di===0 && !isHol;
           }
           return false;
-        });
+        })
+        // Nếu không tìm thấy trong groups, tìm trong tlTasks (chỉ VN, chỉ khi isVN)
+        || (isVN && !p._carryover ? (p.tlTasks||[]).filter(t=>
+            t.lv!=='group' && t.staff && t.staff.length>0 &&
+            !p.groups?.some(g2=>g2.tlTaskId===t.id)
+          ).find(t=>{
+            const from=t.start||t.upDate, to=t.upDate||t.end;
+            return from && to && from<=ds && ds<=to && !isHol;
+          }) : null);
 
         let barColor=null, pos='mid', label='';
         if (activeRow) {
@@ -1755,7 +1763,8 @@ function renderMonthGantt(pjs) {
   // Collect ALL tasks — gắn flag isVN để phân biệt màu
   const m = curMonth();
   const vnIds = new Set((m.projectsVN||[]).map(p=>p.id));
-  const allTasks = pjs.flatMap((p, pIdx) =>
+  // Đọc từ groups/rows (JP + VN cũ)
+  const groupTasks = pjs.flatMap((p, pIdx) =>
     (p.groups||[]).flatMap(g =>
       (g.rows||[])
         .filter(r => r.staff && (r.dateFrom||r.dateTo))
@@ -1768,6 +1777,37 @@ function renderMonthGantt(pjs) {
         }))
     )
   );
+
+  // Đọc thêm từ tlTasks của dự án VN (bảng tiến độ tổng)
+  const tlGroupIds = new Set(groupTasks.map(r=>r.tlTaskId).filter(Boolean));
+  const tlTasks = pjs
+    .filter(p => vnIds.has(p.id))
+    .flatMap((p, pIdx) =>
+      (p.tlTasks||[])
+        .filter(t => t.staff && t.staff.length > 0 && t.lv !== 'group'
+          && (t.start || t.upDate)
+          // Không duplicate với task đã được sync xuống groups
+          && !p.groups?.some(g => g.tlTaskId === t.id && g.rows?.some(r=>r.staff && r.dateFrom))
+        )
+        .flatMap(t =>
+          t.staff.map(staffName => ({
+            id:        t.id + '_' + staffName,
+            staff:     staffName,
+            dateFrom:  t.start  || t.upDate || '',
+            dateTo:    t.upDate || t.end   || '',
+            doneAt:    t.status === 'done' ? (t.actual || t.upDate || '') : '',
+            status:    'new',
+            qty:       0,
+            pjName:    p.nameVN || p.nameJP || '—',
+            groupName: t.name || '—',
+            pjNum:     pjs.indexOf(p) + 1,
+            isVN:      true,
+            _fromTl:   true   // flag để phân biệt nguồn
+          }))
+        )
+    );
+
+  const allTasks = [...groupTasks, ...tlTasks];
 
   function overlaps(r) {
     const from=r.dateFrom||r.dateTo||'', to=r.dateTo||r.dateFrom||'';
