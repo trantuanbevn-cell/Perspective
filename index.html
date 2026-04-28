@@ -845,27 +845,29 @@ function allActiveProjects() {
   const [yr, mo] = mid.split('-').map(Number);
   const monthStart = `${mid}-01`;
   const monthEnd   = `${mid}-${String(new Date(yr, mo, 0).getDate()).padStart(2,'0')}`;
+  const todayStr   = localDateStr(new Date());
 
-  // Dự án tháng hiện tại
+  // Dự án tháng hiện tại — luôn hiện (kể cả dateTo nằm trước monthStart vì được copy từ tháng cũ)
   const cur = allCurProjects().map(p => ({...p, _carryover: false}));
   const curIds = new Set(cur.map(p=>p.id));
 
-  // Dự án từ các tháng khác có row timeline active trong tháng hiện tại
+  // Dự án từ các tháng khác có row timeline giao với tháng hiện tại HOẶC với hôm nay
   const carryover = [];
   Object.entries(D.months).forEach(([m2id, m2]) => {
     if (m2id === mid) return;
     [...(m2.projects||[]), ...(m2.projectsVN||[])].forEach(p => {
-      if (curIds.has(p.id)) return; // đã có trong tháng hiện tại
+      if (curIds.has(p.id)) return;
       const hasActive = (p.groups||[]).some(g =>
         (g.rows||[]).some(r => {
           const from = r.dateFrom || r.dateTo;
           const to   = r.dateTo   || r.dateFrom;
+          // Giao với tháng hiện tại HOẶC dateTo >= hôm nay
           return from && to && from <= monthEnd && to >= monthStart;
         })
       );
       if (hasActive) {
-        carryover.push({...p, _carryover: true}); // đánh dấu carryover
-        curIds.add(p.id); // tránh duplicate nếu có ở nhiều tháng cũ
+        carryover.push({...p, _carryover: true});
+        curIds.add(p.id);
       }
     });
   });
@@ -1395,8 +1397,9 @@ function renderProjectTimeline(pjs) {
       const grpNew = (g.rows||[]).filter(r=>r.status==='new').reduce((s,r)=>s+(r.qty||0),0);
       const grpRev = (g.rows||[]).filter(r=>r.status==='rev').reduce((s,r)=>s+(r.qty||0),0);
       const grpAllDone = (g.rows||[]).some(r=>r.dateTo) && (g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt);
-      // Có lịch UP chưa done VÀ dateTo >= hôm nay (không tính quá hạn)
-      const grpHasPendingUp = (g.rows||[]).some(r=>r.dateTo && !r.doneAt && r.dateTo >= todayStr);
+      // Có lịch UP chưa done — kể cả dateTo trước tháng (dự án copy từ tháng cũ)
+      const grpHasPendingUp = (g.rows||[]).some(r=>r.dateTo && !r.doneAt && r.dateTo >= todayStr)
+        || (!p._carryover && (g.rows||[]).some(r=>r.dateTo && !r.doneAt)); // copy từ tháng cũ sang
       // Opacity: done→mờ, có UP pending→sáng, không có UP→mờ nhẹ
       const grpOpacity = grpAllDone ? '0.45' : grpHasPendingUp ? '1' : (rowDim ? '0.55' : '0.5');
       // Màu tên hạng mục: khớp với status của row đang pending (mới=xanh, sửa=vàng)
@@ -1417,8 +1420,17 @@ function renderProjectTimeline(pjs) {
 
         const activeRow = (g.rows||[]).find(r=>{
           if (!r.dateFrom && !r.dateTo) return false;
-          const from=r.dateFrom||r.dateTo, to=r.dateTo||r.dateFrom;
-          return from<=ds && ds<=to && !isHol;
+          const from = r.dateFrom || r.dateTo;
+          const to   = r.dateTo   || r.dateFrom;
+          // Trường hợp bình thường: ds nằm trong [from, to]
+          if (from<=ds && ds<=to && !isHol) return true;
+          // Trường hợp dự án copy từ tháng cũ: dateTo < đầu tháng hiện tại
+          // → hiện bar ở cột đầu tháng (ngày 1) như "UP chưa xong"
+          if (!p._carryover && r.dateTo && r.dateTo < `${yr}-${String(mo).padStart(2,'0')}-01` && !r.doneAt) {
+            const firstOfMonth = `${yr}-${String(mo).padStart(2,'0')}-01`;
+            return ds === firstOfMonth && !isHol;
+          }
+          return false;
         });
 
         let barColor=null, pos='mid', label='';
