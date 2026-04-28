@@ -2443,7 +2443,7 @@ function tlCalcDays() {
 function confirmSaveTlTask(pjId, taskId) {
   const staff = [...document.querySelectorAll('#tl-staff-wrap input[type=checkbox]:checked')].map(e=>e.value);
   const end   = document.getElementById('tl-end').value;
-  const upDate = document.getElementById('tl-up').value || end; // mặc định = ngày kết thúc
+  const upDate = document.getElementById('tl-up').value || end;
   const task = {
     id: taskId,
     lv:       document.getElementById('tl-lv').value,
@@ -2461,12 +2461,80 @@ function confirmSaveTlTask(pjId, taskId) {
   };
   if (!task.name) { toast('Vui lòng nhập tên công việc'); return; }
   saveTlTask(pjId, task);
+
+  // ── Tự động đồng bộ xuống Hạng mục phối cảnh nếu có nhân sự ──────────
+  if (staff.length > 0 && task.lv !== 'group') {
+    syncTlTaskToGroup(pjId, task);
+  }
+
   closeModal();
   const p = allCurProjects().find(q=>q.id===pjId)
          || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
   const ci = document.getElementById('content-inner') || document.querySelector('.content-inner');
   if(ci && p) renderProjectDetail(ci, p);
-  toast('✓ Đã lưu task tiến độ');
+  toast('✓ Đã lưu task tiến độ' + (staff.length>0&&task.lv!=='group' ? ' & đồng bộ hạng mục' : ''));
+}
+
+// ── Đồng bộ 1 tlTask → group + rows trong Hạng mục phối cảnh ─────────────
+function syncTlTaskToGroup(pjId, task) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p) return;
+  if (!p.groups) p.groups = [];
+
+  // Tìm group hiện có theo tlTaskId (link field)
+  let grp = p.groups.find(g=>g.tlTaskId===task.id);
+
+  if (!grp) {
+    // Tạo group mới
+    grp = {
+      id:       gid(),
+      tlTaskId: task.id,  // link để tìm lại sau
+      type:     task.name,
+      rows:     []
+    };
+    p.groups.push(grp);
+  } else {
+    // Cập nhật tên hạng mục nếu đổi
+    grp.type = task.name;
+  }
+
+  // Mỗi nhân sự → 1 row
+  // Giữ row cũ nếu đã có (bảo toàn qty/OT đã nhập)
+  const existingRows = grp.rows || [];
+  const newRows = [];
+
+  task.staff.forEach(staffName => {
+    // Tìm row hiện có của nhân sự này
+    const existingRow = existingRows.find(r => r.staff === staffName);
+    if (existingRow) {
+      // Cập nhật ngày, giữ qty/OT/doneAt
+      existingRow.dateFrom = task.start || '';
+      existingRow.dateTo   = task.upDate || task.end || '';
+      newRows.push(existingRow);
+    } else {
+      // Tạo row mới — qty=0 (anh tự điền sau)
+      newRows.push({
+        id:       gid(),
+        staff:    staffName,
+        status:   'new',
+        qty:      0,          // để trống, anh tự điền
+        dateFrom: task.start || '',
+        dateTo:   task.upDate || task.end || '',
+        doneAt:   task.status==='done' ? (task.actual||localDateStr(new Date())) : '',
+        note:     '',
+        ot:       0,
+      });
+    }
+  });
+
+  // Giữ lại row của nhân sự không còn trong task (không xóa)
+  existingRows.forEach(r => {
+    if (!task.staff.includes(r.staff)) newRows.push(r);
+  });
+
+  grp.rows = newRows;
+  save();
 }
 
 function renderProjectTimeline_VN(p) {
@@ -2527,7 +2595,7 @@ function renderProjectTimeline_VN(p) {
     wc.setDate(wc.getDate()+7);
   }
 
-  const SC = {none:'#d1d5db',ip:'#3b82f6',done:'#22c55e',late:'#ef4444'};
+  const SC = {none:'#94a3b8',ip:'#3b82f6',done:'#22c55e',late:'#ef4444'};
   const SL = {none:'Chưa',ip:'Đang làm',done:'Xong',late:'Trễ'};
 
   // ── Render 1 dòng task ───────────────────────────────────────────────
@@ -2535,7 +2603,7 @@ function renderProjectTimeline_VN(p) {
     const startDs  = t.start  || t._autoStart  || '';
     const endDs    = t.end    || t._autoEnd    || '';
     const prog     = t.lv==='group' ? (t._autoProgress||0) : (t.progress||0);
-    const bc       = SC[t.status]||'#d1d5db';
+    const bc       = SC[t.status]||'#94a3b8';
     const isUpToday= t.upDate===today;
     const staffNames=(t.staff||[]).map(s=>staffShortName(s)).join(', ');
     const wds      = startDs&&endDs ? calcWorkDays(startDs,endDs) : 0;
