@@ -95,7 +95,8 @@ body{font-family:'Be Vietnam Pro','Noto Sans JP',sans-serif;font-size:13px;backg
 .sidebar-hd span{background:var(--gold);color:var(--navy);border-radius:99px;padding:1px 7px;font-size:10px}
 .pj-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 7px;display:flex;flex-direction:column;gap:6px;min-height:0;scroll-behavior:smooth}
 /* Project card in sidebar */
-.pj-card{background:var(--card-bg);border-radius:8px;border:2px solid transparent;cursor:pointer;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s,transform .15s;flex-shrink:0;width:100%}
+.pj-card:hover .pj-del-btn { opacity:1 !important; }
+.pj-card { position:relative; }
 .pj-card:hover{border-color:var(--gold2);box-shadow:0 3px 10px rgba(0,0,0,.13);transform:translateY(-1px)}
 .pj-card.active{border-color:var(--gold);box-shadow:0 3px 12px rgba(255,192,0,.3)}
 .pj-thumb{width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);overflow:hidden;position:relative;flex-shrink:0;display:block}
@@ -835,6 +836,42 @@ function allCurProjects() {  // used by gantt/stats that need BOTH sections
   const m = curMonth();
   return [...(m.projects||[]), ...(m.projectsVN||[])];
 }
+
+// Lấy dự án từ các tháng khác có timeline kéo dài vào tháng hiện tại
+// Dùng cho bảng Chi tiết và Lịch nhân sự
+// Flag p._carryover = true để không tính qty vào tổng
+function allActiveProjects() {
+  const mid = D.activeMonth;
+  const [yr, mo] = mid.split('-').map(Number);
+  const monthStart = `${mid}-01`;
+  const monthEnd   = `${mid}-${String(new Date(yr, mo, 0).getDate()).padStart(2,'0')}`;
+
+  // Dự án tháng hiện tại
+  const cur = allCurProjects().map(p => ({...p, _carryover: false}));
+  const curIds = new Set(cur.map(p=>p.id));
+
+  // Dự án từ các tháng khác có row timeline active trong tháng hiện tại
+  const carryover = [];
+  Object.entries(D.months).forEach(([m2id, m2]) => {
+    if (m2id === mid) return;
+    [...(m2.projects||[]), ...(m2.projectsVN||[])].forEach(p => {
+      if (curIds.has(p.id)) return; // đã có trong tháng hiện tại
+      const hasActive = (p.groups||[]).some(g =>
+        (g.rows||[]).some(r => {
+          const from = r.dateFrom || r.dateTo;
+          const to   = r.dateTo   || r.dateFrom;
+          return from && to && from <= monthEnd && to >= monthStart;
+        })
+      );
+      if (hasActive) {
+        carryover.push({...p, _carryover: true}); // đánh dấu carryover
+        curIds.add(p.id); // tránh duplicate nếu có ở nhiều tháng cũ
+      }
+    });
+  });
+
+  return [...cur, ...carryover];
+}
 function getPj(id) {
   // Search current section first, then the other (important for cross-section rating save)
   const m = curMonth();
@@ -976,19 +1013,26 @@ function addMonth() {
 
 function doAddMonth(prevMid, newMid) {
   const newMidStart = newMid + '-01';
+  const todayStr = localDateStr(new Date()); // ngày tạo tháng mới
+
+  // Lưu tất cả dự án tháng cũ vào history trước khi copy
+  const prevM = D.months[prevMid] || {projects:[], projectsVN:[]};
+  [...(prevM.projects||[]), ...(prevM.projectsVN||[])].forEach(p => savePjToHistory(p));
 
   // ── Copy dự án sang tháng mới ──
   function copyProjects(srcList) {
     return srcList.map(p => {
       // Kiểm tra có timeline kéo sang tháng mới không
+      // Giữ row nếu dateTo >= hôm nay (ngày tạo tháng mới) — bao gồm cả lịch UP hôm nay
       const hasActiveTimeline = (p.groups||[]).some(g =>
-        (g.rows||[]).some(r => r.dateTo && r.dateTo >= newMidStart)
+        (g.rows||[]).some(r => r.dateTo && r.dateTo >= todayStr)
       );
 
       const newGroups = (p.groups||[]).map(g => ({
         ...g,
         rows: (g.rows||[]).map(r => {
-          const rowActive = r.dateTo && r.dateTo >= newMidStart;
+          // Giữ nguyên timeline nếu dateTo >= hôm nay (bao gồm lịch UP hôm nay)
+          const rowActive = r.dateTo && r.dateTo >= todayStr;
           return {
             ...r,
             // Reset số lượng và đánh giá
@@ -999,9 +1043,10 @@ function doAddMonth(prevMid, newMid) {
             rate6:0,rate7:0,rate8:0,rate9:0,
             rate10:0,rate11:0,rate12:0,rate13:0,
             note: '',
-            // Giữ nguyên timeline nếu đang active, xóa nếu đã qua
+            // Giữ nguyên timeline nếu còn active (kể cả UP hôm nay), xóa nếu đã qua
             dateFrom: rowActive ? r.dateFrom : '',
             dateTo:   rowActive ? r.dateTo   : '',
+            doneAt:   rowActive ? ''          : '', // reset doneAt để UP lại được
           };
         })
       }));
@@ -1156,6 +1201,9 @@ function renderSidebar() {
         ${thumbHtml}
         <div class="pj-thumb-num">${i + 1}</div>
         ${statusBadge}
+        <button onclick="event.stopPropagation();deletePj('${p.id}')" title="Xóa dự án"
+          style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;line-height:1;z-index:5;opacity:0;transition:opacity .15s"
+          class="pj-del-btn">✕</button>
       </div>
       <div class="pj-card-body">
         <div class="pj-card-name">${x(p.nameVN || p.nameJP || '—')}</div>
@@ -1315,6 +1363,9 @@ function renderProjectTimeline(pjs) {
     const allGrpRows = (p.groups||[]).filter(g => g.type || (g.rows||[]).some(r=>r.qty>0));
     const allDone = allGrpRows.length>0 && allGrpRows.every(g=>(g.rows||[]).filter(r=>r.dateTo).every(r=>r.doneAt)) && allGrpRows.some(g=>(g.rows||[]).some(r=>r.dateTo));
     const rowDim = allDone ? 'opacity:0.5' : '';
+    const carryoverBadge = p._carryover
+      ? `<span style="font-size:7px;background:#f39c12;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px;vertical-align:middle">↩ T.cũ</span>`
+      : '';
 
     // Project name row (no timeline)
     const pjRow = `<tr style="${rowDim}">
@@ -1322,8 +1373,8 @@ function renderProjectTimeline(pjs) {
         <span class="badge ${officeBadgeClass(p.office)}" style="font-size:8px;padding:1px 4px">${p.office||'—'}</span>
       </td>
       <td style="padding:4px 4px 1px;border-bottom:none;border-right:${CB};background:var(--table-bg);max-width:175px;overflow:hidden">
-        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;cursor:pointer;color:var(--navy)"
-          onclick="selectPj('${p.id}')" title="${x(p.nameVN||p.nameJP||'—')}">${x(p.nameVN||p.nameJP||'—')}</div>
+        <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px;cursor:pointer;color:${p._carryover?'#888':'var(--navy)'}"
+          onclick="selectPj('${p.id}')" title="${x(p.nameVN||p.nameJP||'—')}">${x(p.nameVN||p.nameJP||'—')}${carryoverBadge}</div>
       </td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
@@ -1415,8 +1466,9 @@ function renderProjectTimeline(pjs) {
     return pjRow + grpRows;
   }).join('');
 
-  const sumNew = pjs.reduce((s,p)=>s+totalNew(p),0);
-  const sumRev = pjs.reduce((s,p)=>s+totalRev(p),0);
+  // Tổng chỉ tính dự án tháng hiện tại (không tính carryover từ tháng cũ)
+  const sumNew = pjs.reduce((s,p)=>s+(p._carryover?0:totalNew(p)),0);
+  const sumRev = pjs.reduce((s,p)=>s+(p._carryover?0:totalRev(p)),0);
   const NC = daysInMonth + 5;
 
   return `<table style="border-collapse:collapse;width:max-content;min-width:100%;font-size:11px;border:1px solid #ccc">
@@ -1456,7 +1508,14 @@ function renderProjectTimeline(pjs) {
 }
 
 function renderMonthOverview(ci) {
-  const pjs=curProjects();
+  const pjs = curProjects();          // chỉ tháng hiện tại — dùng cho stats/tổng
+  const pjsAll = allActiveProjects(); // tháng hiện tại + carryover — dùng cho 2 bảng
+  // Chỉ lấy section hiện tại từ pjsAll cho bảng Chi tiết dự án
+  const pjsTimeline = pjsAll.filter(p =>
+    activeSection==='vn'
+      ? (curMonth().projectsVN||[]).some(q=>q.id===p.id) || p._carryover
+      : (curMonth().projects||[]).some(q=>q.id===p.id) || p._carryover
+  );
   const m=curMonth();
   const sumNew=pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev=pjs.reduce((s,p)=>s+totalRev(p),0);
@@ -1576,7 +1635,7 @@ function renderMonthOverview(ci) {
 
   <div class="card">
     <div class="card-hd"><span class="card-hd-title">${activeSection==="vn"?"🇻🇳":"🇯🇵"} Chi tiết dự án — ${monthLabel(D.activeMonth)}</span></div>
-    <div style="overflow-x:auto">${renderProjectTimeline(pjs)}</div>
+    <div style="overflow-x:auto">${renderProjectTimeline(pjsTimeline)}</div>
   </div>
 
   <div id="pjDetailArea"></div>
@@ -1587,7 +1646,7 @@ function renderMonthOverview(ci) {
       <span style="font-size:10px;color:rgba(255,255,255,.5)">Tất cả dự án · Ai đang làm gì · Deadline · Ai rảnh</span>
     </div>
     <div class="card-body" style="padding:0">
-      ${renderMonthGantt(allCurProjects())}
+      ${renderMonthGantt(pjsAll)}
     </div>
   </div>
   `;
@@ -3305,35 +3364,99 @@ function refreshPjTotals(pjId) {
 function updPj(pjId,field,val) { const p=getPj(pjId); if(!p) return; p[field]=val; save(); renderSidebar(); }
 
 function openAddProject() {
+  const hist = getPjHistory();
+  const histOptions = hist.map(h=>`<option value="${x(h.nameVN||h.nameJP)}">`).join('');
   showModal(`<h3>＋ Thêm dự án mới</h3>
+    ${hist.length>0?`<div style="background:#f0f7ff;border:1px solid #b3d4f5;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#1a5276">
+      💡 <strong>Tip:</strong> Nhập tên dự án cũ → bấm <strong>Tải từ lịch sử</strong> để load lại toàn bộ thông tin
+    </div>`:''}
     <div class="info-grid c3" style="gap:10px">
-      <div class="field"><label>Tên dự án (VN)</label><input id="ap-nVN" placeholder="Tên gợi nhớ…"></div>
-      <div class="field"><label>Tên dự án (JP)</label><input id="ap-nJP" placeholder="例：吹田市計画"></div>
-      <div class="field"><label>Văn phòng</label><select id="ap-off"><option>大阪</option><option>東京</option><option>ハノイ</option><option>HCM</option></select></div>
+      <div class="field"><label>Tên dự án (VN)</label>
+        <input id="ap-nVN" list="ap-hist" placeholder="Tên gợi nhớ…"
+          oninput="apTryLoadHistory()">
+        <datalist id="ap-hist">${histOptions}</datalist>
+      </div>
+      <div class="field"><label>Tên dự án (JP)</label>
+        <input id="ap-nJP" list="ap-hist-jp" placeholder="例：吹田市計画"
+          oninput="apTryLoadHistory()">
+        <datalist id="ap-hist-jp">${hist.map(h=>`<option value="${x(h.nameJP||h.nameVN)}">`).join('')}</datalist>
+      </div>
+      <div class="field"><label>Văn phòng</label>
+        <select id="ap-off"><option>大阪</option><option>東京</option><option>ハノイ</option><option>HCM</option></select>
+      </div>
     </div>
     <div class="info-grid c2" style="gap:10px;margin-top:10px">
       <div class="field"><label>Người liên hệ JP</label>
         <input id="ap-ct" list="ap-cl" placeholder="ソン, フン…">
-        <datalist id="ap-cl">${D.settings.contactList.map(c=>`<option value="${c}">`).join('')}</datalist></div>
+        <datalist id="ap-cl">${D.settings.contactList.map(c=>`<option value="${c}">`).join('')}</datalist>
+      </div>
       <div class="field"><label>Người triển khai chính</label>
         <select id="ap-st"><option value="">— Chọn —</option>
-          ${sortedStaffList().map(s=>`<option>${s}</option>`).join('')}</select></div>
+          ${sortedStaffList().map(s=>`<option>${s}</option>`).join('')}
+        </select>
+      </div>
     </div>
-    <div class="modal-ft">
+    <!-- Preview khi load từ history -->
+    <div id="ap-hist-preview" style="display:none;margin-top:10px;padding:10px;background:#f8fff8;border:1px solid #a9dfbf;border-radius:6px">
+      <div style="font-size:11px;font-weight:700;color:#1e8449;margin-bottom:6px">✅ Đã tìm thấy trong lịch sử</div>
+      <div id="ap-hist-info" style="font-size:11px;color:#555"></div>
+    </div>
+    <div class="modal-ft" style="gap:8px">
       <button class="btn" onclick="closeModal()">Hủy</button>
-      <button class="btn btn-gold" onclick="confirmAddPj()">Thêm dự án</button>
+      ${hist.length>0?`<button class="btn" style="background:#e8f4fd;color:#1a5276;border:1px solid #b3d4f5" onclick="apLoadHistory()">📂 Tải từ lịch sử</button>`:''}
+      <button class="btn btn-gold" onclick="confirmAddPj()">＋ Thêm dự án</button>
     </div>`);
+}
+
+// Thử tự động tìm trong history khi người dùng gõ
+function apTryLoadHistory() {
+  const nVN = document.getElementById('ap-nVN')?.value.trim();
+  const nJP = document.getElementById('ap-nJP')?.value.trim();
+  const found = loadPjFromHistory(nVN, nJP);
+  const preview = document.getElementById('ap-hist-preview');
+  const info = document.getElementById('ap-hist-info');
+  if(found && preview && info) {
+    preview.style.display = 'block';
+    info.innerHTML = `
+      <b>${x(found.nameVN||found.nameJP)}</b> · ${found.office||'?'} · ${found.mainStaff||'?'}<br>
+      Hạng mục: ${(found.groups||[]).map(g=>x(g.type)).filter(Boolean).join(', ')||'—'}<br>
+      <span style="color:#888">Lưu lúc: ${found.savedAt||'?'}</span>
+      ${found.photo?`<div style="margin-top:6px"><img src="${found.photo}" style="height:50px;border-radius:4px;object-fit:cover"></div>`:''}
+    `;
+  } else if(preview) {
+    preview.style.display = 'none';
+  }
+}
+
+// Load đầy đủ từ history vào form
+function apLoadHistory() {
+  const nVN = document.getElementById('ap-nVN')?.value.trim();
+  const nJP = document.getElementById('ap-nJP')?.value.trim();
+  const found = loadPjFromHistory(nVN, nJP);
+  if(!found) { toast('Không tìm thấy trong lịch sử — thử nhập tên dự án trước'); return; }
+  if(document.getElementById('ap-nVN')) document.getElementById('ap-nVN').value = found.nameVN||'';
+  if(document.getElementById('ap-nJP')) document.getElementById('ap-nJP').value = found.nameJP||'';
+  const offSel = document.getElementById('ap-off');
+  if(offSel && found.office) [...offSel.options].forEach(o=>{ o.selected = o.value===found.office; });
+  if(document.getElementById('ap-ct')) document.getElementById('ap-ct').value = found.contact||'';
+  const stSel = document.getElementById('ap-st');
+  if(stSel && found.mainStaff) [...stSel.options].forEach(o=>{ o.selected = o.value===found.mainStaff; });
+  toast(`✅ Đã tải thông tin "${found.nameVN||found.nameJP}" từ lịch sử`);
+  apTryLoadHistory();
 }
 function confirmAddPj() {
   const nVN=document.getElementById('ap-nVN').value.trim();
   const nJP=document.getElementById('ap-nJP').value.trim();
   if(!nVN&&!nJP){alert('Vui lòng nhập tên dự án');return;}
+  // Tìm history để restore ảnh
+  const hist = loadPjFromHistory(nVN, nJP);
   const pj={id:gid(),nameVN:nVN,nameJP:nJP,
     office:document.getElementById('ap-off').value,
     contact:document.getElementById('ap-ct').value.trim(),
     mainStaff:document.getElementById('ap-st').value,
-    groups:[],photos:[],otLog:[],notes:''};
-  if(!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],targetNew:0,targetRev:0};
+    groups:[],
+    photos: hist?.photo ? [hist.photo] : [],  // restore ảnh đầu tiên từ history
+    otLog:[],notes:''};
   if(!D.months[D.activeMonth]) D.months[D.activeMonth]={projects:[],projectsVN:[],targetNew:0,targetRev:0};
   if(activeSection==='vn'){
     if(!D.months[D.activeMonth].projectsVN) D.months[D.activeMonth].projectsVN=[];
@@ -3342,7 +3465,8 @@ function confirmAddPj() {
     D.months[D.activeMonth].projects.push(pj);
   }
   save(); closeModal(); activePjId=pj.id; renderSidebar(); renderContent();
-  toast('✓ Đã thêm dự án ' + (activeSection==='vn'?'🇻🇳 VN':'🇯🇵 JP'));
+  const msg = hist ? `✓ Đã thêm dự án từ lịch sử (kèm ảnh)` : `✓ Đã thêm dự án ${activeSection==='vn'?'🇻🇳 VN':'🇯🇵 JP'}`;
+  toast(msg);
 }
 function openEditProject(id) {
   const p=getPj(id); if(!p) return;
@@ -3375,14 +3499,50 @@ function confirmEditPj(id) {
   p.mainStaff=document.getElementById('ep-st').value;
   save(); closeModal(); renderSidebar(); renderContent(); toast('✓ Đã lưu');
 }
+// ── Project History ────────────────────────────────────────────────────────
+function getPjHistory() {
+  try { return JSON.parse(localStorage.getItem('pj_history')||'[]'); } catch(e) { return []; }
+}
+function savePjToHistory(p) {
+  const hist = getPjHistory();
+  // Không trùng nameVN+nameJP
+  const key = (p.nameVN||'')+'|'+(p.nameJP||'');
+  const idx = hist.findIndex(h=>(h.nameVN||'')+'|'+(h.nameJP||'')===key);
+  const entry = {
+    nameVN: p.nameVN||'', nameJP: p.nameJP||'',
+    office: p.office||'', contact: p.contact||'',
+    mainStaff: p.mainStaff||'',
+    groups: (p.groups||[]).map(g=>({type:g.type||''})), // chỉ lưu tên hạng mục
+    photo: (p.photos||[]).filter(Boolean)[0]||'',       // ảnh đầu tiên
+    savedAt: localDateStr(new Date())
+  };
+  if(idx>=0) hist[idx]=entry; else hist.unshift(entry);
+  // Giữ tối đa 100 dự án
+  if(hist.length>100) hist.length=100;
+  try { localStorage.setItem('pj_history', JSON.stringify(hist)); } catch(e) {}
+}
+function loadPjFromHistory(nameVN, nameJP) {
+  const hist = getPjHistory();
+  return hist.find(h=>
+    (nameVN && h.nameVN===nameVN) ||
+    (nameJP && h.nameJP===nameJP) ||
+    (nameVN && h.nameJP===nameVN) ||  // tìm chéo
+    (nameJP && h.nameVN===nameJP)
+  ) || null;
+}
+
 function deletePj(id) {
-  if(!confirm('Xóa dự án này?')) return;
+  const p = getPj(id);
+  if(!p) return;
+  // Lưu vào history trước khi xóa
+  savePjToHistory(p);
+  if(!confirm(`Xóa dự án "${p.nameVN||p.nameJP||'này'}"?\nDữ liệu sẽ được lưu vào lịch sử để dùng lại sau.`)) return;
   if(activeSection==='vn'){
-    if(D.months[D.activeMonth].projectsVN) D.months[D.activeMonth].projectsVN=D.months[D.activeMonth].projectsVN.filter(p=>p.id!==id);
+    if(D.months[D.activeMonth].projectsVN) D.months[D.activeMonth].projectsVN=D.months[D.activeMonth].projectsVN.filter(q=>q.id!==id);
   } else {
-    D.months[D.activeMonth].projects=D.months[D.activeMonth].projects.filter(p=>p.id!==id);
+    D.months[D.activeMonth].projects=D.months[D.activeMonth].projects.filter(q=>q.id!==id);
   }
-  save(); activePjId=null; renderSidebar(); renderContent(); toast('✓ Đã xóa');
+  save(); activePjId=null; renderSidebar(); renderContent(); toast('✓ Đã xóa & lưu vào lịch sử');
 }
 
 /* DASHBOARD */
