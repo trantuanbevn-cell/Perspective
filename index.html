@@ -1382,7 +1382,7 @@ function renderProjectTimeline(pjs) {
   function dayCell(ds, barColor, pos, label, isToday, isHol, isLast, showUp) {
     const isPrev = ds < `${yr}-${String(mo).padStart(2,'0')}-01`;
     const bg = isToday ? 'rgba(39,174,96,.07)' : isHol ? 'rgba(231,76,60,.04)' : isPrev ? 'rgba(0,0,0,.02)' : 'var(--table-bg)';
-    const br = pos==='start'?'2px 0 0 2px':pos==='end'?'0 2px 2px 0':pos==='only'?'2px':'0';
+    const br = '0';
     const labelHtml = (pos==='start' && label)
       ? `<div style="position:absolute;top:0;left:2px;font-size:6px;color:${barColor};white-space:nowrap;line-height:1;font-weight:700;z-index:10;pointer-events:none;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff">${label}</div>`
       : '';
@@ -1460,31 +1460,27 @@ function renderProjectTimeline(pjs) {
         const isToday = ds===todayStr;
         const isHol   = holidaySet.has(ds)||dow===0||dow===6;
 
-        const activeRow = (g.rows||[]).find(r=>{
+        let barColor=null, pos='mid', label='';
+        // Gộp tất cả rows của group thành 1 bar duy nhất
+        const activeRows = (g.rows||[]).filter(r=>{
           if (!r.dateFrom && !r.dateTo) return false;
           const from = r.dateFrom || r.dateTo;
           const to   = r.dateTo   || r.dateFrom;
           if (from<=ds && ds<=to && !isHol) return true;
-          // Dự án copy từ tháng cũ: dateTo trước tháng hiện tại → hiện bar ở ngày đầu allDays
           if (!p._carryover && r.dateTo && r.dateTo < `${yr}-${String(mo).padStart(2,'0')}-01` && !r.doneAt) {
             return di===0 && !isHol;
           }
           return false;
-        })
-        // Nếu không tìm thấy trong groups, tìm trong tlTasks (chỉ VN, chỉ khi isVN)
-        || (isVN && !p._carryover ? (p.tlTasks||[]).filter(t=>
-            t.lv!=='group' && t.staff && t.staff.length>0 &&
-            !p.groups?.some(g2=>g2.tlTaskId===t.id)
-          ).find(t=>{
-            const from=t.start||t.upDate, to=t.upDate||t.end;
-            return from && to && from<=ds && ds<=to && !isHol;
-          }) : null);
+        });
+        const activeRow = activeRows[0] || null;
 
-        let barColor=null, pos='mid', label='';
         if (activeRow) {
-          const from=activeRow.dateFrom||activeRow.dateTo, to=activeRow.dateTo||activeRow.dateFrom;
-          const done = !!(activeRow.doneAt);
-          const pastDeadline = !!(activeRow.dateTo) && activeRow.dateTo < todayStr;
+          // Tính range tổng của group (tất cả rows)
+          const allFroms = (g.rows||[]).map(r=>r.dateFrom||r.dateTo).filter(Boolean).sort();
+          const allTos   = (g.rows||[]).map(r=>r.dateTo||r.dateFrom).filter(Boolean).sort();
+          const from = allFroms[0]||'', to = allTos[allTos.length-1]||'';
+          const done = (g.rows||[]).every(r=>r.doneAt);
+          const pastDeadline = to && to < todayStr;
           barColor = (done || pastDeadline) ? '#ccc'
             : isVN ? (activeRow.status==='new'?'#7c3aed':'#db2777')
             :        (activeRow.status==='new'?'#5a9a35':'#d4900a');
@@ -1493,7 +1489,8 @@ function renderProjectTimeline(pjs) {
           const nextDs = di<allDays.length-1 ? allDays[di+1] : '';
           const prevHol = !prevDs || holidaySet.has(prevDs) || new Date(prevDs).getDay()===0 || new Date(prevDs).getDay()===6;
           const nextHol = !nextDs || holidaySet.has(nextDs) || new Date(nextDs).getDay()===0 || new Date(nextDs).getDay()===6;
-          const isStart=from===ds||prevHol, isEnd=to===ds||nextHol;
+          const toOutOfRange = to > allDays[allDays.length-1];
+          const isStart=from===ds||prevHol, isEnd=(to===ds||nextHol||toOutOfRange);
           pos=isStart&&isEnd?'only':isStart?'start':isEnd?'end':'mid';
           if (isStart) label = (g.type||'').replace('パース','').replace('作成','');
         }
