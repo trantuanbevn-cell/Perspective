@@ -1444,16 +1444,16 @@ function renderProjectTimeline(pjs) {
       // Có lịch UP chưa done — kể cả dateTo trước tháng (dự án copy từ tháng cũ)
       const grpHasPendingUp = (g.rows||[]).some(r=>r.dateTo && !r.doneAt && r.dateTo >= todayStr)
         || (!p._carryover && (g.rows||[]).some(r=>r.dateTo && !r.doneAt)); // copy từ tháng cũ sang
-      // Opacity: done→mờ, có UP pending→sáng, không có UP→mờ nhẹ
-      const grpOpacity = grpAllDone ? '0.45' : grpHasPendingUp ? '1' : (rowDim ? '0.55' : '0.5');
+      // Opacity: done→mờ nhẹ, có UP pending→sáng, không có UP→mờ vừa (tăng lên để dễ đọc)
+      const grpOpacity = grpAllDone ? '0.55' : grpHasPendingUp ? '1' : (rowDim ? '0.7' : '0.65');
       // Màu tên hạng mục: khớp với status của row đang pending (mới=xanh, sửa=vàng)
       const pendingRow = (g.rows||[]).find(r=>r.dateTo && !r.doneAt && r.dateTo >= todayStr);
-      const grpNameColor = grpAllDone ? '#aaa' : grpHasPendingUp
+      const grpNameColor = grpAllDone ? '#999' : grpHasPendingUp
         ? (isVN
             ? (pendingRow?.status==='new' ? '#7c3aed' : '#db2777')
             : (pendingRow?.status==='new' ? '#5a9a35' : '#d4900a'))
-        : '#bbb';
-      const grpNameWeight = grpHasPendingUp && !grpAllDone ? '700' : '400';
+        : '#666';  // đậm hơn #bbb để dễ đọc
+      const grpNameWeight = grpHasPendingUp && !grpAllDone ? '700' : '500'; // tăng weight
 
       const dayCells = allDays.map((ds, di) => {
         const dow = new Date(ds).getDay();
