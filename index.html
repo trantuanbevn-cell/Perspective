@@ -2517,48 +2517,48 @@ function confirmSaveTlTask(pjId, taskId) {
 
 // ── Đồng bộ 1 tlTask → group + rows trong Hạng mục phối cảnh ─────────────
 function syncTlTaskToGroup(pjId, task) {
-  const p = allCurProjects().find(q=>q.id===pjId)
-         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
-  if (!p) return;
+  // Tìm dự án trong TẤT CẢ tháng, ưu tiên projectsVN
+  let p = null;
+  Object.values(D.months).forEach(m => {
+    if (!p) p = (m.projectsVN||[]).find(q=>q.id===pjId);
+    if (!p) p = (m.projects||[]).find(q=>q.id===pjId);
+  });
+  if (!p) { console.warn('syncTlTaskToGroup: không tìm thấy dự án', pjId); return; }
   if (!p.groups) p.groups = [];
 
-  // Tìm group hiện có theo tlTaskId (link field)
+  // Tìm group hiện có theo tlTaskId
   let grp = p.groups.find(g=>g.tlTaskId===task.id);
 
   if (!grp) {
-    // Tạo group mới
     grp = {
       id:       gid(),
-      tlTaskId: task.id,  // link để tìm lại sau
+      tlTaskId: task.id,
       type:     task.name,
       rows:     []
     };
     p.groups.push(grp);
   } else {
-    // Cập nhật tên hạng mục nếu đổi
     grp.type = task.name;
   }
 
-  // Mỗi nhân sự → 1 row
-  // Giữ row cũ nếu đã có (bảo toàn qty/OT đã nhập)
   const existingRows = grp.rows || [];
   const newRows = [];
 
   task.staff.forEach(staffName => {
-    // Tìm row hiện có của nhân sự này
     const existingRow = existingRows.find(r => r.staff === staffName);
     if (existingRow) {
-      // Cập nhật ngày, giữ qty/OT/doneAt
       existingRow.dateFrom = task.start || '';
       existingRow.dateTo   = task.upDate || task.end || '';
+      if (task.status === 'done' && !existingRow.doneAt) {
+        existingRow.doneAt = task.actual || localDateStr(new Date());
+      }
       newRows.push(existingRow);
     } else {
-      // Tạo row mới — qty=0 (anh tự điền sau)
       newRows.push({
         id:       gid(),
         staff:    staffName,
         status:   'new',
-        qty:      0,          // để trống, anh tự điền
+        qty:      0,
         dateFrom: task.start || '',
         dateTo:   task.upDate || task.end || '',
         doneAt:   task.status==='done' ? (task.actual||localDateStr(new Date())) : '',
@@ -2568,13 +2568,14 @@ function syncTlTaskToGroup(pjId, task) {
     }
   });
 
-  // Giữ lại row của nhân sự không còn trong task (không xóa)
+  // Giữ row của nhân sự không còn trong task
   existingRows.forEach(r => {
     if (!task.staff.includes(r.staff)) newRows.push(r);
   });
 
   grp.rows = newRows;
   save();
+  console.log(`✓ Sync tlTask "${task.name}" → group trong "${p.nameVN||p.nameJP}", ${newRows.length} rows`);
 }
 
 function renderProjectTimeline_VN(p) {
