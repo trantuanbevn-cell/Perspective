@@ -1563,13 +1563,14 @@ function renderProjectTimeline(pjs) {
 
 function renderMonthOverview(ci) {
   const pjs = curProjects();          // chỉ tháng hiện tại — dùng cho stats/tổng
-  const pjsAll = allActiveProjects(); // tháng hiện tại + carryover — dùng cho 2 bảng
-  // Chỉ lấy section hiện tại từ pjsAll cho bảng Chi tiết dự án
-  const pjsTimeline = pjsAll.filter(p =>
+  const pjsAll = allActiveProjects(); // tháng hiện tại + carryover — dùng cho Lịch nhân sự
+  // Bảng Chi tiết dự án: CHỈ hiện đúng section đang xem
+  const curSectionIds = new Set(
     activeSection==='vn'
-      ? (curMonth().projectsVN||[]).some(q=>q.id===p.id) || p._carryover
-      : (curMonth().projects||[]).some(q=>q.id===p.id) || p._carryover
+      ? (curMonth().projectsVN||[]).map(p=>p.id)
+      : (curMonth().projects||[]).map(p=>p.id)
   );
+  const pjsTimeline = pjsAll.filter(p => curSectionIds.has(p.id));
   const m=curMonth();
   const sumNew=pjs.reduce((s,p)=>s+totalNew(p),0);
   const sumRev=pjs.reduce((s,p)=>s+totalRev(p),0);
