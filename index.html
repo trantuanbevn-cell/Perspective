@@ -2185,8 +2185,23 @@ function saveTlTask(pjId, task) {
   if (!p) return;
   if (!p.tlTasks) p.tlTasks = [];
   const idx = p.tlTasks.findIndex(t=>t.id===task.id);
-  if (idx>=0) p.tlTasks[idx] = task;
-  else p.tlTasks.push(task);
+  if (idx>=0) {
+    // Update existing
+    p.tlTasks[idx] = task;
+  } else if (task.parentGroup) {
+    // Insert after the last child of the parent group
+    const parentIdx = p.tlTasks.findIndex(t=>t.id===task.parentGroup);
+    if (parentIdx>=0) {
+      // Find last child of this group (next group starts a new lv=group)
+      let insertAt = parentIdx + 1;
+      while (insertAt < p.tlTasks.length && p.tlTasks[insertAt].lv !== 'group') insertAt++;
+      p.tlTasks.splice(insertAt, 0, task);
+    } else {
+      p.tlTasks.push(task);
+    }
+  } else {
+    p.tlTasks.push(task);
+  }
   save();
 }
 
@@ -2200,12 +2215,12 @@ function deleteTlTask(pjId, taskId) {
   if(ci) renderProjectDetail(ci, p);
 }
 
-function openTlTaskModal(pjId, taskId) {
+function openTlTaskModal(pjId, taskId, parentGroupId) {
   const p = allCurProjects().find(q=>q.id===pjId)
          || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
   if (!p) return;
   const existing = taskId ? (p.tlTasks||[]).find(t=>t.id===taskId) : null;
-  const t = existing || { id:'tl_'+Date.now(), lv:'task', name:'', start:'', end:'', upDate:'', actual:'', progress:0, status:'none', staff:[], note:'' };
+  const t = existing || { id:'tl_'+Date.now(), lv: parentGroupId?'task':'group', name:'', start:'', end:'', upDate:'', actual:'', progress:0, status:'none', staff:[], note:'', parentGroup: parentGroupId||'' };
 
   // Tính số ngày làm việc từ start→end
   const workDays = t.start&&t.end ? calcWorkDays(t.start, t.end) : '';
@@ -2421,101 +2436,189 @@ function confirmSaveTlTask(pjId, taskId) {
 }
 
 function renderProjectTimeline_VN(p) {
-  const tasks = getTlTasks(p);
+  const allTasks = getTlTasks(p);
   const today = localDateStr(new Date());
 
-  // Tính range ngày cho Gantt
-  const dates = tasks.flatMap(t=>[t.start,t.end,t.upDate]).filter(Boolean).sort();
+  // ── Xây cây nhóm cha-con ──────────────────────────────────────────────
+  // Group = task có lv==='group'. Các task sau nó (lv=task/sub) là con,
+  // cho đến khi gặp group tiếp theo.
+  const groups = []; // [{group, children:[]}]
+  let cur = null;
+  allTasks.forEach(t => {
+    if (t.lv === 'group') {
+      cur = { group: t, children: [] };
+      groups.push(cur);
+    } else {
+      if (cur) cur.children.push(t);
+      else groups.push({ group: null, children: [t] }); // task không có group cha
+    }
+  });
+
+  // ── Tự tính start/end của group từ task con ──────────────────────────
+  groups.forEach(g => {
+    if (!g.group || !g.children.length) return;
+    const starts = g.children.map(t=>t.start).filter(Boolean).sort();
+    const ends   = g.children.map(t=>t.end||t.upDate).filter(Boolean).sort();
+    if (starts.length) g.group._autoStart = starts[0];
+    if (ends.length)   g.group._autoEnd   = ends[ends.length-1];
+    // Tiến độ nhóm = trung bình các task con
+    const progs = g.children.map(t=>t.progress||0);
+    g.group._autoProgress = progs.length ? Math.round(progs.reduce((a,b)=>a+b,0)/progs.length) : 0;
+  });
+
+  // ── Tính range Gantt ─────────────────────────────────────────────────
+  const dates = allTasks.flatMap(t=>[t.start||t._autoStart, t.end||t._autoEnd, t.upDate]).filter(Boolean).sort();
   const minDate = dates[0] || today;
   const maxDate = dates[dates.length-1] || today;
-  const gStart = new Date(minDate); gStart.setDate(gStart.getDate()-3);
+  const gStart = new Date(minDate); gStart.setDate(gStart.getDate()-2);
   const gEnd   = new Date(maxDate); gEnd.setDate(gEnd.getDate()+7);
   const totalDays = Math.max(14, Math.ceil((gEnd-gStart)/(1000*60*60*24)));
-  const DAY_W = 5; // px/ngày
+  const DAY_W = 5;
 
   function dx(ds) {
-    if (!ds) return 0;
-    return Math.max(0, Math.ceil((new Date(ds)-gStart)/(1000*60*60*24))) * DAY_W;
+    if (!ds) return -999;
+    return Math.max(0, Math.round((new Date(ds)-gStart)/(1000*60*60*24)) * DAY_W);
   }
   function dw(s,e) {
-    if (!s||!e) return DAY_W*3;
-    return Math.max(DAY_W*1, Math.ceil((new Date(e)-new Date(s))/(1000*60*60*24)+1)*DAY_W);
+    if (!s||!e) return 0;
+    return Math.max(DAY_W, Math.round((new Date(e)-new Date(s))/(1000*60*60*24)+1)*DAY_W);
   }
-  const todayX = dx(today);
+  const todayX = Math.max(0, Math.round((new Date(today)-gStart)/(1000*60*60*24))*DAY_W);
 
   // Week headers
   const weekHdrs = [];
-  const cur = new Date(gStart);
-  while(cur <= gEnd) {
-    weekHdrs.push(`<div style="width:${7*DAY_W}px;flex-shrink:0;text-align:center;font-size:9px;color:var(--gray4);border-right:1px solid var(--gray2);padding:2px 0">${cur.getMonth()+1}/${cur.getDate()}</div>`);
-    cur.setDate(cur.getDate()+7);
+  const wc = new Date(gStart);
+  while(wc <= gEnd) {
+    weekHdrs.push(`<div style="width:${7*DAY_W}px;flex-shrink:0;text-align:center;font-size:9px;color:var(--gray4);border-right:1px solid var(--gray2);padding:2px 0">${wc.getMonth()+1}/${wc.getDate()}</div>`);
+    wc.setDate(wc.getDate()+7);
   }
 
-  const statusColor = {none:'#d1d5db', ip:'#3b82f6', done:'#22c55e', late:'#ef4444'};
-  const statusLabel = {none:'Chưa', ip:'Đang làm', done:'Xong', late:'Trễ'};
+  const SC = {none:'#d1d5db',ip:'#3b82f6',done:'#22c55e',late:'#ef4444'};
+  const SL = {none:'Chưa',ip:'Đang làm',done:'Xong',late:'Trễ'};
 
-  const rows = tasks.map((t,i) => {
-    const indent = t.lv==='group'?0:t.lv==='task'?16:32;
-    const fontW  = t.lv==='group'?'700':'400';
-    const bgRow  = t.lv==='group'?'background:#EEF2FF;':'';
-    const barH   = t.lv==='group'?10:t.lv==='task'?8:6;
-    const barY   = (16-barH)/2;
-    const bc     = statusColor[t.status]||'#d1d5db';
-    const isUpToday = t.upDate===today;
-    const staffNames = (t.staff||[]).map(s=>staffShortName(s)).join(', ');
+  // ── Render 1 dòng task ───────────────────────────────────────────────
+  function renderTaskRow(t, idx, isChild, groupId) {
+    const startDs  = t.start  || t._autoStart  || '';
+    const endDs    = t.end    || t._autoEnd    || '';
+    const prog     = t.lv==='group' ? (t._autoProgress||0) : (t.progress||0);
+    const bc       = SC[t.status]||'#d1d5db';
+    const isUpToday= t.upDate===today;
+    const staffNames=(t.staff||[]).map(s=>staffShortName(s)).join(', ');
+    const wds      = startDs&&endDs ? calcWorkDays(startDs,endDs) : 0;
 
-    // Progress overlay
-    const bw = dw(t.start, t.end);
-    const bx = dx(t.start);
-    const progW = Math.round(bw * (t.progress||0)/100);
+    const bx  = dx(startDs);
+    const bw2 = dw(startDs, endDs);
+    const barH= t.lv==='group'?10:t.lv==='task'?8:6;
+    const barY= (16-barH)/2;
+    const progW = bw2>0 ? Math.round(bw2*prog/100) : 0;
 
-    return `<tr style="${bgRow}">
-      <td style="font-size:10px;color:var(--gray4);text-align:center;width:24px">${i+1}</td>
-      <td style="padding-left:${indent+6}px;font-weight:${fontW};font-size:12px;min-width:180px;max-width:220px">
-        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:${t.lv==='group'?'var(--navy)':'var(--color-text-primary)'}"
-          onclick="openTlTaskModal('${p.id}','${t.id}')" title="${x(t.name)}">${x(t.name)||'—'}</div>
-        ${t.dep?`<div style="font-size:10px;color:#1a5276;margin-top:1px">↳ sau: ${x((p.tlTasks||[]).find(q=>q.id===t.dep)?.name?.slice(0,20)||'?')}</div>`:''}
-        ${staffNames?`<div style="font-size:10px;color:var(--gray4);margin-top:1px">${x(staffNames)}</div>`:''}
-      </td>
-      <td style="font-size:10px;text-align:center;color:var(--gray4);width:50px">${t.start?Math.ceil((new Date(t.end)-new Date(t.start))/(1000*60*60*24)+1)+'ng':'—'}</td>
-      <td style="font-size:10px;width:64px">${t.start?t.start.slice(5).replace('-','/'):''}</td>
-      <td style="font-size:10px;width:64px;${isUpToday?'color:#e74c3c;font-weight:700':''}">${t.upDate?t.upDate.slice(5).replace('-','/'):(t.end?t.end.slice(5).replace('-','/'):'')}${isUpToday?' ⚡':''}</td>
-      <td style="font-size:10px;width:64px;color:#27ae60">${t.actual?t.actual.slice(5).replace('-','/'):'—'}</td>
-      <td style="width:70px;padding:0 4px">
+    const upMarker = t.upDate
+      ? `<div style="position:absolute;top:0;left:${dx(t.upDate)}px;width:2px;height:16px;background:#e74c3c;border-radius:1px;z-index:2" title="UP: ${t.upDate}"></div>`
+      : '';
+    const upLabel = isUpToday
+      ? `<span style="position:absolute;top:0;left:${dx(t.upDate)+3}px;font-size:8px;font-weight:900;color:#e74c3c;z-index:3">UP</span>`
+      : '';
+
+    // Các task con của group: hiện dấu vạch UP của từng task con trên bar group
+    const childMarkers = t.lv==='group' ? (groups.find(g=>g.group?.id===t.id)?.children||[])
+      .filter(c=>c.upDate)
+      .map(c=>`<div style="position:absolute;top:2px;left:${dx(c.upDate)}px;width:2px;height:12px;background:#e67e22;border-radius:1px;opacity:.7" title="${x(c.name)}: UP ${c.upDate}"></div>`)
+      .join('') : '';
+
+    const ganttBar = bw2>0 ? `
+      <div style="position:absolute;top:${barY}px;left:${bx}px;width:${bw2}px;height:${barH}px;background:${bc};border-radius:3px;opacity:.2"></div>
+      <div style="position:absolute;top:${barY}px;left:${bx}px;width:${progW}px;height:${barH}px;background:${bc};border-radius:3px"></div>
+      ${t.lv==='group'?`<span style="position:absolute;bottom:0;left:${bx+2}px;font-size:7px;color:${bc};font-weight:700;white-space:nowrap;line-height:1">${startDs.slice(5).replace('-','/')}${bw2>50?' → '+endDs.slice(5).replace('-','/'):''}  </span>`:''}
+    ` : '';
+
+    // Style row
+    const rowBg = t.lv==='group' ? 'background:linear-gradient(90deg,#EEF2FF,#F8F9FF);border-top:2px solid #C7D2FE'
+      : isChild ? '' : 'border-top:1px dashed var(--gray2)';
+
+    // Nút thu gọn (chỉ cho group)
+    const collapseBtn = t.lv==='group'
+      ? `<button onclick="tlToggleGroup('${t.id}')" id="tl-collapse-${t.id}"
+           style="border:none;background:rgba(99,102,241,.15);border-radius:3px;cursor:pointer;font-size:10px;padding:1px 5px;color:#4F46E5;margin-right:4px;flex-shrink:0"
+           title="Thu gọn/Mở rộng nhóm">▾</button>`
+      : '';
+
+    // Nút thêm task con (chỉ cho group)
+    const addChildBtn = t.lv==='group'
+      ? `<button onclick="openTlTaskModal('${p.id}',null,'${t.id}')"
+           style="border:1px dashed #4F46E5;background:none;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 6px;color:#4F46E5;margin-top:2px"
+           title="Thêm task vào nhóm này">+ thêm</button>`
+      : '';
+
+    const depName = t.dep ? (allTasks.find(q=>q.id===t.dep)?.name?.slice(0,22)||'?') : '';
+
+    return `<tr style="${rowBg}" ${isChild?`class="tl-child-${groupId||''}"`:''}>
+      <td style="font-size:10px;color:var(--gray4);text-align:center;width:24px;padding:3px">${idx}</td>
+      <td style="padding:4px 6px;padding-left:${t.lv==='group'?6:t.lv==='task'?24:40}px;font-weight:${t.lv==='group'?700:400};min-width:200px;max-width:250px">
         <div style="display:flex;align-items:center;gap:4px">
-          <div style="flex:1;height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
-            <div style="height:100%;width:${t.progress||0}%;background:${bc};border-radius:2px"></div>
+          ${collapseBtn}
+          <div style="flex:1;min-width:0">
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+              color:${t.lv==='group'?'#3730A3':'var(--color-text-primary)'};font-size:${t.lv==='group'?'12px':'11px'}"
+              onclick="openTlTaskModal('${p.id}','${t.id}')" title="${x(t.name)}">${x(t.name)||'—'}</div>
+            ${depName?`<div style="font-size:9px;color:#1a5276">↳ sau: ${x(depName)}</div>`:''}
+            ${staffNames&&t.lv!=='group'?`<div style="font-size:9px;color:var(--gray4)">${x(staffNames)}</div>`:''}
+            ${addChildBtn}
           </div>
-          <span style="font-size:9px;color:var(--gray4);min-width:24px">${t.progress||0}%</span>
         </div>
       </td>
-      <td style="width:60px;text-align:center">
-        <span style="font-size:9px;padding:2px 5px;border-radius:10px;background:${bc}22;color:${bc};white-space:nowrap">${statusLabel[t.status]||'?'}</span>
+      <td style="font-size:10px;text-align:center;color:var(--gray4);width:46px;padding:3px">${wds?wds+'ng':'—'}</td>
+      <td style="font-size:10px;width:58px;padding:3px">${startDs?startDs.slice(5).replace('-','/'):''}</td>
+      <td style="font-size:10px;width:58px;padding:3px;${isUpToday?'color:#e74c3c;font-weight:700':''}">${t.upDate?t.upDate.slice(5).replace('-','/'):(endDs?endDs.slice(5).replace('-','/'):'')}${isUpToday?' ⚡':''}</td>
+      <td style="font-size:10px;width:58px;padding:3px;color:#27ae60">${t.actual?t.actual.slice(5).replace('-','/'):'—'}</td>
+      <td style="width:66px;padding:2px 4px">
+        <div style="display:flex;align-items:center;gap:3px">
+          <div style="flex:1;height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${prog}%;background:${bc};border-radius:2px"></div>
+          </div>
+          <span style="font-size:9px;color:var(--gray4);min-width:22px">${prog}%</span>
+        </div>
+        ${t.lv==='group'&&prog>0?`<div style="font-size:8px;color:var(--gray4);margin-top:1px">TB task con</div>`:''}
+      </td>
+      <td style="width:56px;text-align:center;padding:3px">
+        <span style="font-size:9px;padding:2px 5px;border-radius:10px;background:${bc}22;color:${bc};white-space:nowrap">${SL[t.status]||'?'}</span>
       </td>
       <td style="padding:0;position:relative;min-width:${totalDays*DAY_W}px">
         <div style="position:relative;height:16px;width:${totalDays*DAY_W}px">
-          <div style="position:absolute;top:0;bottom:0;left:${todayX}px;width:1.5px;background:#ef4444;opacity:.6;z-index:1"></div>
-          ${t.start&&t.end?`
-            <div style="position:absolute;top:${barY}px;left:${bx}px;width:${bw}px;height:${barH}px;background:${bc};border-radius:3px;opacity:.25"></div>
-            <div style="position:absolute;top:${barY}px;left:${bx}px;width:${progW}px;height:${barH}px;background:${bc};border-radius:3px"></div>
-            ${t.lv==='group'?`<span style="position:absolute;top:0;left:${bx+2}px;font-size:8px;color:${bc};font-weight:700;white-space:nowrap">${t.start.slice(5).replace('-','/')}</span>`:''}
-          `:''}
-          ${t.upDate?`<div style="position:absolute;top:0;left:${dx(t.upDate)}px;width:2px;height:16px;background:#e74c3c;border-radius:1px;z-index:2" title="UP: ${t.upDate}"></div>`:''}
-          ${isUpToday?`<span style="position:absolute;top:0;left:${dx(t.upDate)+3}px;font-size:8px;font-weight:900;color:#e74c3c;white-space:nowrap;z-index:3">UP</span>`:''}
+          <div style="position:absolute;top:0;bottom:0;left:${todayX}px;width:1.5px;background:#ef4444;opacity:.5;z-index:1"></div>
+          ${ganttBar}${upMarker}${upLabel}${childMarkers}
         </div>
       </td>
-      <td style="width:30px;text-align:center">
-        <button onclick="openTlTaskModal('${p.id}','${t.id}')" style="border:none;background:none;cursor:pointer;color:var(--gray4);font-size:14px;padding:0 4px">⋯</button>
+      <td style="width:28px;text-align:center;padding:2px">
+        <button onclick="openTlTaskModal('${p.id}','${t.id}')"
+          style="border:none;background:none;cursor:pointer;color:var(--gray4);font-size:14px;padding:0 2px">⋯</button>
       </td>
     </tr>`;
-  }).join('');
+  }
 
-  // Tổng kết
-  const total = tasks.length;
-  const done  = tasks.filter(t=>t.status==='done').length;
-  const ip    = tasks.filter(t=>t.status==='ip').length;
-  const late  = tasks.filter(t=>t.status==='late'||t.upDate===today).length;
-  const avgProg = total>0?Math.round(tasks.reduce((s,t)=>s+(t.progress||0),0)/total):0;
+  // ── Build tất cả rows ─────────────────────────────────────────────────
+  let rowNum = 0;
+  let allRows = '';
+  groups.forEach(g => {
+    if (g.group) {
+      rowNum++;
+      allRows += renderTaskRow(g.group, rowNum, false, null);
+      g.children.forEach(t => {
+        rowNum++;
+        allRows += renderTaskRow(t, rowNum, true, g.group.id);
+      });
+    } else {
+      g.children.forEach(t => {
+        rowNum++;
+        allRows += renderTaskRow(t, rowNum, false, null);
+      });
+    }
+  });
+
+  const total = allTasks.length;
+  const done  = allTasks.filter(t=>t.status==='done').length;
+  const ip    = allTasks.filter(t=>t.status==='ip').length;
+  const late  = allTasks.filter(t=>t.status==='late'||t.upDate===today).length;
+  const avgProg = total>0?Math.round(allTasks.reduce((s,t)=>s+(t.progress||0),0)/total):0;
 
   return `<div class="card" id="vn-timeline-${p.id}">
     <div class="card-hd">
@@ -2527,38 +2630,38 @@ function renderProjectTimeline_VN(p) {
         </div>
         <span style="font-size:11px;font-weight:700;color:var(--navy)">${avgProg}%</span>
         <button class="btn btn-sm" style="background:#e8f4fd;color:#1a5276;border:1px solid #b3d4f5" onclick="exportTlPDF('${p.id}')">📄 Xuất PDF</button>
-        <button class="btn btn-gold btn-sm" onclick="openTlTaskModal('${p.id}',null)">＋ Thêm</button>
+        <button class="btn btn-gold btn-sm" onclick="openTlTaskModal('${p.id}',null,null)">＋ Thêm</button>
       </div>
     </div>
 
     ${total===0?`<div style="padding:24px;text-align:center;color:var(--gray4)">
       <div style="font-size:32px;margin-bottom:8px">📋</div>
       <div style="font-size:13px;margin-bottom:12px">Chưa có hạng mục tiến độ nào</div>
-      <button class="btn btn-gold" onclick="openTlTaskModal('${p.id}',null)">＋ Thêm hạng mục đầu tiên</button>
+      <button class="btn btn-gold" onclick="openTlTaskModal('${p.id}',null,null)">＋ Thêm hạng mục đầu tiên</button>
     </div>` : `
-    <div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--gray2)">
-      <div style="text-align:center;padding:6px 12px;background:var(--gray1);border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:var(--navy)">${total}</div><div style="font-size:10px;color:var(--gray4)">Tổng task</div></div>
-      <div style="text-align:center;padding:6px 12px;background:#f0fdf4;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#22c55e">${done}</div><div style="font-size:10px;color:#15803d">Xong</div></div>
-      <div style="text-align:center;padding:6px 12px;background:#eff6ff;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#3b82f6">${ip}</div><div style="font-size:10px;color:#1d4ed8">Đang làm</div></div>
-      <div style="text-align:center;padding:6px 12px;background:#fef2f2;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#ef4444">${late}</div><div style="font-size:10px;color:#b91c1c">Trễ/UP</div></div>
+    <div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--gray2);flex-wrap:wrap">
+      <div style="text-align:center;padding:5px 12px;background:var(--gray1);border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:var(--navy)">${total}</div><div style="font-size:10px;color:var(--gray4)">Tổng task</div></div>
+      <div style="text-align:center;padding:5px 12px;background:#f0fdf4;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#22c55e">${done}</div><div style="font-size:10px;color:#15803d">Xong</div></div>
+      <div style="text-align:center;padding:5px 12px;background:#eff6ff;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#3b82f6">${ip}</div><div style="font-size:10px;color:#1d4ed8">Đang làm</div></div>
+      <div style="text-align:center;padding:5px 12px;background:#fef2f2;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#ef4444">${late}</div><div style="font-size:10px;color:#b91c1c">Trễ/UP</div></div>
     </div>
     <div style="overflow-x:auto">
-    <table style="border-collapse:collapse;width:100%;font-size:12px">
+    <table style="border-collapse:collapse;width:100%;font-size:11px">
       <thead><tr style="background:var(--navy)">
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;text-align:center;width:24px">#</th>
-        <th style="color:#FFC000;padding:5px 8px;text-align:left;min-width:180px">Công việc</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;text-align:center;width:50px">Ngày</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">Bắt đầu</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">KT/UP ⚡</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">Thực tế</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:70px">Tiến độ</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:60px">Trạng thái</th>
-        <th style="color:rgba(255,255,255,.6);padding:5px 4px">
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;text-align:center;width:24px">#</th>
+        <th style="color:#FFC000;padding:5px 8px;text-align:left;min-width:200px">Công việc</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;text-align:center;width:46px">Ngày</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;width:58px">Bắt đầu</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;width:58px">KT/UP ⚡</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;width:58px">Thực tế</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;width:66px">Tiến độ</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px;width:56px">Trạng thái</th>
+        <th style="color:rgba(255,255,255,.5);padding:5px 4px">
           <div style="display:flex">${weekHdrs.join('')}</div>
         </th>
-        <th style="width:30px"></th>
+        <th style="width:28px"></th>
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${allRows}</tbody>
     </table>
     </div>`}
   </div>`;
@@ -3941,7 +4044,16 @@ function confirmEditPj(id) {
   p.mainStaff=document.getElementById('ep-st').value;
   save(); closeModal(); renderSidebar(); renderContent(); toast('✓ Đã lưu');
 }
-// ── Xuất PDF Tiến độ dự án ────────────────────────────────────────────────
+// Thu gọn / mở rộng nhóm task
+function tlToggleGroup(groupId) {
+  const btn = document.getElementById('tl-collapse-'+groupId);
+  const children = document.querySelectorAll('.tl-child-'+groupId);
+  const collapsed = btn?.textContent === '▸';
+  children.forEach(r => r.style.display = collapsed ? '' : 'none');
+  if (btn) btn.textContent = collapsed ? '▾' : '▸';
+}
+
+
 function exportTlPDF(pjId) {
   const p = allCurProjects().find(q=>q.id===pjId)
          || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
