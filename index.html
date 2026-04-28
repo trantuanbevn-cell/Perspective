@@ -1322,24 +1322,64 @@ function renderProjectTimeline(pjs) {
   const holidaySet = new Set(getHolidays().map(h => h.date || h));
   const isVN = activeSection === 'vn';
 
+  // Tính ngày bắt đầu bảng: 7 ngày trước hôm nay, nhưng không vượt ra ngoài tháng trước
+  // Nếu hôm nay thuộc tháng hiện tại → lùi 7 ngày (có thể sang tháng trước)
+  // Nếu hôm nay khác tháng (xem tháng cũ) → bắt đầu từ ngày 1
+  const today = new Date();
+  const curMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  let startDay, startDate, extraPrevDays = 0, prevMonthDays = [];
+
+  if (m === curMonthStr) {
+    // Đang xem tháng hiện tại → lùi 7 ngày từ hôm nay
+    const startD = new Date(today);
+    startD.setDate(startD.getDate() - 7);
+    startDate = startD;
+    if (startD.getMonth()+1 !== mo || startD.getFullYear() !== yr) {
+      // Phần lùi sang tháng trước
+      const prevEnd = new Date(yr, mo-1, 0); // ngày cuối tháng trước
+      const prevStart = new Date(startD);
+      for (let d = new Date(prevStart); d <= prevEnd; d.setDate(d.getDate()+1)) {
+        prevMonthDays.push(localDateStr(new Date(d)));
+      }
+      startDay = 1;
+    } else {
+      startDay = startD.getDate();
+    }
+  } else {
+    // Xem tháng cũ → hiển thị nguyên tháng từ ngày 1
+    startDay = 1;
+    startDate = new Date(yr, mo-1, 1);
+  }
+
+  // Tất cả ngày hiển thị = [prevMonthDays] + [startDay..daysInMonth]
+  const allDays = [
+    ...prevMonthDays,
+    ...Array.from({length: daysInMonth - startDay + 1}, (_,i) => {
+      const d = startDay + i;
+      return `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    })
+  ];
+
   const CB = '1px solid #ddd';
   const PB = '2px solid #aaa';
 
   // Day headers — T7+CN+ngày lễ đỏ
-  const dayHeaders = Array.from({length: daysInMonth}, (_,i) => {
-    const d   = i + 1;
-    const ds  = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dow = new Date(yr, mo-1, d).getDay();
+  const dayHeaders = allDays.map(ds => {
+    const d   = parseInt(ds.slice(8));
+    const dow = new Date(ds).getDay();
     const isToday = ds === todayStr;
     const isHol   = holidaySet.has(ds) || dow===0 || dow===6;
-    const col  = isToday ? '#27ae60' : isHol ? '#e74c3c' : 'var(--gray4)';
-    const bg   = isToday ? 'rgba(39,174,96,.1)' : isHol ? 'rgba(231,76,60,.06)' : '';
-    return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:600;color:${col};border-bottom:${PB};border-left:${CB};${bg?'background:'+bg:''};white-space:nowrap">${d}</th>`;
+    const isPrev  = ds < `${yr}-${String(mo).padStart(2,'0')}-01`; // tháng trước
+    const col  = isToday ? '#27ae60' : isHol ? '#e74c3c' : isPrev ? '#bbb' : 'var(--gray4)';
+    const bg   = isToday ? 'rgba(39,174,96,.1)' : isHol ? 'rgba(231,76,60,.06)' : isPrev ? 'rgba(0,0,0,.03)' : '';
+    const lbl  = isPrev ? `<span style="font-size:6px;opacity:.6">${ds.slice(5,7)}/</span>${d}` : d;
+    return `<th style="width:14px;padding:2px 0;text-align:center;font-size:8px;font-weight:600;color:${col};border-bottom:${PB};border-left:${isPrev?'1px solid #eee':CB};${bg?'background:'+bg:''};white-space:nowrap">${lbl}</th>`;
   }).join('');
 
   // Day cell builder
   function dayCell(ds, barColor, pos, label, isToday, isHol, isLast, showUp) {
-    const bg = isToday ? 'rgba(39,174,96,.07)' : isHol ? 'rgba(231,76,60,.04)' : 'var(--table-bg)';
+    const isPrev = ds < `${yr}-${String(mo).padStart(2,'0')}-01`;
+    const bg = isToday ? 'rgba(39,174,96,.07)' : isHol ? 'rgba(231,76,60,.04)' : isPrev ? 'rgba(0,0,0,.02)' : 'var(--table-bg)';
     const br = pos==='start'?'2px 0 0 2px':pos==='end'?'0 2px 2px 0':pos==='only'?'2px':'0';
     const labelHtml = (pos==='start' && label)
       ? `<div style="position:absolute;top:0;left:2px;font-size:6px;color:${barColor};white-space:nowrap;line-height:1;font-weight:700;z-index:10;pointer-events:none;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff">${label}</div>`
@@ -1350,7 +1390,8 @@ function renderProjectTimeline(pjs) {
     const upHtml = (isToday && showUp)
       ? `<div style="position:absolute;top:1px;left:0;right:0;text-align:center;font-size:7px;font-weight:900;color:#e74c3c;line-height:1;z-index:11;text-shadow:0 0 3px #fff,0 0 3px #fff">UP</div>`
       : '';
-    return `<td style="width:14px;padding:0;position:relative;overflow:visible;background:${bg};border-left:${CB};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative;overflow:visible">${bar}${upHtml}</div></td>`;
+    const bL = isPrev ? '1px solid #eee' : CB;
+    return `<td style="width:14px;padding:0;position:relative;overflow:visible;background:${bg};border-left:${bL};border-bottom:${isLast?PB:CB}"><div style="height:16px;position:relative;overflow:visible">${bar}${upHtml}</div></td>`;
   }
 
   // Sắp xếp dự án: 大阪 trước, 東京 sau
@@ -1380,12 +1421,13 @@ function renderProjectTimeline(pjs) {
       </td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
       <td style="padding:2px 3px 1px;border-bottom:none;border-right:${CB};text-align:right;font-size:8px;background:var(--table-bg)"></td>
-      ${Array.from({length:daysInMonth},(_,i)=>{
-        const d=i+1, ds=`${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const dow=new Date(yr,mo-1,d).getDay();
+      ${allDays.map(ds=>{
+        const dow=new Date(ds).getDay();
         const isToday=ds===todayStr, isHol=holidaySet.has(ds)||dow===0||dow===6;
-        const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':'var(--table-bg)';
-        return `<td style="width:14px;padding:0;background:${bg};border-left:${CB};border-bottom:none"><div style="height:8px"></div></td>`;
+        const isPrev=ds<`${yr}-${String(mo).padStart(2,'0')}-01`;
+        const bg=isToday?'rgba(39,174,96,.07)':isHol?'rgba(231,76,60,.04)':isPrev?'rgba(0,0,0,.02)':'var(--table-bg)';
+        const bL=isPrev?'1px solid #eee':CB;
+        return `<td style="width:14px;padding:0;background:${bg};border-left:${bL};border-bottom:none"><div style="height:8px"></div></td>`;
       }).join('')}
       <td style="border-bottom:none;border-left:${CB};background:var(--table-bg)"></td>
     </tr>`;
@@ -1411,10 +1453,8 @@ function renderProjectTimeline(pjs) {
         : '#bbb';
       const grpNameWeight = grpHasPendingUp && !grpAllDone ? '700' : '400';
 
-      const dayCells = Array.from({length:daysInMonth}, (_,i) => {
-        const d  = i+1;
-        const ds = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const dow = new Date(yr,mo-1,d).getDay();
+      const dayCells = allDays.map((ds, di) => {
+        const dow = new Date(ds).getDay();
         const isToday = ds===todayStr;
         const isHol   = holidaySet.has(ds)||dow===0||dow===6;
 
@@ -1422,13 +1462,10 @@ function renderProjectTimeline(pjs) {
           if (!r.dateFrom && !r.dateTo) return false;
           const from = r.dateFrom || r.dateTo;
           const to   = r.dateTo   || r.dateFrom;
-          // Trường hợp bình thường: ds nằm trong [from, to]
           if (from<=ds && ds<=to && !isHol) return true;
-          // Trường hợp dự án copy từ tháng cũ: dateTo < đầu tháng hiện tại
-          // → hiện bar ở cột đầu tháng (ngày 1) như "UP chưa xong"
+          // Dự án copy từ tháng cũ: dateTo trước tháng hiện tại → hiện bar ở ngày đầu allDays
           if (!p._carryover && r.dateTo && r.dateTo < `${yr}-${String(mo).padStart(2,'0')}-01` && !r.doneAt) {
-            const firstOfMonth = `${yr}-${String(mo).padStart(2,'0')}-01`;
-            return ds === firstOfMonth && !isHol;
+            return di===0 && !isHol;
           }
           return false;
         });
@@ -1438,22 +1475,18 @@ function renderProjectTimeline(pjs) {
           const from=activeRow.dateFrom||activeRow.dateTo, to=activeRow.dateTo||activeRow.dateFrom;
           const done = !!(activeRow.doneAt);
           const pastDeadline = !!(activeRow.dateTo) && activeRow.dateTo < todayStr;
-          // Xám: đã done HOẶC dateTo đã qua hôm nay (kể cả chưa done)
           barColor = (done || pastDeadline) ? '#ccc'
             : isVN ? (activeRow.status==='new'?'#7c3aed':'#db2777')
             :        (activeRow.status==='new'?'#5a9a35':'#d4900a');
 
-          const prevDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d-1).padStart(2,'0')}`;
-          const nextDs=`${yr}-${String(mo).padStart(2,'0')}-${String(d+1).padStart(2,'0')}`;
-          const pd1=new Date(yr,mo-1,d-1).getDay(), nd1=new Date(yr,mo-1,d+1).getDay();
-          const prevHol=d<=1||holidaySet.has(prevDs)||pd1===0||pd1===6;
-          const nextHol=d>=daysInMonth||holidaySet.has(nextDs)||nd1===0||nd1===6;
+          const prevDs = di>0 ? allDays[di-1] : '';
+          const nextDs = di<allDays.length-1 ? allDays[di+1] : '';
+          const prevHol = !prevDs || holidaySet.has(prevDs) || new Date(prevDs).getDay()===0 || new Date(prevDs).getDay()===6;
+          const nextHol = !nextDs || holidaySet.has(nextDs) || new Date(nextDs).getDay()===0 || new Date(nextDs).getDay()===6;
           const isStart=from===ds||prevHol, isEnd=to===ds||nextHol;
           pos=isStart&&isEnd?'only':isStart?'start':isEnd?'end':'mid';
-          // Tên hạng mục đầy đủ — không cắt
           if (isStart) label = (g.type||'').replace('パース','').replace('作成','');
         }
-        // UP: chỉ hiện đúng ngày hôm nay
         const showUp = isToday && (g.rows||[]).some(r=>r.dateTo===todayStr&&!r.doneAt);
         return dayCell(ds, barColor, pos, label, isToday, isHol, isLastGrp, showUp);
       }).join('');
@@ -1488,7 +1521,7 @@ function renderProjectTimeline(pjs) {
       <col style="width:34px">
       <col style="width:175px">
       <col style="width:26px"><col style="width:26px">
-      ${Array.from({length:daysInMonth},()=>'<col style="width:14px">').join('')}
+      ${allDays.map(()=>'<col style="width:14px">').join('')}
       <col style="width:90px">
     </colgroup>
     <thead>
@@ -1501,15 +1534,14 @@ function renderProjectTimeline(pjs) {
         <th style="padding:4px 5px;font-size:9px;color:rgba(255,255,255,.7);border-bottom:${PB};border-left:${CB};text-align:left;white-space:nowrap">Ghi chú</th>
       </tr>
     </thead>
-    <tbody>${rows||`<tr><td colspan="${NC}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
+    <tbody>${rows||`<tr><td colspan="${allDays.length+5}" style="text-align:center;padding:16px;color:var(--gray4)">Chưa có dự án</td></tr>`}</tbody>
     <tfoot>
       <tr style="background:var(--navy)">
         <td style="padding:4px 3px;border-top:${PB};border-right:${CB}"></td>
         <td style="padding:4px 6px;font-size:10px;font-weight:700;color:#FFC000;border-top:${PB};border-right:${CB}">Tổng cộng</td>
         <td style="text-align:right;padding:4px 3px;font-size:10px;font-weight:700;color:#7CFC00;border-top:${PB};border-right:${CB}">${sumNew}</td>
         <td style="text-align:right;padding:4px 3px;font-size:10px;font-weight:700;color:#FFC000;border-top:${PB};border-right:${CB}">${sumRev}</td>
-        ${Array.from({length:daysInMonth},(_,i)=>{
-          const ds=`${yr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+        ${allDays.map(ds=>{
           const isToday=ds===todayStr;
           return `<td style="width:14px;border-top:${PB};border-left:${CB};${isToday?'background:rgba(39,174,96,.2);':''}"></td>`;
         }).join('')}
@@ -2136,6 +2168,275 @@ function updateHeroForProject(p) {
   `;
 }
 
+// ══════════════════════════════════════════════════════
+//  TIẾN ĐỘ DỰ ÁN VN — Timeline tổng
+// ══════════════════════════════════════════════════════
+
+function getTlTasks(p) {
+  if (!p.tlTasks) p.tlTasks = [];
+  return p.tlTasks;
+}
+
+function saveTlTask(pjId, task) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p) return;
+  if (!p.tlTasks) p.tlTasks = [];
+  const idx = p.tlTasks.findIndex(t=>t.id===task.id);
+  if (idx>=0) p.tlTasks[idx] = task;
+  else p.tlTasks.push(task);
+  save();
+}
+
+function deleteTlTask(pjId, taskId) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p || !p.tlTasks) return;
+  p.tlTasks = p.tlTasks.filter(t=>t.id!==taskId);
+  save();
+  const ci = document.getElementById('content-inner') || document.getElementById('main-content');
+  if(ci) renderProjectDetail(ci, p);
+}
+
+function openTlTaskModal(pjId, taskId) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p) return;
+  const existing = taskId ? (p.tlTasks||[]).find(t=>t.id===taskId) : null;
+  const t = existing || { id:'tl_'+Date.now(), lv:'task', name:'', start:'', end:'', upDate:'', actual:'', progress:0, status:'none', staff:[], note:'' };
+  const staffOpts = sortedStaffList().map(s=>`
+    <label style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--r);cursor:pointer;font-size:12px;border:0.5px solid var(--gray2);${(t.staff||[]).includes(s)?'background:#dbeafe;border-color:#3b82f6;':''}">
+      <input type="checkbox" value="${s}" ${(t.staff||[]).includes(s)?'checked':''} style="width:auto">
+      <span>${staffShortName(s)}</span>
+      <span style="font-size:10px;color:var(--gray4)">(${s.split(' ')[0]})</span>
+    </label>`).join('');
+
+  showModal(`<div class="modal-hd" style="background:var(--navy);padding:12px 16px;margin:-16px -16px 16px">
+    <span style="color:#FFC000;font-weight:700;font-size:14px">${existing?'Chỉnh sửa':'Thêm'} task tiến độ</span>
+    <span style="color:rgba(255,255,255,.6);font-size:11px;margin-left:8px">${x(p.nameVN||p.nameJP)}</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="field" style="grid-column:1/-1"><label>Tên công việc</label>
+      <input id="tl-name" class="tbl-input" value="${x(t.name)}" placeholder="VD: Nộp hồ sơ TKBVTC lần 1…" style="font-size:13px">
+    </div>
+    <div class="field"><label>Cấp độ</label>
+      <select id="tl-lv" class="sel-sm" style="width:100%">
+        <option value="group" ${t.lv==='group'?'selected':''}>Nhóm chính</option>
+        <option value="task"  ${t.lv==='task' ?'selected':''}>Task</option>
+        <option value="sub"   ${t.lv==='sub'  ?'selected':''}>Sub-task</option>
+      </select>
+    </div>
+    <div class="field"><label>Trạng thái</label>
+      <select id="tl-status" class="sel-sm" style="width:100%">
+        <option value="none" ${t.status==='none'?'selected':''}>Chưa bắt đầu</option>
+        <option value="ip"   ${t.status==='ip'  ?'selected':''}>Đang làm</option>
+        <option value="done" ${t.status==='done'?'selected':''}>Hoàn thành</option>
+        <option value="late" ${t.status==='late'?'selected':''}>Trễ</option>
+      </select>
+    </div>
+    <div class="field"><label>Ngày bắt đầu</label>
+      <input id="tl-start" type="date" class="tbl-input" value="${t.start}" oninput="tlCalcEnd()">
+    </div>
+    <div class="field"><label>Ngày kết thúc (dự kiến)</label>
+      <input id="tl-end" type="date" class="tbl-input" value="${t.end}">
+    </div>
+    <div class="field"><label>Ngày UP / Báo cáo</label>
+      <input id="tl-up" type="date" class="tbl-input" value="${t.upDate}" style="${t.upDate?'border-color:#e74c3c':''}">
+      <div style="font-size:10px;color:#e74c3c;margin-top:2px">Hiện trong bảng Lịch nhân sự</div>
+    </div>
+    <div class="field"><label>Ngày thực tế hoàn thành</label>
+      <input id="tl-actual" type="date" class="tbl-input" value="${t.actual}">
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:10px"><label>Tiến độ thực tế: <span id="tl-prog-lbl">${t.progress||0}%</span></label>
+    <input type="range" id="tl-prog" min="0" max="100" step="5" value="${t.progress||0}"
+      oninput="document.getElementById('tl-prog-lbl').textContent=this.value+'%'"
+      style="width:100%;margin-top:4px">
+  </div>
+  <div class="field" style="margin-bottom:10px"><label>Nhân sự phụ trách</label>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="tl-staff-wrap">${staffOpts}</div>
+  </div>
+  <div class="field"><label>Ghi chú</label>
+    <textarea id="tl-note" class="tbl-input" style="height:56px;resize:none">${x(t.note)}</textarea>
+  </div>
+  <div class="modal-ft">
+    ${existing?`<button class="btn btn-danger btn-sm" onclick="deleteTlTask('${pjId}','${t.id}');closeModal()">Xóa task</button>`:''}
+    <button class="btn" onclick="closeModal()">Hủy</button>
+    <button class="btn btn-gold" onclick="confirmSaveTlTask('${pjId}','${t.id}')">💾 Lưu</button>
+  </div>`);
+}
+
+function tlCalcEnd() {
+  // Không tự tính để tránh ghi đè — user tự nhập
+}
+
+function confirmSaveTlTask(pjId, taskId) {
+  const staff = [...document.querySelectorAll('#tl-staff-wrap input[type=checkbox]:checked')].map(e=>e.value);
+  const task = {
+    id: taskId,
+    lv:       document.getElementById('tl-lv').value,
+    name:     document.getElementById('tl-name').value.trim(),
+    start:    document.getElementById('tl-start').value,
+    end:      document.getElementById('tl-end').value,
+    upDate:   document.getElementById('tl-up').value,
+    actual:   document.getElementById('tl-actual').value,
+    progress: +document.getElementById('tl-prog').value,
+    status:   document.getElementById('tl-status').value,
+    staff,
+    note:     document.getElementById('tl-note').value.trim(),
+  };
+  if (!task.name) { toast('Vui lòng nhập tên công việc'); return; }
+  saveTlTask(pjId, task);
+  closeModal();
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  const ci = document.getElementById('content-inner') || document.querySelector('.content-inner');
+  if(ci && p) renderProjectDetail(ci, p);
+  toast('✓ Đã lưu task tiến độ');
+}
+
+function renderProjectTimeline_VN(p) {
+  const tasks = getTlTasks(p);
+  const today = localDateStr(new Date());
+
+  // Tính range ngày cho Gantt
+  const dates = tasks.flatMap(t=>[t.start,t.end,t.upDate]).filter(Boolean).sort();
+  const minDate = dates[0] || today;
+  const maxDate = dates[dates.length-1] || today;
+  const gStart = new Date(minDate); gStart.setDate(gStart.getDate()-3);
+  const gEnd   = new Date(maxDate); gEnd.setDate(gEnd.getDate()+7);
+  const totalDays = Math.max(14, Math.ceil((gEnd-gStart)/(1000*60*60*24)));
+  const DAY_W = 5; // px/ngày
+
+  function dx(ds) {
+    if (!ds) return 0;
+    return Math.max(0, Math.ceil((new Date(ds)-gStart)/(1000*60*60*24))) * DAY_W;
+  }
+  function dw(s,e) {
+    if (!s||!e) return DAY_W*3;
+    return Math.max(DAY_W*1, Math.ceil((new Date(e)-new Date(s))/(1000*60*60*24)+1)*DAY_W);
+  }
+  const todayX = dx(today);
+
+  // Week headers
+  const weekHdrs = [];
+  const cur = new Date(gStart);
+  while(cur <= gEnd) {
+    weekHdrs.push(`<div style="width:${7*DAY_W}px;flex-shrink:0;text-align:center;font-size:9px;color:var(--gray4);border-right:1px solid var(--gray2);padding:2px 0">${cur.getMonth()+1}/${cur.getDate()}</div>`);
+    cur.setDate(cur.getDate()+7);
+  }
+
+  const statusColor = {none:'#d1d5db', ip:'#3b82f6', done:'#22c55e', late:'#ef4444'};
+  const statusLabel = {none:'Chưa', ip:'Đang làm', done:'Xong', late:'Trễ'};
+
+  const rows = tasks.map((t,i) => {
+    const indent = t.lv==='group'?0:t.lv==='task'?16:32;
+    const fontW  = t.lv==='group'?'700':'400';
+    const bgRow  = t.lv==='group'?'background:#EEF2FF;':'';
+    const barH   = t.lv==='group'?10:t.lv==='task'?8:6;
+    const barY   = (16-barH)/2;
+    const bc     = statusColor[t.status]||'#d1d5db';
+    const isUpToday = t.upDate===today;
+    const staffNames = (t.staff||[]).map(s=>staffShortName(s)).join(', ');
+
+    // Progress overlay
+    const bw = dw(t.start, t.end);
+    const bx = dx(t.start);
+    const progW = Math.round(bw * (t.progress||0)/100);
+
+    return `<tr style="${bgRow}">
+      <td style="font-size:10px;color:var(--gray4);text-align:center;width:24px">${i+1}</td>
+      <td style="padding-left:${indent+6}px;font-weight:${fontW};font-size:12px;min-width:180px;max-width:220px">
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:${t.lv==='group'?'var(--navy)':'var(--color-text-primary)'}"
+          onclick="openTlTaskModal('${p.id}','${t.id}')" title="${x(t.name)}">${x(t.name)||'—'}</div>
+        ${staffNames?`<div style="font-size:10px;color:var(--gray4);margin-top:1px">${x(staffNames)}</div>`:''}
+      </td>
+      <td style="font-size:10px;text-align:center;color:var(--gray4);width:50px">${t.start?Math.ceil((new Date(t.end)-new Date(t.start))/(1000*60*60*24)+1)+'ng':'—'}</td>
+      <td style="font-size:10px;width:64px">${t.start?t.start.slice(5).replace('-','/'):''}</td>
+      <td style="font-size:10px;width:64px;${isUpToday?'color:#e74c3c;font-weight:700':''}">${t.upDate?t.upDate.slice(5).replace('-','/'):(t.end?t.end.slice(5).replace('-','/'):'')}${isUpToday?' ⚡':''}</td>
+      <td style="font-size:10px;width:64px;color:#27ae60">${t.actual?t.actual.slice(5).replace('-','/'):'—'}</td>
+      <td style="width:70px;padding:0 4px">
+        <div style="display:flex;align-items:center;gap:4px">
+          <div style="flex:1;height:4px;background:var(--gray2);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${t.progress||0}%;background:${bc};border-radius:2px"></div>
+          </div>
+          <span style="font-size:9px;color:var(--gray4);min-width:24px">${t.progress||0}%</span>
+        </div>
+      </td>
+      <td style="width:60px;text-align:center">
+        <span style="font-size:9px;padding:2px 5px;border-radius:10px;background:${bc}22;color:${bc};white-space:nowrap">${statusLabel[t.status]||'?'}</span>
+      </td>
+      <td style="padding:0;position:relative;min-width:${totalDays*DAY_W}px">
+        <div style="position:relative;height:16px;width:${totalDays*DAY_W}px">
+          <div style="position:absolute;top:0;bottom:0;left:${todayX}px;width:1.5px;background:#ef4444;opacity:.6;z-index:1"></div>
+          ${t.start&&t.end?`
+            <div style="position:absolute;top:${barY}px;left:${bx}px;width:${bw}px;height:${barH}px;background:${bc};border-radius:3px;opacity:.25"></div>
+            <div style="position:absolute;top:${barY}px;left:${bx}px;width:${progW}px;height:${barH}px;background:${bc};border-radius:3px"></div>
+            ${t.lv==='group'?`<span style="position:absolute;top:0;left:${bx+2}px;font-size:8px;color:${bc};font-weight:700;white-space:nowrap">${t.start.slice(5).replace('-','/')}</span>`:''}
+          `:''}
+          ${t.upDate?`<div style="position:absolute;top:0;left:${dx(t.upDate)}px;width:2px;height:16px;background:#e74c3c;border-radius:1px;z-index:2" title="UP: ${t.upDate}"></div>`:''}
+          ${isUpToday?`<span style="position:absolute;top:0;left:${dx(t.upDate)+3}px;font-size:8px;font-weight:900;color:#e74c3c;white-space:nowrap;z-index:3">UP</span>`:''}
+        </div>
+      </td>
+      <td style="width:30px;text-align:center">
+        <button onclick="openTlTaskModal('${p.id}','${t.id}')" style="border:none;background:none;cursor:pointer;color:var(--gray4);font-size:14px;padding:0 4px">⋯</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Tổng kết
+  const total = tasks.length;
+  const done  = tasks.filter(t=>t.status==='done').length;
+  const ip    = tasks.filter(t=>t.status==='ip').length;
+  const late  = tasks.filter(t=>t.status==='late'||t.upDate===today).length;
+  const avgProg = total>0?Math.round(tasks.reduce((s,t)=>s+(t.progress||0),0)/total):0;
+
+  return `<div class="card" id="vn-timeline-${p.id}">
+    <div class="card-hd">
+      <span class="card-hd-title">📅 Tiến độ dự án</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;color:var(--gray4)">Tổng tiến độ:</span>
+        <div style="width:80px;height:6px;background:var(--gray2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${avgProg}%;background:${avgProg>=80?'#22c55e':avgProg>=40?'#3b82f6':'#f59e0b'};border-radius:3px"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:var(--navy)">${avgProg}%</span>
+        <button class="btn btn-gold btn-sm" onclick="openTlTaskModal('${p.id}',null)">＋ Thêm</button>
+      </div>
+    </div>
+
+    ${total===0?`<div style="padding:24px;text-align:center;color:var(--gray4)">
+      <div style="font-size:32px;margin-bottom:8px">📋</div>
+      <div style="font-size:13px;margin-bottom:12px">Chưa có hạng mục tiến độ nào</div>
+      <button class="btn btn-gold" onclick="openTlTaskModal('${p.id}',null)">＋ Thêm hạng mục đầu tiên</button>
+    </div>` : `
+    <div style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--gray2)">
+      <div style="text-align:center;padding:6px 12px;background:var(--gray1);border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:var(--navy)">${total}</div><div style="font-size:10px;color:var(--gray4)">Tổng task</div></div>
+      <div style="text-align:center;padding:6px 12px;background:#f0fdf4;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#22c55e">${done}</div><div style="font-size:10px;color:#15803d">Xong</div></div>
+      <div style="text-align:center;padding:6px 12px;background:#eff6ff;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#3b82f6">${ip}</div><div style="font-size:10px;color:#1d4ed8">Đang làm</div></div>
+      <div style="text-align:center;padding:6px 12px;background:#fef2f2;border-radius:var(--r)"><div style="font-size:16px;font-weight:700;color:#ef4444">${late}</div><div style="font-size:10px;color:#b91c1c">Trễ/UP</div></div>
+    </div>
+    <div style="overflow-x:auto">
+    <table style="border-collapse:collapse;width:100%;font-size:12px">
+      <thead><tr style="background:var(--navy)">
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;text-align:center;width:24px">#</th>
+        <th style="color:#FFC000;padding:5px 8px;text-align:left;min-width:180px">Công việc</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;text-align:center;width:50px">Ngày</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">Bắt đầu</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">KT/UP ⚡</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:64px">Thực tế</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:70px">Tiến độ</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px;width:60px">Trạng thái</th>
+        <th style="color:rgba(255,255,255,.6);padding:5px 4px">
+          <div style="display:flex">${weekHdrs.join('')}</div>
+        </th>
+        <th style="width:30px"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`}
+  </div>`;
+}
+
 function renderProjectDetail(ci, p) {
   const tn=totalNew(p), tr=totalRev(p), ta=tn+tr;
   const m=curMonth();
@@ -2177,6 +2478,8 @@ function renderProjectDetail(ci, p) {
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px" id="photoGrid-${p.id}">${renderPhotoSlots(p)}</div>
     </div>
   </div>
+
+  ${activeSection==='vn' ? renderProjectTimeline_VN(p) : ''}
 
   <div class="card">
     <div class="card-hd">
@@ -3991,6 +4294,18 @@ function getStaffProfile(name) {
 }
 
 // Helper: staffList đã sắp xếp — Management トゥアン luôn đứng đầu
+// Lấy tên nhân sự không có ký hiệu VP (SGN/HAN/Management → chỉ lấy phần tên)
+function staffShortName(fullName) {
+  if (!fullName) return '';
+  const parts = fullName.trim().split(' ');
+  // Bỏ prefix VP: SGN, HAN, Management, HCM...
+  const vpPrefixes = new Set(['SGN','HAN','HCM','Management','管理']);
+  if (parts.length > 1 && vpPrefixes.has(parts[0])) {
+    return parts.slice(1).join(' '); // ヒエン, ハー, トゥアン...
+  }
+  return fullName; // giữ nguyên nếu không có prefix
+}
+
 function sortedStaffList() {
   return [...D.settings.staffList].sort((a,b) => {
     if (a==='Management トゥアン') return -1;
