@@ -1741,8 +1741,8 @@ function renderMonthGantt(pjs) {
   const today = new Date(); today.setHours(0,0,0,0);
   const todayStr = localDateStr(today);
   const days = [];
-  // 7 ngày trước + hôm nay + 20 ngày sau = 28 ngày (4 tuần)
-  for(let i=-7;i<21;i++){
+  // 7 ngày trước + hôm nay + 48 ngày sau = 56 ngày (8 tuần) để bao phủ dự án dài hạn
+  for(let i=-7;i<49;i++){
     const d=new Date(today); d.setDate(today.getDate()+i); days.push(d);
   }
   const startStr = localDateStr(days[0]);
