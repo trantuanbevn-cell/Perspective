@@ -1322,23 +1322,26 @@ function renderProjectTimeline(pjs) {
   const holidaySet = new Set(getHolidays().map(h => h.date || h));
   const isVN = activeSection === 'vn';
 
-  // Tính ngày bắt đầu bảng: 7 ngày trước hôm nay, nhưng không vượt ra ngoài tháng trước
-  // Nếu hôm nay thuộc tháng hiện tại → lùi 7 ngày (có thể sang tháng trước)
-  // Nếu hôm nay khác tháng (xem tháng cũ) → bắt đầu từ ngày 1
+  // Tính ngày bắt đầu bảng: 7 ngày trước hôm nay (kể cả khi đang xem tháng mới tạo)
+  // Điều kiện: áp dụng khi hôm nay <= cuối tháng đang xem (không phải xem tháng quá khứ xa)
   const today = new Date();
   const curMonthStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  let startDay, startDate, extraPrevDays = 0, prevMonthDays = [];
+  const lastDayOfViewMonth = new Date(yr, mo, 0); // ngày cuối tháng đang xem
+  let startDay, prevMonthDays = [];
 
-  if (m === curMonthStr) {
-    // Đang xem tháng hiện tại → lùi 7 ngày từ hôm nay
+  // Áp dụng lùi 7 ngày nếu: hôm nay <= cuối tháng đang xem (tức đang xem tháng này hoặc tháng mới tạo)
+  const useSliding = today <= lastDayOfViewMonth;
+
+  if (useSliding) {
     const startD = new Date(today);
     startD.setDate(startD.getDate() - 7);
-    startDate = startD;
-    if (startD.getMonth()+1 !== mo || startD.getFullYear() !== yr) {
-      // Phần lùi sang tháng trước
+    const startDStr = localDateStr(startD);
+    const monthStart = `${yr}-${String(mo).padStart(2,'0')}-01`;
+
+    if (startDStr < monthStart) {
+      // Lùi sang tháng trước — thêm các ngày đó vào đầu
       const prevEnd = new Date(yr, mo-1, 0); // ngày cuối tháng trước
-      const prevStart = new Date(startD);
-      for (let d = new Date(prevStart); d <= prevEnd; d.setDate(d.getDate()+1)) {
+      for (let d = new Date(startD); d <= prevEnd; d.setDate(d.getDate()+1)) {
         prevMonthDays.push(localDateStr(new Date(d)));
       }
       startDay = 1;
@@ -1346,9 +1349,8 @@ function renderProjectTimeline(pjs) {
       startDay = startD.getDate();
     }
   } else {
-    // Xem tháng cũ → hiển thị nguyên tháng từ ngày 1
+    // Xem tháng quá khứ → hiển thị nguyên từ ngày 1
     startDay = 1;
-    startDate = new Date(yr, mo-1, 1);
   }
 
   // Tất cả ngày hiển thị = [prevMonthDays] + [startDay..daysInMonth]
