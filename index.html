@@ -2206,6 +2206,10 @@ function openTlTaskModal(pjId, taskId) {
   if (!p) return;
   const existing = taskId ? (p.tlTasks||[]).find(t=>t.id===taskId) : null;
   const t = existing || { id:'tl_'+Date.now(), lv:'task', name:'', start:'', end:'', upDate:'', actual:'', progress:0, status:'none', staff:[], note:'' };
+
+  // Tính số ngày làm việc từ start→end
+  const workDays = t.start&&t.end ? calcWorkDays(t.start, t.end) : '';
+
   const staffOpts = sortedStaffList().map(s=>`
     <label style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--r);cursor:pointer;font-size:12px;border:0.5px solid var(--gray2);${(t.staff||[]).includes(s)?'background:#dbeafe;border-color:#3b82f6;':''}">
       <input type="checkbox" value="${s}" ${(t.staff||[]).includes(s)?'checked':''} style="width:auto">
@@ -2236,54 +2240,173 @@ function openTlTaskModal(pjId, taskId) {
         <option value="late" ${t.status==='late'?'selected':''}>Trễ</option>
       </select>
     </div>
-    <div class="field"><label>Ngày bắt đầu</label>
-      <input id="tl-start" type="date" class="tbl-input" value="${t.start}" oninput="tlCalcEnd()">
+  </div>
+
+  <!-- Tính ngày từ ngày bắt đầu + số ngày làm -->
+  <div style="background:#f0f7ff;border:1px solid #b3d4f5;border-radius:6px;padding:10px 12px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:600;color:#1a5276;margin-bottom:8px">📅 Tính ngày kết thúc theo ngày làm việc</div>
+    <div style="display:grid;grid-template-columns:1fr 80px 1fr;gap:8px;align-items:end">
+      <div class="field" style="margin:0"><label>Ngày bắt đầu</label>
+        <input id="tl-start" type="date" class="tbl-input" value="${t.start}" oninput="tlCalcEnd()">
+      </div>
+      <div class="field" style="margin:0"><label>Số ngày làm</label>
+        <input id="tl-days" type="number" min="1" max="999" class="qty-inp"
+          value="${workDays}" placeholder="7"
+          style="width:100%;font-size:13px;font-weight:700;color:#1F3864;text-align:center"
+          oninput="tlCalcEnd()">
+      </div>
+      <div class="field" style="margin:0"><label>Ngày kết thúc <span style="font-size:10px;color:#888">(tự tính, trừ T7/CN/lễ)</span></label>
+        <input id="tl-end" type="date" class="tbl-input" value="${t.end}" oninput="tlCalcDays()">
+      </div>
     </div>
-    <div class="field"><label>Ngày kết thúc (dự kiến)</label>
-      <input id="tl-end" type="date" class="tbl-input" value="${t.end}">
+    <div id="tl-day-info" style="font-size:11px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #d4e9f7">
+      ${workDays?`Tính được <strong>${workDays} ngày làm việc</strong> (đã trừ T7, CN và ngày lễ)`:
+      'Nhập ngày bắt đầu + số ngày làm → tự tính ngày kết thúc'}
     </div>
-    <div class="field"><label>Ngày UP / Báo cáo</label>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="field"><label>Ngày UP / Báo cáo <span style="color:#e74c3c">⚡</span></label>
       <input id="tl-up" type="date" class="tbl-input" value="${t.upDate}" style="${t.upDate?'border-color:#e74c3c':''}">
-      <div style="font-size:10px;color:#e74c3c;margin-top:2px">Hiện trong bảng Lịch nhân sự</div>
+      <div style="font-size:10px;color:#e74c3c;margin-top:2px">Mặc định = ngày kết thúc nếu để trống</div>
     </div>
     <div class="field"><label>Ngày thực tế hoàn thành</label>
       <input id="tl-actual" type="date" class="tbl-input" value="${t.actual}">
     </div>
-  </div>
-  <div class="field" style="margin-bottom:10px"><label>Tiến độ thực tế: <span id="tl-prog-lbl">${t.progress||0}%</span></label>
-    <input type="range" id="tl-prog" min="0" max="100" step="5" value="${t.progress||0}"
-      oninput="document.getElementById('tl-prog-lbl').textContent=this.value+'%'"
-      style="width:100%;margin-top:4px">
+    <div class="field"><label>Phụ thuộc task trước <span style="font-size:10px;color:var(--gray4);font-weight:400">(tuỳ chọn — bỏ trống nếu chạy song song)</span></label>
+      <select id="tl-dep" class="sel-sm" style="width:100%">
+        <option value="">— Không phụ thuộc (song song) —</option>
+        ${(p.tlTasks||[]).filter(q=>q.id!==t.id).map(q=>`
+          <option value="${q.id}" ${t.dep===q.id?'selected':''}>
+            ${q.lv==='group'?'📁':q.lv==='task'?'▸':'  ·'} ${x(q.name.length>40?q.name.slice(0,40)+'…':q.name)}
+          </option>`).join('')}
+      </select>
+      <div id="tl-dep-info" style="font-size:10px;color:#1a5276;margin-top:4px;display:${t.dep?'block':'none'}">
+        ⚡ Ngày bắt đầu task này sẽ = ngày kết thúc task trước + 1 ngày làm việc
+        <button type="button" onclick="tlApplyDep()" style="margin-left:8px;font-size:10px;padding:1px 8px;border:1px solid #1a5276;border-radius:3px;background:#e8f4fd;color:#1a5276;cursor:pointer">Áp dụng ngay</button>
+      </div>
+    </div>
+    <div class="field"><label>Nội dung / Mô tả</label>
+      <input id="tl-content" class="tbl-input" value="${x(t.content||'')}" placeholder="Bản vẽ, hồ sơ, tài liệu…">
+    </div>
+    <div class="field"><label>Tiến độ: <span id="tl-prog-lbl">${t.progress||0}%</span></label>
+      <input type="range" id="tl-prog" min="0" max="100" step="5" value="${t.progress||0}"
+        oninput="document.getElementById('tl-prog-lbl').textContent=this.value+'%'"
+        style="width:100%;margin-top:8px">
+    </div>
   </div>
   <div class="field" style="margin-bottom:10px"><label>Nhân sự phụ trách</label>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="tl-staff-wrap">${staffOpts}</div>
   </div>
   <div class="field"><label>Ghi chú</label>
-    <textarea id="tl-note" class="tbl-input" style="height:56px;resize:none">${x(t.note)}</textarea>
+    <textarea id="tl-note" class="tbl-input" style="height:48px;resize:none">${x(t.note)}</textarea>
   </div>
   <div class="modal-ft">
     ${existing?`<button class="btn btn-danger btn-sm" onclick="deleteTlTask('${pjId}','${t.id}');closeModal()">Xóa task</button>`:''}
     <button class="btn" onclick="closeModal()">Hủy</button>
     <button class="btn btn-gold" onclick="confirmSaveTlTask('${pjId}','${t.id}')">💾 Lưu</button>
   </div>`);
+
+  // Gắn event sau khi modal render
+  setTimeout(()=>{
+    const depSel = document.getElementById('tl-dep');
+    if(depSel) depSel.addEventListener('change',function(){
+      document.getElementById('tl-dep-info').style.display=this.value?'block':'none';
+    });
+  },100);
+}
+
+// ── Tính ngày làm việc (trừ T7, CN, lễ) ─────────────────────────────────
+// Áp dụng dependency: tính ngày bắt đầu = ngày kết thúc task trước + 1 ngày làm
+function tlApplyDep() {
+  const depId = document.getElementById('tl-dep')?.value;
+  if (!depId) return;
+  // Tìm task phụ thuộc trong D
+  let depTask = null;
+  Object.values(D.months).forEach(m=>{
+    [...(m.projectsVN||[])].forEach(p=>{
+      const found = (p.tlTasks||[]).find(t=>t.id===depId);
+      if(found) depTask = found;
+    });
+  });
+  if(!depTask||!depTask.end) { toast('Task phụ thuộc chưa có ngày kết thúc'); return; }
+  const newStart = addWorkDays(depTask.end, 1); // ngày làm việc tiếp theo
+  if(document.getElementById('tl-start')) document.getElementById('tl-start').value = newStart;
+  tlCalcEnd(); // tính lại ngày kết thúc theo số ngày làm
+  toast(`✓ Ngày bắt đầu: ${newStart.slice(5).replace('-','/')} (ngày làm việc kế tiếp sau task trước)`);
+}
+
+// ── Tính ngày làm việc (trừ T7, CN, lễ) ─────────────────────────────────
+function calcWorkDays(startStr, endStr) {
+  if (!startStr || !endStr) return 0;
+  const holidays = new Set(getHolidays().map(h=>h.date||h));
+  let count = 0;
+  const d = new Date(startStr);
+  const end = new Date(endStr);
+  while (d <= end) {
+    const dow = d.getDay();
+    const ds = localDateStr(d);
+    if (dow !== 0 && dow !== 6 && !holidays.has(ds)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function addWorkDays(startStr, days) {
+  // Tính ngày kết thúc từ ngày bắt đầu + số ngày làm việc
+  if (!startStr || !days || days <= 0) return '';
+  const holidays = new Set(getHolidays().map(h=>h.date||h));
+  let count = 0;
+  const d = new Date(startStr);
+  while (count < days) {
+    const dow = d.getDay();
+    const ds = localDateStr(d);
+    if (dow !== 0 && dow !== 6 && !holidays.has(ds)) count++;
+    if (count < days) d.setDate(d.getDate() + 1);
+  }
+  return localDateStr(d);
 }
 
 function tlCalcEnd() {
-  // Không tự tính để tránh ghi đè — user tự nhập
+  const start = document.getElementById('tl-start')?.value;
+  const days  = +document.getElementById('tl-days')?.value;
+  if (!start || !days) return;
+  const end = addWorkDays(start, days);
+  if (end && document.getElementById('tl-end')) {
+    document.getElementById('tl-end').value = end;
+    document.getElementById('tl-day-info').innerHTML =
+      `Ngày kết thúc: <strong>${end.slice(5).replace('-','/')}</strong> — <strong>${days} ngày làm việc</strong> (đã trừ T7, CN và ngày lễ)`;
+  }
 }
+
+function tlCalcDays() {
+  const start = document.getElementById('tl-start')?.value;
+  const end   = document.getElementById('tl-end')?.value;
+  if (!start || !end) return;
+  const days = calcWorkDays(start, end);
+  if (document.getElementById('tl-days')) document.getElementById('tl-days').value = days;
+  document.getElementById('tl-day-info').innerHTML =
+    `Tính được <strong>${days} ngày làm việc</strong> (đã trừ T7, CN và ngày lễ)`;
+}
+
+
 
 function confirmSaveTlTask(pjId, taskId) {
   const staff = [...document.querySelectorAll('#tl-staff-wrap input[type=checkbox]:checked')].map(e=>e.value);
+  const end   = document.getElementById('tl-end').value;
+  const upDate = document.getElementById('tl-up').value || end; // mặc định = ngày kết thúc
   const task = {
     id: taskId,
     lv:       document.getElementById('tl-lv').value,
     name:     document.getElementById('tl-name').value.trim(),
     start:    document.getElementById('tl-start').value,
-    end:      document.getElementById('tl-end').value,
-    upDate:   document.getElementById('tl-up').value,
+    end,
+    upDate,
     actual:   document.getElementById('tl-actual').value,
+    content:  document.getElementById('tl-content')?.value.trim()||'',
     progress: +document.getElementById('tl-prog').value,
     status:   document.getElementById('tl-status').value,
+    dep:      document.getElementById('tl-dep')?.value||'',
     staff,
     note:     document.getElementById('tl-note').value.trim(),
   };
@@ -2351,6 +2474,7 @@ function renderProjectTimeline_VN(p) {
       <td style="padding-left:${indent+6}px;font-weight:${fontW};font-size:12px;min-width:180px;max-width:220px">
         <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;color:${t.lv==='group'?'var(--navy)':'var(--color-text-primary)'}"
           onclick="openTlTaskModal('${p.id}','${t.id}')" title="${x(t.name)}">${x(t.name)||'—'}</div>
+        ${t.dep?`<div style="font-size:10px;color:#1a5276;margin-top:1px">↳ sau: ${x((p.tlTasks||[]).find(q=>q.id===t.dep)?.name?.slice(0,20)||'?')}</div>`:''}
         ${staffNames?`<div style="font-size:10px;color:var(--gray4);margin-top:1px">${x(staffNames)}</div>`:''}
       </td>
       <td style="font-size:10px;text-align:center;color:var(--gray4);width:50px">${t.start?Math.ceil((new Date(t.end)-new Date(t.start))/(1000*60*60*24)+1)+'ng':'—'}</td>
@@ -2402,6 +2526,7 @@ function renderProjectTimeline_VN(p) {
           <div style="height:100%;width:${avgProg}%;background:${avgProg>=80?'#22c55e':avgProg>=40?'#3b82f6':'#f59e0b'};border-radius:3px"></div>
         </div>
         <span style="font-size:11px;font-weight:700;color:var(--navy)">${avgProg}%</span>
+        <button class="btn btn-sm" style="background:#e8f4fd;color:#1a5276;border:1px solid #b3d4f5" onclick="exportTlPDF('${p.id}')">📄 Xuất PDF</button>
         <button class="btn btn-gold btn-sm" onclick="openTlTaskModal('${p.id}',null)">＋ Thêm</button>
       </div>
     </div>
@@ -3816,7 +3941,212 @@ function confirmEditPj(id) {
   p.mainStaff=document.getElementById('ep-st').value;
   save(); closeModal(); renderSidebar(); renderContent(); toast('✓ Đã lưu');
 }
-// ── Project History ────────────────────────────────────────────────────────
+// ── Xuất PDF Tiến độ dự án ────────────────────────────────────────────────
+function exportTlPDF(pjId) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p) return;
+
+  // Modal nhập thông tin trước khi xuất
+  showModal(`<div class="modal-hd" style="background:var(--navy);padding:12px 16px;margin:-16px -16px 16px">
+    <span style="color:#FFC000;font-weight:700;font-size:14px">📄 Xuất PDF Tiến độ Dự án</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px">
+    <div class="field"><label>Tiêu đề file PDF</label>
+      <input id="pdf-title" class="tbl-input" value="TIẾN ĐỘ THIẾT KẾ NỘI THẤT" style="font-weight:700;font-size:13px">
+    </div>
+    <div class="field"><label>Tên dự án (hiện trên PDF)</label>
+      <input id="pdf-pjname" class="tbl-input" value="${x(p.nameVN||p.nameJP||'')}" style="font-size:13px">
+    </div>
+    <div class="field"><label>Địa chỉ dự án</label>
+      <input id="pdf-addr" class="tbl-input" placeholder="VD: Số 1 Lê Thành Tông, Hoàn Kiếm, Hà Nội" value="${x(p.address||'')}">
+    </div>
+    <div class="field"><label>Chủ đầu tư</label>
+      <input id="pdf-cdt" class="tbl-input" placeholder="VD: Công ty TNHH Khách Sạn Nhà Hát" value="${x(p.cdt||'')}">
+    </div>
+    <div class="field"><label>Tư vấn thiết kế</label>
+      <input id="pdf-tvtk" class="tbl-input" value="Gendai Sougo Việt Nam">
+    </div>
+    <div class="field"><label>Ghi chú cuối trang</label>
+      <textarea id="pdf-note" class="tbl-input" style="height:56px;resize:none" placeholder="- Số ngày làm việc không tính T7, CN, các ngày nghỉ lễ…">${x(p.tlNote||'')}</textarea>
+    </div>
+  </div>
+  <div class="modal-ft">
+    <button class="btn" onclick="closeModal()">Hủy</button>
+    <button class="btn btn-gold" onclick="doExportTlPDF('${pjId}')">📄 Tạo & Tải PDF</button>
+  </div>`);
+}
+
+function doExportTlPDF(pjId) {
+  const p = allCurProjects().find(q=>q.id===pjId)
+         || Object.values(D.months).flatMap(m=>[...(m.projectsVN||[])]).find(q=>q.id===pjId);
+  if (!p) return;
+
+  const title  = document.getElementById('pdf-title').value;
+  const pjName = document.getElementById('pdf-pjname').value;
+  const addr   = document.getElementById('pdf-addr').value;
+  const cdt    = document.getElementById('pdf-cdt').value;
+  const tvtk   = document.getElementById('pdf-tvtk').value;
+  const note   = document.getElementById('pdf-note').value;
+
+  // Lưu lại thông tin dự án
+  p.address = addr; p.cdt = cdt; p.tlNote = note;
+  save();
+
+  const tasks = getTlTasks(p);
+
+  // Tính range cho Gantt
+  const dates = tasks.flatMap(t=>[t.start,t.end]).filter(Boolean).sort();
+  const minDate = dates[0]||localDateStr(new Date());
+  const maxDate = dates[dates.length-1]||localDateStr(new Date());
+  const gStart = new Date(minDate); gStart.setDate(gStart.getDate()-2);
+  const gEnd   = new Date(maxDate); gEnd.setDate(gEnd.getDate()+5);
+  const totalDays = Math.ceil((gEnd-gStart)/(1000*60*60*24));
+
+  // Week columns
+  const weeks = [];
+  const wc = new Date(gStart);
+  while(wc <= gEnd) {
+    weeks.push(new Date(wc));
+    wc.setDate(wc.getDate()+7);
+  }
+  const COL_W = Math.max(30, Math.min(50, Math.floor(560/weeks.length))); // px/tuần
+  const DAY_W = COL_W/7;
+
+  function dx(ds) {
+    if(!ds) return 0;
+    return Math.round((new Date(ds)-gStart)/(1000*60*60*24)*DAY_W);
+  }
+  function dw(s,e) {
+    if(!s||!e) return DAY_W*3;
+    return Math.max(2, Math.round((new Date(e)-new Date(s))/(1000*60*60*24)*DAY_W));
+  }
+
+  // Build rows HTML
+  let id = 0;
+  const rowsHTML = tasks.map(t=>{
+    id++;
+    const wds = t.start&&t.end?calcWorkDays(t.start,t.end):0;
+    const indent = t.lv==='group'?0:t.lv==='task'?16:28;
+    const fw = t.lv==='group'?'bold':'normal';
+    const fs = t.lv==='group'?'10pt':'9pt';
+    const bgRow = t.lv==='group'?'#E8EAF6':'#fff';
+    const borderTop = t.lv==='group'?'border-top:2px solid #1F3864;':'';
+
+    const bx = t.start?dx(t.start):0;
+    const bw2 = t.start&&t.end?dw(t.start,t.end):0;
+    const barColor = t.status==='done'?'#22c55e':t.lv==='group'?'#5B8CCC':'#5B8CCC';
+    const barH = t.lv==='group'?10:t.lv==='task'?8:6;
+    const barY = (16-barH)/2;
+
+    const barHTML = bw2>0?`<div style="position:absolute;left:${bx}px;top:${barY}px;width:${bw2}px;height:${barH}px;background:${barColor};border-radius:2px"></div>
+      <span style="position:absolute;left:${bx+2}px;top:0;font-size:7pt;color:#fff;line-height:16px;font-weight:bold;white-space:nowrap">${t.start?t.start.slice(5).replace('-','/'):''}${bw2>60?'  →  '+t.end.slice(5).replace('-','/'):''}  </span>`:'';
+
+    return `<tr style="background:${bgRow};${borderTop}">
+      <td style="border:1px solid #bbb;padding:3px 4px;font-size:9pt;text-align:center;color:#555">${id}</td>
+      <td style="border:1px solid #bbb;padding:3px 6px;font-size:${fs};font-weight:${fw};padding-left:${indent+6}px">${x(t.name)}</td>
+      <td style="border:1px solid #bbb;padding:3px 4px;font-size:8pt;text-align:center;color:#555">${t.content||''}</td>
+      <td style="border:1px solid #bbb;padding:3px 4px;font-size:8pt;text-align:center;font-weight:bold">${wds?wds+' ngày':''}</td>
+      <td style="border:1px solid #bbb;padding:3px 4px;font-size:8pt;text-align:center">${t.start?t.start.slice(5).replace('-','/'):''}</td>
+      <td style="border:1px solid #bbb;padding:3px 4px;font-size:8pt;text-align:center">${t.end?t.end.slice(5).replace('-','/'):''}</td>
+      <td style="border:1px solid #bbb;padding:0;position:relative;min-width:${totalDays*DAY_W}px;height:16px">
+        <div style="position:relative;height:16px;width:${totalDays*DAY_W}px">
+          ${barHTML}
+          ${weeks.map((w,wi)=>`<div style="position:absolute;left:${wi*7*DAY_W}px;top:0;bottom:0;width:1px;background:#ddd"></div>`).join('')}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const weekHeadersHTML = weeks.map((w,wi)=>`
+    <th style="border:1px solid #bbb;padding:2px;font-size:7.5pt;text-align:center;font-weight:normal;width:${COL_W}px;background:#E8EAF6;color:#1F3864">
+      ${w.getMonth()+1}/${w.getDate()}
+    </th>`).join('');
+
+  const noteLines = note.split('\n').filter(Boolean).map(l=>`<li style="margin:2px 0">${x(l.replace(/^-\s*/,''))}</li>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>${x(title)} — ${x(pjName)}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:10pt;margin:16mm;color:#111}
+  table{border-collapse:collapse;width:100%}
+  th,td{vertical-align:middle}
+  h1{font-size:14pt;text-align:center;text-transform:uppercase;margin:4px 0}
+  h2{font-size:12pt;text-align:center;text-transform:uppercase;margin:2px 0 8px}
+  .info-line{font-size:9pt;margin:1px 0}
+  @media print{
+    body{margin:10mm}
+    @page{size:A3 landscape;margin:10mm}
+  }
+</style>
+</head>
+<body>
+<table style="margin-bottom:10px;border:none">
+  <tr>
+    <td style="border:none;vertical-align:top;width:40%">
+      <div class="info-line"><b>Địa chỉ:</b> ${x(addr)}</div>
+      <div class="info-line"><b>Chủ đầu tư:</b> ${x(cdt)}</div>
+      <div class="info-line"><b>Tư vấn thiết kế:</b> ${x(tvtk)}</div>
+    </td>
+    <td style="border:none;text-align:center;width:60%">
+      <h1>${x(title)}</h1>
+      <h2>${x(pjName)}</h2>
+    </td>
+  </tr>
+</table>
+
+<table style="font-size:9pt">
+  <thead>
+    <tr style="background:#1F3864;color:#FFC000">
+      <th style="border:1px solid #bbb;padding:4px;width:28px">ID</th>
+      <th style="border:1px solid #bbb;padding:4px;text-align:left;min-width:200px">CÔNG VIỆC</th>
+      <th style="border:1px solid #bbb;padding:4px;width:70px">NỘI DUNG</th>
+      <th style="border:1px solid #bbb;padding:4px;width:60px">NGÀY LÀM VIỆC</th>
+      <th style="border:1px solid #bbb;padding:4px;width:54px">BẮT ĐẦU</th>
+      <th style="border:1px solid #bbb;padding:4px;width:54px">BÁO CÁO & XUẤT HỒ SƠ</th>
+      <th style="border:1px solid #bbb;padding:4px">
+        <table style="width:100%;border:none">
+          <tr>
+            ${weeks.map(w=>{
+              const mo = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              return `<th style="border:none;width:${COL_W}px;text-align:center;font-size:8pt;padding:1px;border-right:1px solid rgba(255,255,255,.3)">${mo[w.getMonth()+1]} '${String(w.getFullYear()).slice(2)}</th>`;
+            }).join('')}
+          </tr>
+          <tr>${weekHeadersHTML}</tr>
+        </table>
+      </th>
+    </tr>
+  </thead>
+  <tbody>${rowsHTML}</tbody>
+</table>
+
+${noteLines?`<div style="margin-top:14px;font-size:8.5pt;color:#444;border-top:1px solid #ccc;padding-top:8px">
+  <b>Lưu ý:</b>
+  <ul style="margin:4px 0 0 16px;padding:0">${noteLines}</ul>
+</div>`:''}
+
+</body>
+</html>`;
+
+  closeModal();
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const w2 = window.open(url,'_blank');
+  if(w2) {
+    setTimeout(()=>{ try{w2.print();}catch(e){} }, 800);
+    toast('✅ Mở file PDF — dùng Ctrl+P để in hoặc Lưu PDF');
+  } else {
+    const a = document.createElement('a');
+    a.href = url; a.download = `TienDo_${(p.nameVN||p.nameJP||'DuAn').replace(/\s+/g,'_')}.html`;
+    a.click();
+    toast('✅ Đã tải file HTML — mở và Ctrl+P để in PDF');
+  }
+}
+
+
 function getPjHistory() {
   try { return JSON.parse(localStorage.getItem('pj_history')||'[]'); } catch(e) { return []; }
 }
